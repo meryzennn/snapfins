@@ -145,8 +145,6 @@ export default function DashboardPage() {
     });
   };
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
   const [transactions, setTransactions] = useState<any[]>([]);
   const [isLoadingTx, setIsLoadingTx] = useState(true);
   const [userAvatar, setUserAvatar] = useState<string | null>(null);
@@ -164,6 +162,16 @@ export default function DashboardPage() {
   const userDropdownRef = useRef<HTMLDivElement>(null);
   const currencyDropdownRef = useRef<HTMLDivElement>(null);
   const filterDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Immersive Scan States (New)
+  const [showScanModal, setShowScanModal] = useState(false);
+  const [scanStep, setScanStep] = useState<'select' | 'camera' | 'analyzing' | 'confirm'>('select');
+  const [scanningLogs, setScanningLogs] = useState<string[]>([]);
+  const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  const [tempScanData, setTempScanData] = useState<any>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Currency & Rate Initialization
   useEffect(() => {
@@ -707,80 +715,152 @@ export default function DashboardPage() {
     }
   };
 
-  const handleScan = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setIsScanning(true);
+  const startCamera = async () => {
+    setScanStep("camera");
     setScanError(null);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "environment" },
+        audio: false,
+      });
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+    } catch (err: any) {
+      console.error("Camera access failed:", err);
+      setScanError(t("cameraAccessDenied") || "Camera access denied. Please check permissions.");
+      setScanStep("select");
+    }
+  };
+
+  const stopCamera = () => {
+    if (videoRef.current && videoRef.current.srcObject) {
+      const stream = videoRef.current.srcObject as MediaStream;
+      stream.getTracks().forEach((track) => track.stop());
+      videoRef.current.srcObject = null;
+    }
+  };
+
+  const processScanData = async (file: File | Blob) => {
+    setScanStep("analyzing");
+    setScanError(null);
+    setScanningLogs(["> Establishing connection to Gemini AI..."]);
+
+    // Staggered log gimmick
+    const addLog = (msg: string, delay: number) => 
+      new Promise(resolve => setTimeout(() => {
+        setScanningLogs(prev => [...prev, msg]);
+        resolve(null);
+      }, delay));
+
     try {
       const supabase = createClient();
       const { data: userData } = await supabase.auth.getUser();
       
       if (!userData?.user) {
-        setScanError(t("notAuthenticated") || "Please login first to scan receipts.");
-        return;
+        throw new Error(t("notAuthenticated") || "Please login first to scan receipts.");
       }
 
       const formData = new FormData();
       formData.append("file", file);
       formData.append("language", lang);
 
-      const res = await fetch("/api/scan", {
-        method: "POST",
-        body: formData,
-      });
+      // Animation start
+      const scanPromise = fetch("/api/scan", { method: "POST", body: formData });
+      
+      await addLog("> Accessing visual processing matrix... [OK]", 800);
+      await addLog("> Extracting merchant and total... [IN PROGRESS]", 1200);
 
+      const res = await scanPromise;
       const data = await res.json();
+
       if (res.ok && data.transaction) {
-        // Validation check for non-receipts
         if (data.transaction.isValidReceipt === false) {
-          setScanError(
-            data.transaction.errorReason || t("tryAgainWithDifferent"),
-          );
-          return;
+          throw new Error(data.transaction.errorReason || t("tryAgainWithDifferent"));
         }
 
-        const newTx = {
-          user_id: userData.user.id,
-          date: data.transaction.date,
-          category: data.transaction.category || "GENERAL",
-          color: assignColor(data.transaction.category || "GENERAL"),
-          description: data.transaction.description,
-          type: "Debit",
-          amount: data.transaction.amount,
-          currency: data.transaction.currency || "IDR", 
-          source: "Gemini Vision",
-          is_ai: true,
-        };
+        await addLog("> Validating tax categories... [DONE]", 600);
+        await addLog("> Ready for confirmation.", 400);
 
-        const { data: insertedData, error } = await supabase
-          .from("transactions")
-          .insert([newTx])
-          .select();
-
-        if (error) throw error;
-        
-        if (insertedData) {
-          const mappedTx = {
-            ...insertedData[0],
-            isAi: insertedData[0].is_ai,
-          };
-          // Update both state and trigger external fetch for stability
-          setTransactions((prev) => [mappedTx, ...prev]);
-          await fetchTransactions(); 
-          setScanSuccess({ date: data.transaction.date });
-        }
+        setTempScanData({
+          ...data.transaction,
+          userId: userData.user.id
+        });
+        setScanStep("confirm");
       } else {
-        setScanError(data.error || t("scanErrorHint"));
+        throw new Error(data.error || t("scanErrorHint"));
       }
     } catch (error: any) {
       console.error(error);
       setScanError(error.message || t("tryAgainWithDifferent"));
+      setScanStep("select");
+    }
+  };
+
+  const capturePhoto = () => {
+    if (videoRef.current && canvasRef.current) {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        canvas.toBlob((blob) => {
+          if (blob) {
+            stopCamera();
+            processScanData(blob);
+          }
+        }, "image/jpeg", 0.9);
+      }
+    }
+  };
+
+  const handleScan = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    await processScanData(file);
+    // Reset input
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const finalizeScan = async () => {
+    if (!tempScanData) return;
+    setIsScanning(true);
+    try {
+      const supabase = createClient();
+      const newTx = {
+        user_id: tempScanData.userId,
+        date: tempScanData.date,
+        category: tempScanData.category || "GENERAL",
+        color: assignColor(tempScanData.category || "GENERAL"),
+        description: tempScanData.description,
+        type: "Debit",
+        amount: tempScanData.amount,
+        currency: tempScanData.currency || "IDR",
+        source: "Gemini Vision",
+        is_ai: true,
+      };
+
+      const { data: insertedData, error } = await supabase
+        .from("transactions")
+        .insert([newTx])
+        .select();
+
+      if (error) throw error;
+      
+      if (insertedData) {
+        const mappedTx = { ...insertedData[0], isAi: insertedData[0].is_ai };
+        setTransactions((prev) => [mappedTx, ...prev]);
+        await fetchTransactions();
+        setShowScanModal(false);
+        setTempScanData(null);
+        setScanStep("select");
+      }
+    } catch (error: any) {
+      alert("Failed to save: " + error.message);
     } finally {
       setIsScanning(false);
-      // Reset input value to allow scanning same file again
-      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
@@ -794,6 +874,190 @@ export default function DashboardPage() {
 
   return (
     <>
+      {/* Immersive Scan Modal */}
+      {showScanModal && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-300">
+          <div className="bg-surface dark:bg-slate-900 p-6 sm:p-10 rounded-3xl shadow-2xl flex flex-col w-full max-w-xl border border-white/10 relative overflow-hidden">
+            {/* Modal Header */}
+            <div className="flex justify-between items-center mb-8 relative z-10">
+              <div>
+                <h3 className="font-headline font-bold text-3xl text-on-surface dark:text-white mb-1">
+                  {scanStep === 'select' ? t("scanReceipt") : 
+                   scanStep === 'camera' ? t("cameraCapture") || "Camera Scan" : 
+                   scanStep === 'analyzing' ? t("analyzing") || "Analyzing..." : 
+                   t("confirmEntry")}
+                </h3>
+                <p className="text-sm text-on-surface-variant dark:text-gray-400 font-medium italic opacity-70">
+                  {scanStep === 'select' ? "Choose your input source" : 
+                   scanStep === 'camera' ? "Align receipt within the frame" : 
+                   scanStep === "analyzing" ? "Gemini AI is processing your image" : 
+                   "Verify the extracted information"}
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  stopCamera();
+                  setShowScanModal(false);
+                  setScanStep("select");
+                }}
+                className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-surface-container-high dark:hover:bg-slate-800 transition-colors text-on-surface-variant cursor-pointer"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            {/* Step 1: Selection */}
+            {scanStep === 'select' && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 animate-in slide-in-from-bottom-4 duration-500">
+                <button 
+                  onClick={startCamera}
+                  className="group relative flex flex-col items-center justify-center p-12 bg-surface-container-low dark:bg-slate-800/50 rounded-3xl border-2 border-dashed border-outline-variant/30 hover:border-primary hover:bg-primary/5 transition-all duration-300 cursor-pointer"
+                >
+                  <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                    <span className="material-symbols-outlined text-primary text-4xl">photo_camera</span>
+                  </div>
+                  <span className="font-bold text-on-surface dark:text-white">Camera View</span>
+                </button>
+                <button 
+                  onClick={() => fileInputRef.current?.click()}
+                  className="group relative flex flex-col items-center justify-center p-12 bg-surface-container-low dark:bg-slate-800/50 rounded-3xl border-2 border-dashed border-outline-variant/30 hover:border-secondary hover:bg-secondary/5 transition-all duration-300 cursor-pointer"
+                >
+                  <div className="w-16 h-16 bg-secondary/10 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                    <span className="material-symbols-outlined text-secondary text-4xl">image</span>
+                  </div>
+                  <span className="font-bold text-on-surface dark:text-white">Gallery Upload</span>
+                </button>
+              </div>
+            )}
+
+            {/* Step 2: Camera Live */}
+            {scanStep === 'camera' && (
+              <div className="relative rounded-2xl overflow-hidden aspect-[3/4] bg-black border-2 border-primary/30 shadow-2xl animate-in zoom-in duration-300">
+                <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
+                
+                {/* Scanner Overlay UI */}
+                <div className="absolute inset-0 scanner-overlay-gradient pointer-events-none">
+                  {/* Corners */}
+                  <div className="scanner-corner top-4 left-4 border-t-4 border-l-4"></div>
+                  <div className="scanner-corner top-4 right-4 border-t-4 border-r-4"></div>
+                  <div className="scanner-corner bottom-4 left-4 border-b-4 border-l-4"></div>
+                  <div className="scanner-corner bottom-4 right-4 border-b-4 border-r-4"></div>
+                  
+                  {/* Scan Line */}
+                  <div className="animate-scan-line"></div>
+                </div>
+
+                {/* Capture Button */}
+                <div className="absolute bottom-10 inset-x-0 flex justify-center items-center gap-6">
+                  <button 
+                    onClick={() => { stopCamera(); setScanStep('select'); }}
+                    className="w-12 h-12 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white hover:bg-white/20 transition-all cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined">restart_alt</span>
+                  </button>
+                  <button 
+                    onClick={capturePhoto}
+                    className="w-20 h-20 rounded-full border-4 border-primary p-1 bg-white/20 backdrop-blur-sm group hover:scale-110 transition-all cursor-pointer"
+                  >
+                    <div className="w-full h-full rounded-full bg-primary flex items-center justify-center shadow-lg group-hover:bg-primary-container">
+                      <span className="material-symbols-outlined text-white text-3xl">camera_alt</span>
+                    </div>
+                  </button>
+                  <div className="w-12 h-12"></div>
+                </div>
+              </div>
+            )}
+
+            {/* Step 3: Analyzing Gimmick */}
+            {scanStep === 'analyzing' && (
+              <div className="flex flex-col items-center py-10 animate-in fade-in duration-500">
+                <div className="relative w-48 h-48 mb-8">
+                  <div className="absolute inset-0 rounded-full border-4 border-primary/20 border-t-primary animate-spin"></div>
+                  <div className="absolute inset-4 rounded-full border-4 border-secondary/20 border-b-secondary animate-spin [animation-duration:2s]"></div>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className="material-symbols-outlined text-primary text-6xl animate-pulse">auto_awesome</span>
+                  </div>
+                </div>
+                
+                <h4 className="text-xl font-bold dark:text-white mb-6 flex items-center gap-3">
+                  <span className="w-3 h-3 bg-secondary rounded-full animate-pulse"></span>
+                  Analyzing with Gemini AI...
+                </h4>
+
+                {/* Terminal-style Logs */}
+                <div className="w-full bg-slate-950 rounded-2xl p-6 font-mono text-xs text-secondary shadow-lg border border-white/5 space-y-2 max-h-40 overflow-y-auto">
+                  {scanningLogs.map((log, idx) => (
+                    <div key={idx} className={idx === scanningLogs.length - 1 ? "terminal-cursor" : ""}>
+                      {log}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Step 4: Confirm Entry */}
+            {scanStep === 'confirm' && tempScanData && (
+              <div className="animate-in slide-in-from-right-4 duration-500">
+                <div className="bg-surface-container-low dark:bg-slate-800/80 rounded-2xl p-6 border border-outline-variant/30 mb-8">
+                  <div className="grid grid-cols-2 gap-y-6">
+                    <div className="col-span-2 flex items-center gap-4 mb-2">
+                       <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                          <span className="material-symbols-outlined text-primary text-2xl">receipt_long</span>
+                       </div>
+                       <div>
+                          <p className="text-[10px] uppercase tracking-widest font-black text-on-surface-variant opacity-60">Merchant</p>
+                          <p className="font-bold text-xl text-on-surface dark:text-white capitalize">{tempScanData.description}</p>
+                       </div>
+                    </div>
+                    <div>
+                      <p className="text-[10px] uppercase tracking-widest font-black text-on-surface-variant opacity-60">Date</p>
+                      <p className="font-bold text-on-surface dark:text-white">{tempScanData.date}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] uppercase tracking-widest font-black text-on-surface-variant opacity-60">Category</p>
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-primary/10 text-primary">
+                        {tempScanData.category}
+                      </span>
+                    </div>
+                    <div className="col-span-2 pt-4 border-t border-outline-variant/10 flex justify-between items-end">
+                      <div>
+                        <p className="text-[10px] uppercase tracking-widest font-black text-secondary">Total Amount</p>
+                        <p className="font-black text-3xl text-on-surface dark:text-white tracking-tighter">
+                          {tempScanData.currency} {tempScanData.amount}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex gap-4">
+                  <button 
+                    onClick={() => setScanStep('select')}
+                    className="flex-1 py-4 rounded-2xl bg-surface-container-high dark:bg-slate-800 text-on-surface dark:text-white font-bold hover:bg-surface-variant transition-all cursor-pointer"
+                  >
+                    Try Again
+                  </button>
+                  <button 
+                    onClick={finalizeScan}
+                    disabled={isScanning}
+                    className="flex-1 py-4 rounded-2xl bg-secondary text-white font-black hover:brightness-110 active:scale-95 transition-all shadow-lg shadow-secondary/20 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                  >
+                    {isScanning ? <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin"></div> : "Confirm Entry"}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {scanError && (
+              <div className="mt-6 p-4 rounded-xl bg-error/10 border border-error/20 flex items-start gap-3 animate-in fade-in zoom-in duration-300">
+                <span className="material-symbols-outlined text-error">error</span>
+                <p className="text-xs font-semibold text-error-container">{scanError}</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Manual Entry Modal */}
       {showManualEntry && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
@@ -1116,28 +1380,6 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Loading Overlay for Scanner */}
-      {isScanning && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="bg-surface p-8 rounded-3xl shadow-2xl flex flex-col items-center max-w-sm w-full border border-primary/20 animate-in fade-in zoom-in duration-300">
-            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-6 relative">
-              <span
-                className="material-symbols-outlined text-primary text-3xl animate-pulse"
-                style={{ fontVariationSettings: "'FILL' 1" }}
-              >
-                auto_awesome
-              </span>
-              <div className="absolute inset-0 rounded-full border-t-2 border-primary animate-spin"></div>
-            </div>
-            <h3 className="font-headline font-bold text-xl text-on-surface mb-2">
-              {t("analyzingReceipt")}
-            </h3>
-            <p className="text-sm text-center text-on-surface-variant">
-              {t("analyzingHint")}
-            </p>
-          </div>
-        </div>
-      )}
 
       {/* TopNavBar Shared Component - v2.1.1 */}
       <nav className="sticky top-0 w-full z-50 bg-slate-50/80 dark:bg-slate-950/80 backdrop-blur-md border-b border-outline-variant/30">
@@ -1359,7 +1601,7 @@ export default function DashboardPage() {
               {t("manualEntry")}
             </button>
             <button
-              onClick={() => fileInputRef.current?.click()}
+              onClick={() => setShowScanModal(true)}
               className="px-5 py-2.5 rounded-lg bg-gradient-to-r from-primary to-primary-container text-white font-bold text-sm shadow-[0_4px_15px_rgba(53,37,205,0.3)] transition-all active:scale-[0.98] flex items-center gap-2 magic-glow-hover cursor-pointer overflow-hidden group"
             >
               <span
@@ -1931,6 +2173,16 @@ export default function DashboardPage() {
           </p>
         </div>
       </footer>
+
+      {/* Hidden processing elements */}
+      <canvas ref={canvasRef} className="hidden" />
+      <input
+        type="file"
+        accept="image/*"
+        ref={fileInputRef}
+        onChange={handleScan}
+        className="hidden"
+      />
     </>
   );
 }

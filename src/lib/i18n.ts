@@ -144,6 +144,10 @@ export const translations = {
     scanSuccessTitle: 'Scan Successful',
     scanSuccessDate: (d: string) => `Date: ${d}`,
     viewTransaction: 'View Transaction',
+    cameraCapture: 'Camera Capture',
+    analyzing: 'Analyzing...',
+    confirmEntry: 'Confirm Entry',
+    cameraAccessDenied: 'Camera access denied. Please check permissions.',
   },
 
   id: {
@@ -285,9 +289,13 @@ export const translations = {
     allMonths: 'Semua Bulan',
     filterMonth: 'Bulan',
     filterYear: 'Tahun',
-    scanSuccessTitle: 'Struk Berhasil',
+    scanSuccessTitle: 'Berhasil di-Scan',
     scanSuccessDate: (d: string) => `Tanggal: ${d}`,
     viewTransaction: 'Lihat Transaksi',
+    cameraCapture: 'Ambil Foto',
+    analyzing: 'Menganalisis...',
+    confirmEntry: 'Konfirmasi Entri',
+    cameraAccessDenied: 'Akses kamera ditolak. Silakan cek izin browser.',
   }
 } as const;
 
