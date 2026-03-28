@@ -75,7 +75,7 @@ export default function DashboardPage() {
     date: new Date().toISOString().split("T")[0],
     category: "GENERAL",
     description: "",
-    type: "Debit",
+    type: "Expense",
     currency: "IDR",
     amount: "",
     source: "",
@@ -300,19 +300,19 @@ export default function DashboardPage() {
       const val = convert(rawVal, txCurrency, currency);
 
       // Update ALL TIME totals for Net Worth
-      if (tx.type === "Credit") totalIncome += val;
-      else if (tx.type === "Debit" || tx.type === "Investment")
+      if (tx.type === "Credit" || tx.type === "Income") totalIncome += val;
+      else if (tx.type === "Debit" || tx.type === "Expense" || tx.type === "Investment")
         totalExpense += val;
 
       if (isAllMonths) {
         // Compare Current Year vs Previous Year
         if (txYear === selectedYear) {
-          if (tx.type === "Credit") incomeCurrent += val;
-          else if (tx.type === "Debit") expenseCurrent += val;
+          if (tx.type === "Credit" || tx.type === "Income") incomeCurrent += val;
+          else if (tx.type === "Debit" || tx.type === "Expense") expenseCurrent += val;
           else if (tx.type === "Investment") investmentCurrent += val;
         } else if (txYear === selectedYear - 1) {
-          if (tx.type === "Credit") incomePrev += val;
-          else if (tx.type === "Debit") expensePrev += val;
+          if (tx.type === "Credit" || tx.type === "Income") incomePrev += val;
+          else if (tx.type === "Debit" || tx.type === "Expense") expensePrev += val;
           else if (tx.type === "Investment") investmentPrev += val;
         }
       } else {
@@ -322,12 +322,12 @@ export default function DashboardPage() {
           selectedMonth === 0 ? selectedYear - 1 : selectedYear;
 
         if (txMonth === selectedMonth && txYear === selectedYear) {
-          if (tx.type === "Credit") incomeCurrent += val;
-          else if (tx.type === "Debit") expenseCurrent += val;
+          if (tx.type === "Credit" || tx.type === "Income") incomeCurrent += val;
+          else if (tx.type === "Debit" || tx.type === "Expense") expenseCurrent += val;
           else if (tx.type === "Investment") investmentCurrent += val;
         } else if (txMonth === prevMonth && txYear === prevMonthYear) {
-          if (tx.type === "Credit") incomePrev += val;
-          else if (tx.type === "Debit") expensePrev += val;
+          if (tx.type === "Credit" || tx.type === "Income") incomePrev += val;
+          else if (tx.type === "Debit" || tx.type === "Expense") expensePrev += val;
           else if (tx.type === "Investment") investmentPrev += val;
         }
       }
@@ -471,8 +471,8 @@ export default function DashboardPage() {
           invested: 0,
         };
       }
-      if (tx.type === "Debit") acc[tx.category].spent += amount;
-      else if (tx.type === "Credit") acc[tx.category].received += amount;
+      if (tx.type === "Debit" || tx.type === "Expense") acc[tx.category].spent += amount;
+      else if (tx.type === "Credit" || tx.type === "Income") acc[tx.category].received += amount;
       else if (tx.type === "Investment") acc[tx.category].invested += amount;
 
       return acc;
@@ -702,7 +702,7 @@ export default function DashboardPage() {
           date: new Date().toISOString().split("T")[0],
           category: "GENERAL",
           description: "",
-          type: "Debit",
+          type: "Expense",
           currency: "IDR",
           amount: "",
           source: "",
@@ -835,7 +835,7 @@ export default function DashboardPage() {
         category: tempScanData.category || "GENERAL",
         color: assignColor(tempScanData.category || "GENERAL"),
         description: tempScanData.description,
-        type: "Debit",
+        type: "Expense",
         amount: tempScanData.amount,
         currency: tempScanData.currency || "IDR",
         source: "Gemini Vision",
@@ -1213,22 +1213,22 @@ export default function DashboardPage() {
                     className="w-full bg-surface-container-low border border-outline-variant/30 rounded-xl px-4 py-3 text-on-surface text-sm focus:outline-none focus:border-primary transition-colors"
                   >
                     <option
-                      value="Debit"
+                      value="Expense"
                       className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
                     >
-                      Debit
+                      {t("typeExpense")}
                     </option>
                     <option
-                      value="Credit"
+                      value="Income"
                       className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
                     >
-                      Credit
+                      {t("typeIncome")}
                     </option>
                     <option
                       value="Investment"
                       className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
                     >
-                      Investment
+                      {t("typeInvestment")}
                     </option>
                   </select>
                 </div>
@@ -1427,8 +1427,13 @@ export default function DashboardPage() {
                 </span>
               </button>
 
-              {showCurrencyDropdown && (
-                <div className="absolute right-0 top-10 mt-2 w-48 bg-white dark:bg-slate-900 border border-outline-variant/20 rounded-2xl shadow-2xl z-[100] overflow-hidden text-[11px] animate-in fade-in slide-in-from-top-2 duration-200">
+                <div 
+                  className={`absolute right-0 lg:left-0 top-10 mt-2 w-48 bg-white dark:bg-slate-900 border border-outline-variant/20 rounded-2xl shadow-2xl z-[100] overflow-hidden text-[11px] dropdown-transition origin-top-right lg:origin-top-left ${
+                    showCurrencyDropdown 
+                      ? "opacity-100 translate-y-0 scale-100 pointer-events-auto visible" 
+                      : "opacity-0 -translate-y-8 scale-90 pointer-events-none invisible"
+                  }`}
+                >
                   <div className="px-3 py-2 border-b border-outline-variant/10 font-black text-[9px] uppercase tracking-widest text-on-surface-variant bg-slate-50 dark:bg-slate-800">
                     {t("preferredCurrency")}
                   </div>
@@ -1459,7 +1464,6 @@ export default function DashboardPage() {
                     )}
                   </div>
                 </div>
-              )}
             </div>
 
             <div className="flex bg-surface-container-low border border-outline-variant/30 rounded-lg p-0.5">
@@ -1503,8 +1507,13 @@ export default function DashboardPage() {
                 />
               </button>
 
-              {showUserDropdown && (
-                <div className="absolute right-0 top-12 mt-2 w-64 bg-white dark:bg-slate-900 border border-outline-variant/20 rounded-2xl shadow-2xl z-[100] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                <div 
+                  className={`absolute right-0 top-12 mt-2 w-64 bg-white dark:bg-slate-900 border border-outline-variant/20 rounded-2xl shadow-2xl z-[100] overflow-hidden dropdown-transition origin-top-right ${
+                    showUserDropdown 
+                      ? "opacity-100 translate-y-0 scale-100 pointer-events-auto visible" 
+                      : "opacity-0 -translate-y-8 scale-90 pointer-events-none invisible"
+                  }`}
+                >
                   <div className="px-5 py-4 border-b border-outline-variant/10 bg-slate-50 dark:bg-slate-800/50">
                     <p className="text-xs font-black uppercase tracking-widest text-primary mb-1">
                       {t("profile")}
@@ -1568,7 +1577,6 @@ export default function DashboardPage() {
                     </button>
                   </div>
                 </div>
-              )}
             </div>
           </div>
         </div>
@@ -1761,37 +1769,40 @@ export default function DashboardPage() {
 
         {/* Main Data Table Section */}
         <section className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-bold text-on-surface">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <h3 className="text-xl font-black text-on-surface font-headline tracking-tight">
               {t("recentLedger")}
             </h3>
-            <div className="flex items-center gap-2 relative" ref={filterDropdownRef}>
+            <div className="flex flex-wrap items-center gap-2 sm:gap-4 relative" ref={filterDropdownRef}>
               {mounted && (
                 <>
-                  <div className="flex bg-surface-container-low dark:bg-slate-800 p-1 rounded-lg">
+                  {/* View Toggle */}
+                  <div className="flex bg-surface-container-low dark:bg-slate-800 p-1 rounded-xl shadow-inner-sm">
                     <button
                       onClick={() => setViewMode("grid")}
-                      className={`px-3 py-1 text-xs font-bold rounded shadow-sm transition-colors cursor-pointer ${viewMode === "grid" ? "bg-surface-container-lowest dark:bg-slate-700 text-foreground" : "text-on-surface-variant hover:text-on-surface"}`}
+                      className={`px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all duration-200 cursor-pointer ${viewMode === "grid" ? "bg-white dark:bg-slate-700 text-primary shadow-sm scale-105" : "text-on-surface-variant hover:text-on-surface"}`}
                     >
                       {t("btnGrid")}
                     </button>
                     <button
                       onClick={() => setViewMode("pivot")}
-                      className={`px-3 py-1 text-xs font-bold rounded shadow-sm transition-colors cursor-pointer ${viewMode === "pivot" ? "bg-surface-container-lowest dark:bg-slate-700 text-foreground" : "text-on-surface-variant hover:text-on-surface"}`}
+                      className={`px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all duration-200 cursor-pointer ${viewMode === "pivot" ? "bg-white dark:bg-slate-700 text-primary shadow-sm scale-105" : "text-on-surface-variant hover:text-on-surface"}`}
                     >
                       {t("btnPivot")}
                     </button>
                   </div>
 
-                  {/* Period Selector (Year/Month) */}
-                  <div className="flex flex-wrap items-center gap-2">
+                  <div className="h-4 w-px bg-outline-variant/30 hidden sm:block"></div>
+
+                  {/* Period Selector Group */}
+                  <div className="flex items-center gap-2">
                     {/* Year Select */}
-                    <div className="relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-outline-variant bg-surface-container-lowest text-on-surface shadow-sm transition-all focus-within:ring-2 focus-within:ring-primary/20">
-                      <span className="material-symbols-outlined text-sm text-primary opacity-70">calendar_month</span>
+                    <div className="relative flex items-center gap-1.5 px-3 py-2 rounded-xl border border-outline-variant/30 bg-surface-container-low text-on-surface shadow-sm transition-all focus-within:ring-2 focus-within:ring-primary/20 hover:border-outline-variant">
+                      <span className="material-symbols-outlined text-sm text-primary/70">calendar_month</span>
                       <select 
                         value={selectedYear}
                         onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-                        className="bg-transparent border-none text-[11px] font-bold outline-none cursor-pointer p-0 m-0 pr-4 text-on-surface appearance-none"
+                        className="bg-transparent border-none text-[11px] font-bold outline-none cursor-pointer p-0 m-0 pr-5 text-on-surface appearance-none"
                       >
                         {availableYears.map(year => (
                           <option key={year} value={year} className="bg-surface-container-lowest text-on-surface">{year}</option>
@@ -1803,11 +1814,11 @@ export default function DashboardPage() {
                     </div>
 
                     {/* Month Select */}
-                    <div className="relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-outline-variant bg-surface-container-lowest text-on-surface shadow-sm transition-all focus-within:ring-2 focus-within:ring-primary/20">
+                    <div className="relative flex items-center gap-1.5 px-3 py-2 rounded-xl border border-outline-variant/30 bg-surface-container-low text-on-surface shadow-sm transition-all focus-within:ring-2 focus-within:ring-primary/20 hover:border-outline-variant">
                       <select 
                         value={selectedMonth}
                         onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
-                        className="bg-transparent border-none text-[11px] font-bold outline-none cursor-pointer p-0 m-0 pr-4 text-on-surface appearance-none"
+                        className="bg-transparent border-none text-[11px] font-bold outline-none cursor-pointer p-0 m-0 pr-5 text-on-surface appearance-none"
                       >
                         <option value={-1} className="bg-surface-container-lowest text-on-surface">{t("allMonths")}</option>
                         {(t("months") as unknown as string[]).map((m, idx) => (
@@ -1844,64 +1855,71 @@ export default function DashboardPage() {
               <div className="relative flex items-center" ref={filterDropdownRef}>
                 <button
                   onClick={() => setShowFilterDropdown(!showFilterDropdown)}
-                  className={`flex items-center gap-1 px-3 py-1.5 rounded-lg border text-[11px] font-bold transition-all cursor-pointer ${filterCategory !== "ALL" || showFilterDropdown ? "border-primary bg-primary/5 text-primary" : "border-outline-variant text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low"}`}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl border text-[11px] font-black uppercase tracking-wider transition-all duration-300 cursor-pointer shadow-sm ${filterCategory !== "ALL" || showFilterDropdown ? "border-primary bg-primary/10 text-primary" : "border-outline-variant/30 text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low"}`}
                 >
                   <span className="material-symbols-outlined text-sm">
                     filter_list
                   </span>
                   {t("colCategory")}
+                  {filterCategory !== "ALL" && (
+                     <span className="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+                  )}
                 </button>
-                {showFilterDropdown && (
-                  <div className="absolute right-0 top-10 mt-2 w-56 bg-white dark:bg-slate-900 border border-outline-variant/20 rounded-2xl shadow-2xl z-[100] overflow-hidden text-sm animate-in fade-in slide-in-from-top-2 duration-200">
-                    <div className="px-4 py-3 border-b border-outline-variant/10 font-black text-[10px] uppercase tracking-widest text-on-surface-variant bg-slate-50 dark:bg-slate-800 flex justify-between items-center">
-                      {t("filterPrompt")}
-                      {filterCategory !== "ALL" && (
-                        <button
-                          onClick={() => setFilterCategory("ALL")}
-                          className="text-error hover:underline text-[9px] uppercase"
-                        >
-                          {t("resetFilter")}
-                        </button>
-                      )}
-                    </div>
-                    <div className="max-h-72 overflow-y-auto py-1 scrollbar-thin">
+                <div 
+                  className={`absolute right-0 top-12 mt-2 w-56 bg-white dark:bg-slate-900 border border-outline-variant/20 rounded-2xl shadow-2xl z-[100] overflow-hidden text-sm dropdown-transition origin-top-right ${
+                    showFilterDropdown 
+                      ? "opacity-100 translate-y-0 scale-100 pointer-events-auto visible" 
+                      : "opacity-0 -translate-y-8 scale-90 pointer-events-none invisible"
+                  }`}
+                >
+                  <div className="px-4 py-3 border-b border-outline-variant/10 font-black text-[10px] uppercase tracking-widest text-on-surface-variant bg-slate-50 dark:bg-slate-800 flex justify-between items-center">
+                    {t("filterPrompt")}
+                    {filterCategory !== "ALL" && (
                       <button
-                        onClick={() => {
-                          setFilterCategory("ALL");
-                          setShowFilterDropdown(false);
-                        }}
-                        className={`w-full text-left px-4 py-3 hover:bg-primary/5 transition-colors text-xs cursor-pointer flex items-center justify-between ${filterCategory === "ALL" ? "text-primary font-black bg-primary/5" : "text-on-surface font-semibold"}`}
+                        onClick={() => setFilterCategory("ALL")}
+                        className="text-error hover:underline text-[9px] uppercase"
                       >
-                        {t("filterAll")}
-                        {filterCategory === "ALL" && (
-                          <span className="material-symbols-outlined text-sm">
-                            check
-                          </span>
-                        )}
+                        {t("resetFilter")}
                       </button>
-                      <div className="h-[1px] bg-outline-variant/10 mx-2 my-1"></div>
-                      {availableCategories
-                        .filter((c) => c !== "ALL")
-                        .map((cat) => (
-                          <button
-                            key={cat}
-                            onClick={() => {
-                              setFilterCategory(cat);
-                              setShowFilterDropdown(false);
-                            }}
-                            className={`w-full text-left px-4 py-3 hover:bg-primary/5 transition-colors text-xs cursor-pointer flex items-center justify-between ${filterCategory === cat ? "text-primary font-black bg-primary/5" : "text-on-surface font-semibold"}`}
-                          >
-                            {cat}
-                            {filterCategory === cat && (
-                              <span className="material-symbols-outlined text-sm">
-                                check
-                              </span>
-                            )}
-                          </button>
-                        ))}
-                    </div>
+                    )}
                   </div>
-                )}
+                  <div className="max-h-72 overflow-y-auto py-1 scrollbar-thin">
+                    <button
+                      onClick={() => {
+                        setFilterCategory("ALL");
+                        setShowFilterDropdown(false);
+                      }}
+                      className={`w-full text-left px-4 py-3 hover:bg-primary/5 transition-colors text-xs cursor-pointer flex items-center justify-between ${filterCategory === "ALL" ? "text-primary font-black bg-primary/5" : "text-on-surface font-semibold"}`}
+                    >
+                      {t("filterAll")}
+                      {filterCategory === "ALL" && (
+                        <span className="material-symbols-outlined text-sm">
+                          check
+                        </span>
+                      )}
+                    </button>
+                    <div className="h-[1px] bg-outline-variant/10 mx-2 my-1"></div>
+                    {availableCategories
+                      .filter((c) => c !== "ALL")
+                      .map((cat) => (
+                        <button
+                          key={cat}
+                          onClick={() => {
+                            setFilterCategory(cat);
+                            setShowFilterDropdown(false);
+                          }}
+                          className={`w-full text-left px-4 py-3 hover:bg-primary/5 transition-colors text-xs cursor-pointer flex items-center justify-between ${filterCategory === cat ? "text-primary font-black bg-primary/5" : "text-on-surface font-semibold"}`}
+                        >
+                          {cat}
+                          {filterCategory === cat && (
+                            <span className="material-symbols-outlined text-sm">
+                              check
+                            </span>
+                          )}
+                        </button>
+                      ))}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -1981,12 +1999,12 @@ export default function DashboardPage() {
                           </div>
                         </td>
                         <td
-                          className={`px-3 py-2 font-bold ${tx.type === "Credit" ? "text-secondary" : tx.type === "Investment" ? "text-indigo-500" : "text-error"}`}
+                          className={`px-3 py-2 font-bold ${tx.type === "Credit" || tx.type === "Income" ? "text-secondary" : tx.type === "Investment" ? "text-indigo-500" : "text-error"}`}
                         >
-                          {tx.type}
+                          {tx.type === "Credit" || tx.type === "Income" ? t("typeIncome") : tx.type === "Debit" || tx.type === "Expense" ? t("typeExpense") : t("typeInvestment")}
                         </td>
                         <td
-                          className={`px-3 py-2 text-right font-mono font-bold whitespace-nowrap ${tx.type === "Credit" ? "text-secondary" : tx.type === "Investment" ? "text-indigo-500" : ""}`}
+                          className={`px-3 py-2 text-right font-mono font-bold whitespace-nowrap ${tx.type === "Credit" || tx.type === "Income" ? "text-secondary" : tx.type === "Investment" ? "text-indigo-500" : ""}`}
                         >
                           <div className={tx.amount.length > 18 ? "text-[9px]" : tx.amount.length > 15 ? "text-[10px]" : ""}>
                           {(() => {
@@ -2009,9 +2027,9 @@ export default function DashboardPage() {
                             }
                             const val = parseFloat(cleanNum) || 0;
                             const sign =
-                              tx.type === "Credit"
+                              tx.type === "Credit" || tx.type === "Income"
                                 ? "+"
-                                : tx.type === "Debit"
+                                : tx.type === "Debit" || tx.type === "Expense"
                                   ? "-"
                                   : "";
                             return (
@@ -2142,11 +2160,11 @@ export default function DashboardPage() {
       </main>
 
       {/* Footer Shared Component */}
-      <footer className="w-full py-8 mt-auto bg-slate-100 dark:bg-slate-900 border-t border-outline-variant/30">
-        <div className="flex flex-col md:flex-row justify-between items-center px-10 max-w-7xl mx-auto space-y-4 md:space-y-0">
-          <span className="text-sm font-bold text-slate-900 dark:text-slate-100">
+      <footer className="w-full border-t border-outline-variant/10 py-12 pb-36 md:pb-12 bg-surface-container-lowest dark:bg-slate-900/30">
+        <div className="max-w-7xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-8">
+          <p className="font-headline font-black text-2xl tracking-tighter opacity-20 dark:opacity-40">
             SnapFins
-          </span>
+          </p>
           <div className="flex gap-8 font-inter text-[11px] uppercase tracking-widest font-medium">
             <a
               className="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-opacity duration-300"
@@ -2172,7 +2190,7 @@ export default function DashboardPage() {
           </p>
         </div>
       </footer>
-      {/* Mobile Bottom Navigation - v1.0.0 */}
+      {/* Mobile Bottom Navigation - v1.0.1 */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 z-[100] px-4 pb-4">
         <div className="bg-surface/80 dark:bg-slate-900/80 backdrop-blur-xl border border-outline-variant/20 rounded-2xl shadow-[0_-10px_40px_rgba(0,0,0,0.1)] flex justify-around items-center py-3">
           <button className="flex flex-col items-center gap-1 group">
@@ -2191,12 +2209,6 @@ export default function DashboardPage() {
             <div className="w-8 h-1 bg-transparent rounded-full mb-1"></div>
             <span className="material-symbols-outlined text-on-surface-variant">monitoring</span>
             <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">{t("navAnalytics")}</span>
-          </button>
-          
-          <button className="flex flex-col items-center gap-1 group opacity-60 hover:opacity-100 transition-opacity" onClick={() => setShowUserDropdown(!showUserDropdown)}>
-            <div className="w-8 h-1 bg-transparent rounded-full mb-1"></div>
-            <span className="material-symbols-outlined text-on-surface-variant">person</span>
-            <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">{lang === "id" ? "PROFIL" : "PROFILE"}</span>
           </button>
         </div>
       </div>
