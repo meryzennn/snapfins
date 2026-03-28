@@ -81,6 +81,46 @@ export default function DashboardPage() {
     source: "",
   });
 
+  // --- Trend Indicator Component with 5s Loop ---
+  const TrendIndicator = ({ trend, isExpense = false, context }: { trend: string, isExpense?: boolean, context?: string }) => {
+    const [animationKey, setAnimationKey] = useState(0);
+
+    useEffect(() => {
+      if (!mounted || trend === "—") return;
+      const interval = setInterval(() => {
+        setAnimationKey((prev) => prev + 1);
+      }, 5000);
+      return () => clearInterval(interval);
+    }, [mounted, trend]);
+
+    if (!mounted || trend === "—") return null;
+    const val = parseFloat(trend.replace(/\s+/g, ""));
+    const colorClass = isExpense ? (val <= 0 ? "text-secondary bg-secondary-container/20" : "text-error bg-error-container/20") : (val >= 0 ? "text-secondary bg-secondary-container/20" : "text-error bg-error-container/20");
+    const strokeColor = "currentColor";
+
+    return (
+      <div key={animationKey} className="flex flex-col gap-1 items-start">
+        <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-bold ${colorClass} shrink-0 w-fit`}>
+          <svg width="22" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="overflow-visible shrink-0">
+            {val >= 0 ? (
+              <>
+                <path key={`up-path-${animationKey}`} d="M2 18L8 12L12 16L22 6" stroke={strokeColor} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="animate-draw-path" />
+                <path key={`up-arrow-${animationKey}`} d="M16 6H22V12" stroke={strokeColor} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="animate-fade-scale" />
+              </>
+            ) : (
+              <>
+                <path key={`down-path-${animationKey}`} d="M2 6L8 12L12 8L22 18" stroke={strokeColor} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="animate-draw-path" />
+                <path key={`down-arrow-${animationKey}`} d="M16 18H22V12" stroke={strokeColor} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="animate-fade-scale" />
+              </>
+            )}
+          </svg>
+          <span>{Math.abs(val).toFixed(1)}%</span>
+        </div>
+        {context && <span className="text-[9px] font-medium text-on-surface-variant/50 ml-0.5">{context}</span>}
+      </div>
+    );
+  };
+
   const toggleTheme = () => {
     const isDark = theme === "dark";
     const newTheme = isDark ? "light" : "dark";
@@ -286,24 +326,31 @@ export default function DashboardPage() {
     });
 
     const netWorthNow = totalIncome - totalExpense;
-
-    // Calculate Net Worth at Start of Period to find trend
-    // (A simplification: Net Worth Trend follows the balance change of the period)
     const periodBalance = incomeCurrent - expenseCurrent - investmentCurrent;
     const netWorthAtStart = netWorthNow - periodBalance;
 
-    const computeTrend = (curr: number, prev: number) => {
-      if (prev === 0) return null;
-      return ((curr - prev) / prev) * 100;
+    const computeTrend = (curr: number, prev: number, baseline?: number) => {
+      if (prev === 0) {
+        if (baseline && baseline > 0) return (curr / baseline) * 100;
+        return curr > 0 ? 100.0 : (curr < 0 ? -100.0 : null);
+      }
+      const diff = curr - prev;
+      if (Math.abs(diff) < 0.01) return null;
+      return (diff / Math.abs(prev)) * 100;
     };
 
     const iTrend = computeTrend(incomeCurrent, incomePrev);
-    const eTrend = computeTrend(expenseCurrent, expensePrev);
-    const invTrend = computeTrend(investmentCurrent, investmentPrev);
+    const eTrend = computeTrend(expenseCurrent, expensePrev, incomeCurrent);
+    const invTrend = computeTrend(investmentCurrent, investmentPrev, incomeCurrent);
     const nwTrend =
       netWorthAtStart === 0
-        ? null
+        ? (incomeCurrent > 0 ? (periodBalance / incomeCurrent) * 100 : (periodBalance > 0 ? 100.0 : (periodBalance < 0 ? -100.0 : null)))
         : (periodBalance / Math.abs(netWorthAtStart)) * 100;
+
+    const hasHistory = incomePrev > 0 || expensePrev > 0 || investmentPrev > 0;
+    const comparisonContext = isAllMonths
+      ? (hasHistory ? `vs ${selectedYear - 1}` : "")
+      : (hasHistory ? (lang === "id" ? "vs bulan lalu" : "vs last month") : "");
 
     return {
       income: formatValue(incomeCurrent, currency, lang),
@@ -314,21 +361,31 @@ export default function DashboardPage() {
       expenseTrend: eTrend !== null ? eTrend.toFixed(1) : "—",
       investmentTrend: invTrend !== null ? invTrend.toFixed(1) : "—",
       netWorthTrend: nwTrend !== null ? nwTrend.toFixed(1) : "—",
+      comparisonContext,
     };
   };
 
   const totals = calculateTotals();
 
-  // Dynamically calculate days remaining until end of current month (relative to selected period)
-  const daysUntilEndOfMonth = (() => {
+  // Dynamically calculate days remaining until end of period
+  const daysLeftLabel = (() => {
     const today = new Date();
-    if (selectedYear !== today.getFullYear() || selectedMonth !== today.getMonth()) return 0;
-    const lastDay = new Date(
-      today.getFullYear(),
-      today.getMonth() + 1,
-      0,
-    ).getDate();
-    return lastDay - today.getDate();
+    const isCurrentYear = selectedYear === today.getFullYear();
+    const isCurrentMonth = selectedMonth === today.getMonth();
+
+    if (selectedMonth === -1) {
+      // Annual view
+      if (!isCurrentYear) return null;
+      const endOfYear = new Date(selectedYear, 11, 31);
+      const diff = Math.ceil((endOfYear.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+      return `${Math.max(0, diff)} ${lang === "id" ? "hari tersisa tahun ini" : "days left this year"}`;
+    } else {
+      // Monthly view
+      if (!isCurrentYear || !isCurrentMonth) return null;
+      const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+      const diff = lastDay - today.getDate();
+      return `${Math.max(0, diff)} ${lang === "id" ? "hari tersisa bulan ini" : "days left this month"}`;
+    }
   })();
 
   // Filter transactions based on active category and period
@@ -1318,188 +1375,139 @@ export default function DashboardPage() {
 
         {/* Summary Cards Grid */}
         <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {/* Helper function for robust currency parsing */}
-          {(() => {
-            const parseCurrency = (str: string) => {
-              // Regex to separate symbol (non-digits) from number (digits/separators)
-              // Matches symbol at the start and the rest as the amount
-              const match = str.match(/^([^0-9\-]+)?\s?(.+)$/);
-              if (!match) return { symbol: "", amount: str };
-              return { symbol: match[1] || "", amount: match[2] || "" };
-            };
+          {/* 1. Total Net Worth */}
+          <div className="glass-card p-6 rounded-2xl border border-white/40 dark:border-white/10 shadow-xl relative overflow-hidden group bg-gradient-to-br from-white/60 dark:from-slate-900/60 to-surface-container-low/40 dark:to-slate-800/40">
+            <div className="absolute -top-4 -right-4 w-24 h-24 bg-primary/5 rounded-full blur-2xl group-hover:bg-primary/10 transition-colors"></div>
+            <div className="relative flex justify-between items-start min-h-[2.5rem] mb-2">
+              {totals.netWorthTrend !== "—" && totals.netWorthTrend !== "0.0" && (
+                <TrendIndicator trend={totals.netWorthTrend} context={totals.comparisonContext} />
+              )}
+            </div>
+            <div className="relative flex justify-between items-start mb-4 gap-4">
+              <div className="min-w-0 flex-grow">
+                <p className="text-[10px] uppercase tracking-[0.2em] font-extrabold text-on-surface-variant mb-1 truncate">
+                  {t("totalNetWorth")}
+                </p>
+                <div 
+                  className="text-on-surface text-3xl font-black font-headline tracking-tighter truncate" 
+                  title={totals.netWorth}
+                >
+                  {totals.netWorth}
+                </div>
+              </div>
+              <div className="w-12 h-12 flex-shrink-0 flex items-center justify-center rounded-xl bg-white dark:bg-slate-800 shadow-sm border border-outline-variant/20">
+                <span
+                  className="material-symbols-outlined text-primary text-2xl"
+                  style={{ fontVariationSettings: "'FILL' 1" }}
+                >
+                  account_balance
+                </span>
+              </div>
+            </div>
+          </div>
 
-            const renderCardData = (valStr: string) => {
-              const { symbol, amount } = parseCurrency(valStr);
-              return (
-                <h2 className="text-3xl font-black font-headline tracking-tighter flex items-baseline gap-1">
-                  <span className="text-base opacity-50 font-medium">
-                    {symbol}
+          {/* 2. Monthly Income */}
+          <div className="glass-card p-6 rounded-2xl border border-white/40 dark:border-white/10 shadow-xl relative overflow-hidden group bg-gradient-to-br from-white/60 dark:from-slate-900/60 to-secondary-container/10">
+            <div className="absolute -top-4 -right-4 w-24 h-24 bg-secondary/5 rounded-full blur-2xl group-hover:bg-secondary/10 transition-colors"></div>
+            <div className="relative flex justify-between items-start min-h-[2.5rem] mb-2">
+              {totals.incomeTrend !== "—" && totals.incomeTrend !== "0.0" && (
+                <TrendIndicator trend={totals.incomeTrend} context={totals.comparisonContext} />
+              )}
+            </div>
+            <div className="relative flex justify-between items-start mb-4 gap-4">
+              <div className="min-w-0 flex-grow">
+                <p className="text-[10px] uppercase tracking-[0.2em] font-extrabold text-on-surface-variant mb-1 truncate">
+                  {selectedMonth === -1 ? t("annualIncome") : t("monthlyIncome")}
+                </p>
+                <div 
+                  className="text-secondary text-3xl font-black font-headline tracking-tighter truncate" 
+                  title={totals.income}
+                >
+                  {totals.income}
+                </div>
+              </div>
+              <div className="w-12 h-12 flex-shrink-0 flex items-center justify-center rounded-xl bg-white dark:bg-slate-800 shadow-sm border border-outline-variant/20">
+                <span
+                  className="material-symbols-outlined text-secondary text-2xl"
+                  style={{ fontVariationSettings: "'FILL' 1" }}
+                >
+                  insights
+                </span>
+              </div>
+            </div>
+            <div className="mt-3 pt-3 border-t border-outline-variant/10 flex items-center gap-2 text-[10px] font-bold text-on-surface-variant">
+              {daysLeftLabel && (
+                <>
+                  <span className="material-symbols-outlined text-sm">
+                    calendar_month
                   </span>
-                  <span className="truncate">{amount}</span>
-                </h2>
-              );
-            };
+                  {daysLeftLabel}
+                </>
+              )}
+            </div>
+          </div>
 
-            return (
-              <>
-                {/* 1. Total Net Worth */}
-                <div className="glass-card p-6 rounded-2xl border border-white/40 dark:border-white/10 shadow-xl relative overflow-hidden group bg-gradient-to-br from-white/60 dark:from-slate-900/60 to-surface-container-low/40 dark:to-slate-800/40">
-                  <div className="absolute -top-4 -right-4 w-24 h-24 bg-primary/5 rounded-full blur-2xl group-hover:bg-primary/10 transition-colors"></div>
-                  <div className="relative flex justify-between items-start h-6 mb-1">
-                    {mounted && totals.netWorthTrend !== "—" && (
-                      <div
-                        className={`flex items-center gap-2 w-fit px-2 py-0.5 rounded-md text-[10px] font-bold ${parseFloat(totals.netWorthTrend) >= 0 ? "text-secondary bg-secondary-container/30" : "text-error bg-error-container/30"}`}
-                      >
-                        <span className="material-symbols-outlined text-[12px]">
-                          {parseFloat(totals.netWorthTrend) >= 0
-                            ? "trending_up"
-                            : "trending_down"}
-                        </span>
-                        {totals.netWorthTrend}%
-                      </div>
-                    )}
-                  </div>
-                  <div className="relative flex justify-between items-start mb-4">
-                    <div>
-                      <p className="text-[10px] uppercase tracking-[0.2em] font-extrabold text-on-surface-variant mb-1">
-                        {t("totalNetWorth")}
-                      </p>
-                      <div className="text-on-surface">
-                        {renderCardData(totals.netWorth)}
-                      </div>
-                    </div>
-                    <div className="w-12 h-12 flex items-center justify-center rounded-xl bg-white dark:bg-slate-800 shadow-sm border border-outline-variant/20">
-                      <span
-                        className="material-symbols-outlined text-primary text-2xl"
-                        style={{ fontVariationSettings: "'FILL' 1" }}
-                      >
-                        account_balance
-                      </span>
-                    </div>
-                  </div>
+          {/* 3. Monthly Investment */}
+          <div className="glass-card p-6 rounded-2xl border border-white/40 dark:border-white/10 shadow-xl relative overflow-hidden group bg-gradient-to-br from-white/60 dark:from-slate-900/60 to-indigo-500/10">
+            <div className="absolute -top-4 -right-4 w-24 h-24 bg-indigo-500/5 rounded-full blur-2xl group-hover:bg-indigo-500/10 transition-colors"></div>
+            <div className="relative flex justify-between items-start min-h-[2.5rem] mb-2">
+              {totals.investmentTrend !== "—" && totals.investmentTrend !== "0.0" && (
+                <TrendIndicator trend={totals.investmentTrend} context={totals.comparisonContext} />
+              )}
+            </div>
+            <div className="relative flex justify-between items-start mb-4 gap-4">
+              <div className="min-w-0 flex-grow">
+                <p className="text-[10px] uppercase tracking-[0.2em] font-extrabold text-on-surface-variant mb-1 truncate">
+                  {selectedMonth === -1 ? t("annualInvestment") : t("monthlyInvestment")}
+                </p>
+                <div 
+                  className="text-indigo-500 text-3xl font-black font-headline tracking-tighter truncate" 
+                  title={totals.investment}
+                >
+                  {totals.investment}
                 </div>
+              </div>
+              <div className="w-12 h-12 flex-shrink-0 flex items-center justify-center rounded-xl bg-white dark:bg-slate-800 shadow-sm border border-outline-variant/20">
+                <span
+                  className="material-symbols-outlined text-indigo-500 text-2xl"
+                  style={{ fontVariationSettings: "'FILL' 1" }}
+                >
+                  rocket_launch
+                </span>
+              </div>
+            </div>
+          </div>
 
-                {/* 2. Monthly Income */}
-                <div className="glass-card p-6 rounded-2xl border border-white/40 dark:border-white/10 shadow-xl relative overflow-hidden group bg-gradient-to-br from-white/60 dark:from-slate-900/60 to-secondary-container/10">
-                  <div className="absolute -top-4 -right-4 w-24 h-24 bg-secondary/5 rounded-full blur-2xl group-hover:bg-secondary/10 transition-colors"></div>
-                  <div className="relative flex justify-between items-start h-6 mb-1">
-                    {mounted && totals.incomeTrend !== "—" && (
-                      <div
-                        className={`flex items-center gap-2 w-fit px-2 py-0.5 rounded-md text-[10px] font-bold ${parseFloat(totals.incomeTrend) >= 0 ? "text-secondary bg-secondary-container/30" : "text-error bg-error-container/30"}`}
-                      >
-                        <span className="material-symbols-outlined text-[12px]">
-                          {parseFloat(totals.incomeTrend) >= 0
-                            ? "trending_up"
-                            : "trending_down"}
-                        </span>
-                        {totals.incomeTrend}%
-                      </div>
-                    )}
-                  </div>
-                  <div className="relative flex justify-between items-start mb-4">
-                    <div>
-                      <p className="text-[10px] uppercase tracking-[0.2em] font-extrabold text-on-surface-variant mb-1">
-                        {t("monthlyIncome")}
-                      </p>
-                      <div className="text-secondary">
-                        {renderCardData(totals.income)}
-                      </div>
-                    </div>
-                    <div className="w-12 h-12 flex items-center justify-center rounded-xl bg-white dark:bg-slate-800 shadow-sm border border-outline-variant/20">
-                      <span
-                        className="material-symbols-outlined text-secondary text-2xl"
-                        style={{ fontVariationSettings: "'FILL' 1" }}
-                      >
-                        insights
-                      </span>
-                    </div>
-                  </div>
-                  <div className="mt-3 pt-3 border-t border-outline-variant/10 flex items-center gap-2 text-[10px] font-bold text-on-surface-variant">
-                    <span className="material-symbols-outlined text-sm">
-                      calendar_month
-                    </span>
-                    {lang === "id"
-                      ? `Sisa ${daysUntilEndOfMonth} hari di bulan ini`
-                      : `${daysUntilEndOfMonth} days left this month`}
-                  </div>
+          {/* 4. Monthly Expense */}
+          <div className="glass-card p-6 rounded-2xl border border-white/40 dark:border-white/10 shadow-xl relative overflow-hidden group bg-gradient-to-br from-white/60 dark:from-slate-900/60 to-error-container/10">
+            <div className="absolute -top-4 -right-4 w-24 h-24 bg-error/5 rounded-full blur-2xl group-hover:bg-error/10 transition-colors"></div>
+            <div className="relative flex justify-between items-start min-h-[2.5rem] mb-2">
+              {totals.expenseTrend !== "—" && totals.expenseTrend !== "0.0" && (
+                <TrendIndicator trend={totals.expenseTrend} isExpense context={totals.comparisonContext} />
+              )}
+            </div>
+            <div className="relative flex justify-between items-start mb-4 gap-4">
+              <div className="min-w-0 flex-grow">
+                <p className="text-[10px] uppercase tracking-[0.2em] font-extrabold text-on-surface-variant mb-1 truncate">
+                  {selectedMonth === -1 ? t("annualExpense") : t("monthlyExpense")}
+                </p>
+                <div 
+                  className="text-error text-3xl font-black font-headline tracking-tighter truncate" 
+                  title={totals.expense}
+                >
+                  {totals.expense}
                 </div>
-
-                {/* 3. Monthly Investment */}
-                <div className="glass-card p-6 rounded-2xl border border-white/40 dark:border-white/10 shadow-xl relative overflow-hidden group bg-gradient-to-br from-white/60 dark:from-slate-900/60 to-indigo-500/10">
-                  <div className="absolute -top-4 -right-4 w-24 h-24 bg-indigo-500/5 rounded-full blur-2xl group-hover:bg-indigo-500/10 transition-colors"></div>
-                  <div className="relative flex justify-between items-start h-6 mb-1">
-                    {mounted && totals.investmentTrend !== "—" && (
-                      <div
-                        className={`flex items-center gap-2 w-fit px-2 py-0.5 rounded-md text-[10px] font-bold ${parseFloat(totals.investmentTrend) >= 0 ? "text-secondary bg-secondary-container/30" : "text-error bg-error-container/30"}`}
-                      >
-                        <span className="material-symbols-outlined text-[12px]">
-                          {parseFloat(totals.investmentTrend) >= 0
-                            ? "trending_up"
-                            : "trending_down"}
-                        </span>
-                        {totals.investmentTrend}%
-                      </div>
-                    )}
-                  </div>
-                  <div className="relative flex justify-between items-start mb-4">
-                    <div>
-                      <p className="text-[10px] uppercase tracking-[0.2em] font-extrabold text-on-surface-variant mb-1">
-                        {t("monthlyInvestment")}
-                      </p>
-                      <div className="text-indigo-500">
-                        {renderCardData(totals.investment)}
-                      </div>
-                    </div>
-                    <div className="w-12 h-12 flex items-center justify-center rounded-xl bg-white dark:bg-slate-800 shadow-sm border border-outline-variant/20">
-                      <span
-                        className="material-symbols-outlined text-indigo-500 text-2xl"
-                        style={{ fontVariationSettings: "'FILL' 1" }}
-                      >
-                        rocket_launch
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* 4. Monthly Expense */}
-                <div className="glass-card p-6 rounded-2xl border border-white/40 dark:border-white/10 shadow-xl relative overflow-hidden group bg-gradient-to-br from-white/60 dark:from-slate-900/60 to-error-container/10">
-                  <div className="absolute -top-4 -right-4 w-24 h-24 bg-error/5 rounded-full blur-2xl group-hover:bg-error/10 transition-colors"></div>
-                  <div className="relative flex justify-between items-start h-6 mb-1">
-                    {mounted && totals.expenseTrend !== "—" && (
-                      <div
-                        className={`flex items-center gap-2 w-fit px-2 py-0.5 rounded-md text-[10px] font-bold ${parseFloat(totals.expenseTrend) <= 0 ? "text-secondary bg-secondary-container/30" : "text-error bg-error-container/30"}`}
-                      >
-                        <span className="material-symbols-outlined text-[12px]">
-                          {parseFloat(totals.expenseTrend) <= 0
-                            ? "trending_down"
-                            : "trending_up"}
-                        </span>
-                        {totals.expenseTrend}%
-                      </div>
-                    )}
-                  </div>
-                  <div className="relative flex justify-between items-start mb-4">
-                    <div>
-                      <p className="text-[10px] uppercase tracking-[0.2em] font-extrabold text-on-surface-variant mb-1">
-                        {t("monthlyExpense")}
-                      </p>
-                      <div className="text-error">
-                        {renderCardData(totals.expense)}
-                      </div>
-                    </div>
-                    <div className="w-12 h-12 flex items-center justify-center rounded-xl bg-white dark:bg-slate-800 shadow-sm border border-outline-variant/20">
-                      <span
-                        className="material-symbols-outlined text-error text-2xl"
-                        style={{ fontVariationSettings: "'FILL' 1" }}
-                      >
-                        credit_score
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </>
-            );
-          })()}
+              </div>
+              <div className="w-12 h-12 flex-shrink-0 flex items-center justify-center rounded-xl bg-white dark:bg-slate-800 shadow-sm border border-outline-variant/20">
+                <span
+                  className="material-symbols-outlined text-error text-2xl"
+                  style={{ fontVariationSettings: "'FILL' 1" }}
+                >
+                  credit_score
+                </span>
+              </div>
+            </div>
+          </div>
         </section>
 
         {/* Main Data Table Section */}
