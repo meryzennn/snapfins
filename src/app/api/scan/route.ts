@@ -32,9 +32,9 @@ export async function POST(req: Request) {
       CRITICAL: You MUST write the "errorReason" in ${language === 'id' ? 'Indonesian' : 'English'}! (e.g. ${language === 'id' ? '"Pendeteksi kami mendeteksi gambar bukan struk, silakan coba lagi."' : '"We detected that the image is not a receipt, please try again."'})
       
       If it IS a valid receipt or financial document, set "isValidReceipt" to true and extract the following data in a structured JSON format:
-      - date: Transaction date (YYYY-MM-DD). IMPORTANT: Today's reference date is ${new Date().toISOString().split('T')[0]}. If the receipt does not clearly specify a year, assume it is this year. If no date is found at all, use this reference date.
+      - date: Transaction date (YYYY-MM-DD). IMPORTANT: Today's reference date is ${new Date().toISOString().split('T')[0]}. If the receipt does not clearly specify a year (e.g. only "12/03" or "March 15"), you MUST use the year from this reference date (${new Date().getFullYear()}). Do NOT assume an old year like 2023 or 2024 unless it is explicitly printed.
       - description: The name of the store, merchant, or specific items bought. Keep original language.
-      - amount: The total numerical amount extracted as a string. CRITICAL: You must detect the native currency used in the receipt (e.g., IDR, USD, EUR) and prefix the amount appropriately. Apply the correct thousands separator format (e.g. dots for IDR, commas for USD).
+      - amount: The total numerical amount extracted as a string. CRITICAL: You must detect the native currency used in the receipt (e.g., IDR, USD, EUR) and do NOT include any currency symbols or prefixes here, just the numbers and dots/commas as separators.
       - currency: The detected 3-letter currency code (e.g., "IDR", "USD", "EUR", "GBP").
       - category: A single UPPERCASE word representing the category (e.g., DINING, GROCERY, RETAIL, TECH, TRANSPORT, HEALTH, UTILITIES).
 

@@ -49,7 +49,7 @@ export const translations = {
 
     // ---- DASHBOARD HEADER ----
     financialOverview: 'Financial Overview',
-    liveStatus: 'Financial Intelligence (LIVE)',
+    liveStatus: 'Real-time Wealth Insights',
     manualEntry: 'Manual Entry',
     scanReceipt: 'Scan Receipt',
 
@@ -128,9 +128,19 @@ export const translations = {
     cancel: 'Cancel',
     profile: 'Profile',
     deleting: 'Deleting...',
+    notAuthenticated: 'Your session has expired. Please log in again to scan receipts.',
 
     // ---- FOOTER DASHBOARD ----
     footerPrecision: '© 2026 0x5zen. Precision Wealth Instruments.',
+
+    // ---- PERIOD FILTERING ----
+    months: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
+    allMonths: 'All Months',
+    filterMonth: 'Month',
+    filterYear: 'Year',
+    scanSuccessTitle: 'Scan Successful',
+    scanSuccessDate: (d: string) => `Date: ${d}`,
+    viewTransaction: 'View Transaction',
   },
 
   id: {
@@ -180,7 +190,7 @@ export const translations = {
 
     // ---- DASHBOARD HEADER ----
     financialOverview: 'Ringkasan Keuangan',
-    liveStatus: 'Intelijen Keuangan (LANGSUNG)',
+    liveStatus: 'Wawasan Kekayaan Real-time',
     manualEntry: 'Input Manual',
     scanReceipt: 'Scan Struk',
 
@@ -259,9 +269,19 @@ export const translations = {
     cancel: 'Batal',
     profile: 'Profil',
     deleting: 'Menghapus...',
+    notAuthenticated: 'Sesi Anda telah berakhir. Silakan masuk kembali untuk melakukan scan struk.',
 
     // ---- FOOTER DASHBOARD ----
     footerPrecision: '© 2026 0x5zen. Instrumen Kekayaan Presisi.',
+
+    // ---- PERIOD FILTERING ----
+    months: ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'],
+    allMonths: 'Semua Bulan',
+    filterMonth: 'Bulan',
+    filterYear: 'Tahun',
+    scanSuccessTitle: 'Struk Berhasil',
+    scanSuccessDate: (d: string) => `Tanggal: ${d}`,
+    viewTransaction: 'Lihat Transaksi',
   }
 } as const;
 

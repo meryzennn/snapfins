@@ -22,8 +22,8 @@ export default function RootLayout({
       <head>
         <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
         {/* Inline script to prevent FOUC (Flash of Unstyled Content) before hydration */}
-        <script id="theme-script" dangerouslySetInnerHTML={{
-          __html: `
+        <Script id="theme-script" strategy="beforeInteractive">
+          {`
             try {
               const t = localStorage.getItem('snapfins-theme');
               if (t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
@@ -32,8 +32,8 @@ export default function RootLayout({
                 document.documentElement.classList.remove('dark');
               }
             } catch(e){}
-          `
-        }} />
+          `}
+        </Script>
       </head>
       <body className={`${inter.variable} ${manrope.variable} antialiased bg-background text-foreground min-h-screen flex flex-col selection:bg-primary/20`}>
         {children}

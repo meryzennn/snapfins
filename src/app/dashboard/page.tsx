@@ -54,9 +54,16 @@ export default function DashboardPage() {
   const [mounted, setMounted] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
+  const [scanSuccess, setScanSuccess] = useState<{ date: string } | null>(null);
   // View & Filter States
   const [viewMode, setViewMode] = useState<"grid" | "pivot">("grid");
   const [filterCategory, setFilterCategory] = useState<string>("ALL");
+  const [selectedMonth, setSelectedMonth] = useState<number>(
+    new Date().getMonth(),
+  ); // 0-11, -1 for ALL
+  const [selectedYear, setSelectedYear] = useState<number>(
+    new Date().getFullYear(),
+  );
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [showCurrencyDropdown, setShowCurrencyDropdown] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -192,35 +199,28 @@ export default function DashboardPage() {
   // Reset page when filter changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [filterCategory]);
+  }, [filterCategory, selectedMonth, selectedYear]);
 
   const calculateTotals = () => {
-    let incomeCurrentMonth = 0,
-      incomeLastMonth = 0;
-    let expenseCurrentMonth = 0,
-      expenseLastMonth = 0;
-    let investmentCurrentMonth = 0,
-      investmentLastMonth = 0;
+    let incomeCurrent = 0,
+      incomePrev = 0;
+    let expenseCurrent = 0,
+      expensePrev = 0;
+    let investmentCurrent = 0,
+      investmentPrev = 0;
     let totalIncome = 0,
       totalExpense = 0;
 
-    const now = new Date();
-    const currentMonth = now.getMonth();
-    const currentYear = now.getFullYear();
-    const lastMonth = now.getMonth() === 0 ? 11 : now.getMonth() - 1;
-    const lastMonthYear =
-      now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+    // Define the Period we are looking at
+    // If selectedMonth is -1 (ALL), we look at the entire year
+    const isAllMonths = selectedMonth === -1;
 
     transactions.forEach((tx) => {
       const txDate = new Date(tx.date);
-      const isCurrentMonth =
-        txDate.getMonth() === currentMonth &&
-        txDate.getFullYear() === currentYear;
-      const isLastMonth =
-        txDate.getMonth() === lastMonth &&
-        txDate.getFullYear() === lastMonthYear;
+      const txMonth = txDate.getMonth();
+      const txYear = txDate.getFullYear();
 
-      // Extract numeric value correctly
+      // Extract numeric value safely
       let numStr = tx.amount;
       const txCurrency = normalizeCurrency(
         tx.currency ||
@@ -256,73 +256,102 @@ export default function DashboardPage() {
       else if (tx.type === "Debit" || tx.type === "Investment")
         totalExpense += val;
 
-      if (isCurrentMonth) {
-        if (tx.type === "Credit") incomeCurrentMonth += val;
-        else if (tx.type === "Debit") expenseCurrentMonth += val;
-        else if (tx.type === "Investment") investmentCurrentMonth += val;
-      } else if (isLastMonth) {
-        if (tx.type === "Credit") incomeLastMonth += val;
-        else if (tx.type === "Debit") expenseLastMonth += val;
-        else if (tx.type === "Investment") investmentLastMonth += val;
+      if (isAllMonths) {
+        // Compare Current Year vs Previous Year
+        if (txYear === selectedYear) {
+          if (tx.type === "Credit") incomeCurrent += val;
+          else if (tx.type === "Debit") expenseCurrent += val;
+          else if (tx.type === "Investment") investmentCurrent += val;
+        } else if (txYear === selectedYear - 1) {
+          if (tx.type === "Credit") incomePrev += val;
+          else if (tx.type === "Debit") expensePrev += val;
+          else if (tx.type === "Investment") investmentPrev += val;
+        }
+      } else {
+        // Compare Selected Month vs Month Prior
+        const prevMonth = selectedMonth === 0 ? 11 : selectedMonth - 1;
+        const prevMonthYear =
+          selectedMonth === 0 ? selectedYear - 1 : selectedYear;
+
+        if (txMonth === selectedMonth && txYear === selectedYear) {
+          if (tx.type === "Credit") incomeCurrent += val;
+          else if (tx.type === "Debit") expenseCurrent += val;
+          else if (tx.type === "Investment") investmentCurrent += val;
+        } else if (txMonth === prevMonth && txYear === prevMonthYear) {
+          if (tx.type === "Credit") incomePrev += val;
+          else if (tx.type === "Debit") expensePrev += val;
+          else if (tx.type === "Investment") investmentPrev += val;
+        }
       }
     });
 
     const netWorthNow = totalIncome - totalExpense;
-    // Net Worth at start = Current Net Worth - (Total Income - Total Expense - Total Investment) of current month
-    const netWorthAtStartOfMonth =
-      netWorthNow -
-      (incomeCurrentMonth - expenseCurrentMonth - investmentCurrentMonth);
 
-    const incomeTrend =
-      incomeLastMonth === 0
+    // Calculate Net Worth at Start of Period to find trend
+    // (A simplification: Net Worth Trend follows the balance change of the period)
+    const periodBalance = incomeCurrent - expenseCurrent - investmentCurrent;
+    const netWorthAtStart = netWorthNow - periodBalance;
+
+    const computeTrend = (curr: number, prev: number) => {
+      if (prev === 0) return null;
+      return ((curr - prev) / prev) * 100;
+    };
+
+    const iTrend = computeTrend(incomeCurrent, incomePrev);
+    const eTrend = computeTrend(expenseCurrent, expensePrev);
+    const invTrend = computeTrend(investmentCurrent, investmentPrev);
+    const nwTrend =
+      netWorthAtStart === 0
         ? null
-        : ((incomeCurrentMonth - incomeLastMonth) / incomeLastMonth) * 100;
-    const expenseTrend =
-      expenseLastMonth === 0
-        ? null
-        : ((expenseCurrentMonth - expenseLastMonth) / expenseLastMonth) * 100;
-    const investmentTrend =
-      investmentLastMonth === 0
-        ? null
-        : ((investmentCurrentMonth - investmentLastMonth) /
-            investmentLastMonth) *
-          100;
-    const netWorthTrend =
-      netWorthAtStartOfMonth === 0
-        ? null
-        : ((netWorthNow - netWorthAtStartOfMonth) / netWorthAtStartOfMonth) *
-          100;
+        : (periodBalance / Math.abs(netWorthAtStart)) * 100;
 
     return {
-      income: formatValue(incomeCurrentMonth, currency, lang),
-      expense: formatValue(expenseCurrentMonth, currency, lang),
-      investment: formatValue(investmentCurrentMonth, currency, lang),
+      income: formatValue(incomeCurrent, currency, lang),
+      expense: formatValue(expenseCurrent, currency, lang),
+      investment: formatValue(investmentCurrent, currency, lang),
       netWorth: formatValue(netWorthNow, currency, lang),
-      incomeTrend: incomeTrend !== null ? incomeTrend.toFixed(1) : "—",
-      expenseTrend: expenseTrend !== null ? expenseTrend.toFixed(1) : "—",
-      investmentTrend:
-        investmentTrend !== null ? investmentTrend.toFixed(1) : "—",
-      netWorthTrend: netWorthTrend !== null ? netWorthTrend.toFixed(1) : "—",
+      incomeTrend: iTrend !== null ? iTrend.toFixed(1) : "—",
+      expenseTrend: eTrend !== null ? eTrend.toFixed(1) : "—",
+      investmentTrend: invTrend !== null ? invTrend.toFixed(1) : "—",
+      netWorthTrend: nwTrend !== null ? nwTrend.toFixed(1) : "—",
     };
   };
 
   const totals = calculateTotals();
 
-  // Dynamically calculate days remaining until end of current month
+  // Dynamically calculate days remaining until end of current month (relative to selected period)
   const daysUntilEndOfMonth = (() => {
-    const now = new Date();
+    const today = new Date();
+    if (selectedYear !== today.getFullYear() || selectedMonth !== today.getMonth()) return 0;
     const lastDay = new Date(
-      now.getFullYear(),
-      now.getMonth() + 1,
+      today.getFullYear(),
+      today.getMonth() + 1,
       0,
     ).getDate();
-    return lastDay - now.getDate();
+    return lastDay - today.getDate();
   })();
 
-  // Filter transactions based on active category
-  const filteredTransactions = transactions.filter(
-    (tx) => filterCategory === "ALL" || tx.category === filterCategory,
-  );
+  // Filter transactions based on active category and period
+  const filteredTransactions = transactions.filter((tx) => {
+    const txDate = new Date(tx.date);
+    const mMatch = selectedMonth === -1 || txDate.getMonth() === selectedMonth;
+    const yMatch = txDate.getFullYear() === selectedYear;
+    const cMatch = filterCategory === "ALL" || tx.category === filterCategory;
+    return mMatch && yMatch && cMatch;
+  });
+
+  // Year list for filtering (dynamic based on data + sensible defaults)
+  const availableYears = (() => {
+    const currentYear = new Date().getFullYear();
+    const dataYears = transactions.map((t) => new Date(t.date).getFullYear());
+    const years = Array.from(new Set([currentYear, currentYear - 1, ...dataYears]));
+    
+    const minYear = Math.min(...years);
+    const maxYear = Math.max(...years);
+    const list = [];
+    for (let y = minYear; y <= maxYear; y++) list.push(y);
+    return list.sort((a, b) => b - a);
+  })();
 
   // Pagination Logic
   const paginatedTransactions = filteredTransactions.slice(
@@ -410,6 +439,10 @@ export default function DashboardPage() {
       : Math.ceil(pivotRows.length / pageSize);
 
   const handleDownloadCSV = () => {
+    const periodLabel = selectedMonth === -1 
+      ? `${selectedYear}` 
+      : `${(t("months") as unknown as string[])[selectedMonth]}_${selectedYear}`;
+
     if (viewMode === "grid") {
       const headers = [
         t("colDate"),
@@ -437,7 +470,7 @@ export default function DashboardPage() {
       link.setAttribute("href", url);
       link.setAttribute(
         "download",
-        `snapfins_ledger_${new Date().toISOString().split("T")[0]}.csv`,
+        `snapfins_ledger_${periodLabel}_${new Date().toISOString().split("T")[0]}.csv`,
       );
       document.body.appendChild(link);
       link.click();
@@ -467,7 +500,7 @@ export default function DashboardPage() {
       link.setAttribute("href", url);
       link.setAttribute(
         "download",
-        `snapfins_pivot_${new Date().toISOString().split("T")[0]}.csv`,
+        `snapfins_pivot_${periodLabel}_${new Date().toISOString().split("T")[0]}.csv`,
       );
       document.body.appendChild(link);
       link.click();
@@ -622,7 +655,16 @@ export default function DashboardPage() {
     if (!file) return;
 
     setIsScanning(true);
+    setScanError(null);
     try {
+      const supabase = createClient();
+      const { data: userData } = await supabase.auth.getUser();
+      
+      if (!userData?.user) {
+        setScanError(t("notAuthenticated") || "Please login first to scan receipts.");
+        return;
+      }
+
       const formData = new FormData();
       formData.append("file", file);
       formData.append("language", lang);
@@ -643,46 +685,55 @@ export default function DashboardPage() {
         }
 
         const newTx = {
+          user_id: userData.user.id,
           date: data.transaction.date,
           category: data.transaction.category || "GENERAL",
           color: assignColor(data.transaction.category || "GENERAL"),
           description: data.transaction.description,
           type: "Debit",
           amount: data.transaction.amount,
-          currency: data.transaction.currency || "IDR", // Save detected currency
+          currency: data.transaction.currency || "IDR", 
           source: "Gemini Vision",
           is_ai: true,
         };
 
-        const supabase = createClient();
-        const { data: userData } = await supabase.auth.getUser();
-        if (userData?.user) {
-          const { data: insertedData, error } = await supabase
-            .from("transactions")
-            .insert([{ ...newTx, user_id: userData.user.id }])
-            .select();
-          if (!error && insertedData) {
-            const mappedTx = {
-              ...insertedData[0],
-              isAi: insertedData[0].is_ai,
-            };
-            setTransactions((prev) => [mappedTx, ...prev]);
-          } else {
-            setScanError(t("scanErrorHint"));
-          }
+        const { data: insertedData, error } = await supabase
+          .from("transactions")
+          .insert([newTx])
+          .select();
+
+        if (error) throw error;
+        
+        if (insertedData) {
+          const mappedTx = {
+            ...insertedData[0],
+            isAi: insertedData[0].is_ai,
+          };
+          // Update both state and trigger external fetch for stability
+          setTransactions((prev) => [mappedTx, ...prev]);
+          await fetchTransactions(); 
+          setScanSuccess({ date: data.transaction.date });
         }
       } else {
         setScanError(data.error || t("scanErrorHint"));
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      setScanError(t("tryAgainWithDifferent"));
+      setScanError(error.message || t("tryAgainWithDifferent"));
     } finally {
       setIsScanning(false);
       // Reset input value to allow scanning same file again
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
+
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-surface flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -726,41 +777,46 @@ export default function DashboardPage() {
                     {t("labelAmount")}
                   </label>
                   <div className="flex bg-surface-container-low border border-outline-variant/30 rounded-xl focus-within:border-primary transition-colors overflow-hidden">
-                    <select
-                      value={manualForm.currency}
-                      onChange={(e) => {
-                        const newCurrency = e.target.value;
-                        const raw = manualForm.amount.replace(/\D/g, "");
-                        if (raw) {
-                          const locale =
-                            newCurrency === "IDR" ? "id-ID" : "en-US";
-                          const fmt = new Intl.NumberFormat(locale).format(
-                            parseInt(raw, 10),
-                          );
-                          setManualForm({
-                            ...manualForm,
-                            currency: newCurrency,
-                            amount: fmt,
-                          });
-                        } else {
-                          setManualForm({
-                            ...manualForm,
-                            currency: newCurrency,
-                          });
-                        }
-                      }}
-                      className="bg-transparent text-on-surface text-xs font-black pl-3 pr-1 py-3 focus:outline-none border-r border-outline-variant/30 cursor-pointer w-20 shrink-0 appearance-none"
-                    >
-                      {Object.keys(currencySymbols).map((c) => (
-                        <option
-                          key={c}
-                          value={c}
-                          className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
-                        >
-                          {c}
-                        </option>
-                      ))}
-                    </select>
+                    <div className="relative flex items-center">
+                      <select
+                        value={manualForm.currency}
+                        onChange={(e) => {
+                          const newCurrency = e.target.value;
+                          const raw = manualForm.amount.replace(/\D/g, "");
+                          if (raw) {
+                            const locale =
+                              newCurrency === "IDR" ? "id-ID" : "en-US";
+                            const fmt = new Intl.NumberFormat(locale).format(
+                              parseInt(raw, 10),
+                            );
+                            setManualForm({
+                              ...manualForm,
+                              currency: newCurrency,
+                              amount: fmt,
+                            });
+                          } else {
+                            setManualForm({
+                              ...manualForm,
+                              currency: newCurrency,
+                            });
+                          }
+                        }}
+                        className="bg-transparent text-on-surface text-[10px] font-black pl-3 pr-6 py-3 focus:outline-none border-r border-outline-variant/30 cursor-pointer w-20 shrink-0 appearance-none"
+                      >
+                        {Object.keys(currencySymbols).map((c) => (
+                          <option
+                            key={c}
+                            value={c}
+                            className="bg-surface dark:bg-slate-900 text-on-surface"
+                          >
+                            {c}
+                          </option>
+                        ))}
+                      </select>
+                      <span className="material-symbols-outlined absolute right-1.5 pointer-events-none text-xs text-on-surface-variant opacity-50">
+                        expand_more
+                      </span>
+                    </div>
                     <input
                       type="text"
                       placeholder={
@@ -916,6 +972,48 @@ export default function DashboardPage() {
             >
               {t("tryAgain")}
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Scan Success Modal (Jump to Date) */}
+      {scanSuccess && (
+        <div className="fixed inset-0 z-[101] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-surface p-8 rounded-3xl shadow-2xl flex flex-col items-center max-w-sm w-full border border-primary/20 animate-in fade-in zoom-in duration-300">
+            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-6 relative">
+              <span className="material-symbols-outlined text-primary text-4xl">
+                check_circle
+              </span>
+            </div>
+            <h3 className="font-headline font-bold text-xl text-on-surface mb-2">
+              {t("scanSuccessTitle")}
+            </h3>
+            <p className="text-sm text-center text-on-surface-variant leading-relaxed mb-4">
+              {t("scanSuccessDate", scanSuccess.date)}
+            </p>
+
+            <div className="flex flex-col gap-3 w-full">
+              <button
+                onClick={() => {
+                  const d = new Date(scanSuccess.date);
+                  setSelectedMonth(d.getMonth());
+                  setSelectedYear(d.getFullYear());
+                  setScanSuccess(null);
+                }}
+                className="w-full bg-primary hover:bg-primary-container text-white font-bold py-3 px-4 rounded-xl transition-all shadow-md active:scale-95 flex items-center justify-center gap-2"
+              >
+                <span className="material-symbols-outlined text-lg">
+                  visibility
+                </span>
+                {t("viewTransaction")}
+              </button>
+              <button
+                onClick={() => setScanSuccess(null)}
+                className="w-full bg-surface-container hover:bg-surface-container-high text-on-surface font-bold py-3 px-4 rounded-xl transition-all active:scale-95"
+              >
+                {t("cancel")}
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -1184,8 +1282,7 @@ export default function DashboardPage() {
             <h1 className="text-4xl font-extrabold tracking-tight text-on-surface font-headline">
               {t("financialOverview")}
             </h1>
-            <p className="text-on-surface-variant font-medium tracking-wide text-sm flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-secondary animate-pulse"></span>
+            <p className="text-on-surface-variant font-black tracking-[0.2em] uppercase text-[10px] opacity-60 hover:opacity-100 transition-opacity">
               {t("liveStatus")}
             </p>
           </div>
@@ -1412,20 +1509,63 @@ export default function DashboardPage() {
               {t("recentLedger")}
             </h3>
             <div className="flex items-center gap-2 relative" ref={filterDropdownRef}>
-              <div className="flex bg-surface-container-low dark:bg-slate-800 p-1 rounded-lg">
-                <button
-                  onClick={() => setViewMode("grid")}
-                  className={`px-3 py-1 text-xs font-bold rounded shadow-sm transition-colors cursor-pointer ${viewMode === "grid" ? "bg-surface-container-lowest dark:bg-slate-700 text-foreground" : "text-on-surface-variant hover:text-on-surface"}`}
-                >
-                  {t("btnGrid")}
-                </button>
-                <button
-                  onClick={() => setViewMode("pivot")}
-                  className={`px-3 py-1 text-xs font-bold rounded shadow-sm transition-colors cursor-pointer ${viewMode === "pivot" ? "bg-surface-container-lowest dark:bg-slate-700 text-foreground" : "text-on-surface-variant hover:text-on-surface"}`}
-                >
-                  {t("btnPivot")}
-                </button>
-              </div>
+              {mounted && (
+                <>
+                  <div className="flex bg-surface-container-low dark:bg-slate-800 p-1 rounded-lg">
+                    <button
+                      onClick={() => setViewMode("grid")}
+                      className={`px-3 py-1 text-xs font-bold rounded shadow-sm transition-colors cursor-pointer ${viewMode === "grid" ? "bg-surface-container-lowest dark:bg-slate-700 text-foreground" : "text-on-surface-variant hover:text-on-surface"}`}
+                    >
+                      {t("btnGrid")}
+                    </button>
+                    <button
+                      onClick={() => setViewMode("pivot")}
+                      className={`px-3 py-1 text-xs font-bold rounded shadow-sm transition-colors cursor-pointer ${viewMode === "pivot" ? "bg-surface-container-lowest dark:bg-slate-700 text-foreground" : "text-on-surface-variant hover:text-on-surface"}`}
+                    >
+                      {t("btnPivot")}
+                    </button>
+                  </div>
+
+                  {/* Period Selector (Year/Month) */}
+                  <div className="flex flex-wrap items-center gap-2">
+                    {/* Year Select */}
+                    <div className="relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-outline-variant bg-surface-container-lowest text-on-surface shadow-sm transition-all focus-within:ring-2 focus-within:ring-primary/20">
+                      <span className="material-symbols-outlined text-sm text-primary opacity-70">calendar_month</span>
+                      <select 
+                        value={selectedYear}
+                        onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+                        className="bg-transparent border-none text-[11px] font-bold outline-none cursor-pointer p-0 m-0 pr-4 text-on-surface appearance-none"
+                      >
+                        {availableYears.map(year => (
+                          <option key={year} value={year} className="bg-surface-container-lowest text-on-surface">{year}</option>
+                        ))}
+                      </select>
+                      <span className="material-symbols-outlined absolute right-2 pointer-events-none text-xs text-on-surface-variant opacity-50">
+                        expand_more
+                      </span>
+                    </div>
+
+                    {/* Month Select */}
+                    <div className="relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-outline-variant bg-surface-container-lowest text-on-surface shadow-sm transition-all focus-within:ring-2 focus-within:ring-primary/20">
+                      <select 
+                        value={selectedMonth}
+                        onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
+                        className="bg-transparent border-none text-[11px] font-bold outline-none cursor-pointer p-0 m-0 pr-4 text-on-surface appearance-none"
+                      >
+                        <option value={-1} className="bg-surface-container-lowest text-on-surface">{t("allMonths")}</option>
+                        {(t("months") as unknown as string[]).map((m, idx) => (
+                          <option key={idx} value={idx} className="bg-surface-container-lowest text-on-surface">{m}</option>
+                        ))}
+                      </select>
+                      <span className="material-symbols-outlined absolute right-2 pointer-events-none text-xs text-on-surface-variant opacity-50">
+                        expand_more
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="h-4 w-px bg-outline-variant/30 hidden sm:block"></div>
+                </>
+              )}
 
               {/* Active Filter Pill */}
               {filterCategory !== "ALL" && (
@@ -1444,7 +1584,7 @@ export default function DashboardPage() {
                 </div>
               )}
 
-              <div className="relative flex items-center">
+              <div className="relative flex items-center" ref={filterDropdownRef}>
                 <button
                   onClick={() => setShowFilterDropdown(!showFilterDropdown)}
                   className={`flex items-center gap-1 px-3 py-1.5 rounded-lg border text-[11px] font-bold transition-all cursor-pointer ${filterCategory !== "ALL" || showFilterDropdown ? "border-primary bg-primary/5 text-primary" : "border-outline-variant text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low"}`}
