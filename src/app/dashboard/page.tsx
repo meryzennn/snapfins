@@ -47,6 +47,37 @@ const getCategoryStyle = (color: string) => {
   return styles[color] || styles.slate;
 };
 
+const SelectionToggle = ({
+  checked,
+  indeterminate,
+  onChange,
+}: {
+  checked: boolean;
+  indeterminate?: boolean;
+  onChange: () => void;
+}) => (
+  <button
+    onClick={(e) => {
+      e.stopPropagation();
+      onChange();
+    }}
+    className={`w-5 h-5 rounded-md border-2 transition-all duration-300 flex items-center justify-center cursor-pointer group/toggle relative overflow-hidden active:scale-90
+      ${checked || indeterminate ? "bg-primary border-primary shadow-lg shadow-primary/20" : "border-outline-variant/60 hover:border-primary bg-transparent"}
+    `}
+  >
+    {(checked || indeterminate) && (
+      <div className="absolute inset-0 bg-white/20 animate-ping [animation-duration:1.5s]"></div>
+    )}
+    <span
+      className={`material-symbols-outlined text-white text-[14px] font-black transition-all duration-300 transform relative z-10
+      ${checked || indeterminate ? "scale-100 opacity-100" : "scale-0 opacity-0"}
+    `}
+    >
+      {indeterminate ? "remove" : "check"}
+    </span>
+  </button>
+);
+
 export default function DashboardPage() {
   const { theme, setTheme } = useTheme();
   const { lang, setLang, t } = useLang();
@@ -156,6 +187,13 @@ export default function DashboardPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [ratesInitialized, setRatesInitialized] = useState(false);
+  
+  // Selection & Action States
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [editingTx, setEditingTx] = useState<any>(null);
+  const [showDeleteTxModal, setShowDeleteTxModal] = useState(false);
+  const [deleteQueue, setDeleteQueue] = useState<string[]>([]);
+  const [isDeletingRows, setIsDeletingRows] = useState(false);
 
   // Local alias for imported function to resolve potential bundler reference issues
   const setRates = updateExchangeRates;
@@ -626,6 +664,63 @@ export default function DashboardPage() {
     setIsLoadingTx(false);
   };
 
+  const handleSelectRow = (id: string) => {
+    setSelectedIds(prev => 
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
+  const handleSelectAll = (ids: string[]) => {
+    if (selectedIds.length === ids.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(ids);
+    }
+  };
+
+  const handleEdit = (tx: any) => {
+    setEditingTx(tx);
+    setManualForm({
+      date: tx.date || new Date().toISOString().split("T")[0],
+      category: tx.category,
+      description: tx.description,
+      type: tx.type === "Debit" ? "Expense" : tx.type === "Credit" ? "Income" : tx.type,
+      currency: tx.currency || currency,
+      amount: tx.amount.replace(/[^0-9.,]/g, ""),
+      source: tx.source || "",
+    });
+    setShowManualEntry(true);
+  };
+
+  const handleDeleteClick = (ids: string[]) => {
+    setDeleteQueue(ids);
+    setShowDeleteTxModal(true);
+  };
+
+  const confirmDeleteBatch = async () => {
+    if (deleteQueue.length === 0) return;
+    setIsDeletingRows(true);
+    const supabase = createClient();
+    
+    try {
+      const { error } = await supabase
+        .from("transactions")
+        .delete()
+        .in("id", deleteQueue);
+
+      if (!error) {
+        setTransactions(prev => prev.filter(tx => !deleteQueue.includes(tx.id)));
+        setSelectedIds(prev => prev.filter(id => !deleteQueue.includes(id)));
+        setShowDeleteTxModal(false);
+        setDeleteQueue([]);
+      }
+    } catch (err) {
+      console.error("Delete failed:", err);
+    } finally {
+      setIsDeletingRows(false);
+    }
+  };
+
   useEffect(() => {
     setMounted(true);
     fetchTransactions();
@@ -689,46 +784,64 @@ export default function DashboardPage() {
 
       if (!userData?.user) throw new Error("Not authenticated");
 
-      let amountStr = manualForm.amount;
-      // Provide a clean format like "Rp 250,000" or "$ 25.00"
-      if (!amountStr.startsWith(manualForm.currency)) {
-        amountStr = `${manualForm.currency} ${amountStr}`;
-      }
-
-      const newTx = {
+      const txPayload = {
         user_id: userData.user.id,
         date: manualForm.date,
         category: manualForm.category.toUpperCase(),
         color: assignColor(manualForm.category.toUpperCase()),
         description: manualForm.description,
         type: manualForm.type,
-        amount: manualForm.amount, // Save only the numeric string
-        currency: manualForm.currency, // Save explicit currency code
-        source: manualForm.source || "Manual Entry",
-        is_ai: false,
+        amount: manualForm.amount,
+        currency: manualForm.currency,
+        source: manualForm.source || (editingTx ? editingTx.source : "Manual Entry"),
+        is_ai: editingTx ? editingTx.isAi : false,
       };
 
-      const { data: insertedData, error } = await supabase
-        .from("transactions")
-        .insert([newTx])
-        .select();
+      if (editingTx) {
+        // UPDATE Existing Transaction
+        const { data: updatedData, error } = await supabase
+          .from("transactions")
+          .update(txPayload)
+          .eq("id", editingTx.id)
+          .select();
 
-      if (error) throw error;
+        if (error) throw error;
 
-      if (insertedData) {
-        const mappedTx = { ...insertedData[0], isAi: insertedData[0].is_ai };
-        setTransactions((prev) => [mappedTx, ...prev]);
-        setShowManualEntry(false);
-        setManualForm({
-          date: new Date().toISOString().split("T")[0],
-          category: "GENERAL",
-          description: "",
-          type: "Expense",
-          currency: "IDR",
-          amount: "",
-          source: "",
-        });
+        if (updatedData) {
+          const mappedTx = { ...updatedData[0], isAi: updatedData[0].is_ai };
+          setTransactions((prev) => 
+            prev.map(tx => tx.id === editingTx.id ? mappedTx : tx)
+          );
+          setShowManualEntry(false);
+          setEditingTx(null);
+        }
+      } else {
+        // INSERT New Transaction
+        const { data: insertedData, error } = await supabase
+          .from("transactions")
+          .insert([txPayload])
+          .select();
+
+        if (error) throw error;
+
+        if (insertedData) {
+          const mappedTx = { ...insertedData[0], isAi: insertedData[0].is_ai };
+          setTransactions((prev) => [mappedTx, ...prev]);
+          setShowManualEntry(false);
+        }
       }
+
+      // Reset Form
+      setManualForm({
+        date: new Date().toISOString().split("T")[0],
+        category: "GENERAL",
+        description: "",
+        type: "Expense",
+        currency,
+        amount: "",
+        source: "",
+      });
+
     } catch (err: any) {
       alert("Failed to save: " + err.message);
     } finally {
@@ -1088,7 +1201,7 @@ export default function DashboardPage() {
           >
             <div className="flex justify-between items-center mb-6">
               <h3 className="font-headline font-bold text-2xl text-on-surface">
-                {t("manualEntryTitle")}
+                {editingTx ? t("editTransaction") : t("manualEntryTitle")}
               </h3>
               <button
                 onClick={() => setShowManualEntry(false)}
@@ -1284,11 +1397,52 @@ export default function DashboardPage() {
                       {t("saving")}
                     </>
                   ) : (
-                    t("saveTransaction")
+                    editingTx ? t("btnEdit") : t("saveTransaction")
                   )}
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Transaction Confirmation Modal */}
+      {showDeleteTxModal && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-surface p-8 rounded-3xl shadow-2xl flex flex-col items-center max-w-sm w-full border border-error/20 animate-in fade-in zoom-in duration-300">
+            <div className="w-16 h-16 rounded-full bg-error/10 flex items-center justify-center mb-6 relative">
+              <span className="material-symbols-outlined text-error text-4xl">
+                warning
+              </span>
+            </div>
+            <h3 className="font-headline font-bold text-xl text-on-surface mb-2 text-center">
+              {deleteQueue.length > 1 ? t("confirmDeleteSelectedTitle") : t("confirmDeleteTransactionTitle")}
+            </h3>
+            <p className="text-sm text-center text-on-surface-variant leading-relaxed mb-8">
+              {deleteQueue.length > 1 ? t("confirmDeleteSelectedMsg", deleteQueue.length) : t("confirmDeleteTransactionMsg")}
+            </p>
+
+            <div className="flex flex-col gap-3 w-full">
+              <button
+                onClick={confirmDeleteBatch}
+                disabled={isDeletingRows}
+                className="w-full bg-error hover:bg-red-600 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-sm active:scale-95 flex items-center justify-center gap-2"
+              >
+                {isDeletingRows ? (
+                  <span className="material-symbols-outlined animate-spin text-sm">
+                    sync
+                  </span>
+                ) : null}
+                {isDeletingRows ? t("deleting") : t("btnDelete")}
+              </button>
+              <button
+                onClick={() => setShowDeleteTxModal(false)}
+                disabled={isDeletingRows}
+                className="w-full bg-surface-container hover:bg-surface-container-high text-on-surface font-bold py-3 px-4 rounded-xl transition-all active:scale-95"
+              >
+                {t("cancel")}
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -1618,14 +1772,38 @@ export default function DashboardPage() {
           </div>
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             <button
-              onClick={() => setShowManualEntry(true)}
+              onClick={() => {
+                setEditingTx(null);
+                setManualForm({
+                  date: new Date().toISOString().split("T")[0],
+                  category: "GENERAL",
+                  description: "",
+                  type: "Expense",
+                  currency,
+                  amount: "",
+                  source: "",
+                });
+                setShowManualEntry(true);
+              }}
               className="flex sm:hidden px-5 py-3 rounded-xl border border-outline-variant text-on-surface font-bold text-sm hover:bg-surface-container-low transition-all active:scale-[0.98] items-center justify-center gap-2 cursor-pointer"
             >
               <span className="material-symbols-outlined text-lg">edit_note</span>
               {t("manualEntry")}
             </button>
             <button
-              onClick={() => setShowManualEntry(true)}
+              onClick={() => {
+                setEditingTx(null);
+                setManualForm({
+                  date: new Date().toISOString().split("T")[0],
+                  category: "GENERAL",
+                  description: "",
+                  type: "Expense",
+                  currency,
+                  amount: "",
+                  source: "",
+                });
+                setShowManualEntry(true);
+              }}
               className="hidden sm:flex md:flex px-5 py-2.5 rounded-lg border border-outline-variant text-on-surface font-semibold text-sm hover:bg-surface-container-low transition-all active:opacity-80 items-center gap-2 cursor-pointer"
             >
               {t("manualEntry")}
@@ -2005,12 +2183,48 @@ export default function DashboardPage() {
                 </div>
               </div>
             </div>
+            
+            {/* Bulk Action Bar */}
+            {selectedIds.length > 0 && (
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-6 py-4 bg-primary/5 border border-primary/20 rounded-2xl animate-in slide-in-from-top-4 duration-300">
+                <div className="flex items-center gap-3">
+                  <span className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white text-xs font-black">
+                    {selectedIds.length}
+                  </span>
+                  <p className="text-sm font-bold text-on-surface">
+                    {typeof t("itemsSelected") === 'function' ? t("itemsSelected", selectedIds.length) : `${selectedIds.length} items Selected`}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <button
+                    onClick={() => setSelectedIds([])}
+                    className="flex-1 sm:flex-none px-4 py-2 rounded-xl text-on-surface-variant hover:text-on-surface font-bold text-xs transition-colors cursor-pointer"
+                  >
+                    {t("cancel")}
+                  </button>
+                  <button
+                    onClick={() => handleDeleteClick(selectedIds)}
+                    className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2 rounded-xl bg-error text-white font-black text-xs shadow-lg shadow-error/20 hover:brightness-110 active:scale-95 transition-all cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-sm">delete</span>
+                    {t("btnDelete")}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
           <div className="overflow-x-auto rounded-lg shadow-sm border border-outline-variant/20">
             <table className="w-full excel-grid bg-surface-container-lowest dark:bg-slate-900/50 text-xs font-body tracking-tight">
               <thead className="bg-slate-100/80 dark:bg-slate-800 text-on-surface-variant uppercase font-bold text-[10px] tracking-widest">
                 {viewMode === "grid" ? (
                   <tr>
+                    <th className="px-3 py-2 text-center w-10">
+                      <SelectionToggle
+                        checked={selectedIds.length > 0 && selectedIds.length === paginatedTransactions.length}
+                        indeterminate={selectedIds.length > 0 && selectedIds.length < paginatedTransactions.length}
+                        onChange={() => handleSelectAll(paginatedTransactions.map(tx => tx.id))}
+                      />
+                    </th>
                     <th className="px-3 py-2 text-left w-24">{t("colDate")}</th>
                     <th className="px-3 py-2 text-left w-32">
                       {t("colCategory")}
@@ -2025,6 +2239,7 @@ export default function DashboardPage() {
                     <th className="px-3 py-2 text-left w-40">
                       {t("colLinkedAssets")}
                     </th>
+                    <th className="px-3 py-2 text-center w-24">{t("colActions")}</th>
                   </tr>
                 ) : (
                   <tr>
@@ -2052,8 +2267,14 @@ export default function DashboardPage() {
                     paginatedTransactions.map((tx) => (
                       <tr
                         key={tx.id}
-                        className="hover:bg-primary/5 transition-colors group"
+                        className={`hover:bg-primary/5 transition-all duration-300 group ${selectedIds.includes(tx.id) ? "bg-primary/[0.08]" : ""}`}
                       >
+                        <td className="px-3 py-2 text-center">
+                          <SelectionToggle
+                            checked={selectedIds.includes(tx.id)}
+                            onChange={() => handleSelectRow(tx.id)}
+                          />
+                        </td>
                         <td className="px-3 py-2 font-mono text-slate-500 whitespace-nowrap">
                           {(() => {
                             if (!tx.date) return "—";
@@ -2129,12 +2350,30 @@ export default function DashboardPage() {
                         <td className="px-3 py-2 text-slate-400">
                           {tx.source}
                         </td>
+                        <td className="px-3 py-2 text-center opacity-60 group-hover:opacity-100 transition-all duration-300 whitespace-nowrap">
+                          <div className="flex items-center justify-center gap-1">
+                            <button
+                              onClick={() => handleEdit(tx)}
+                              className="w-8 h-8 rounded-lg flex items-center justify-center text-primary-container bg-primary/5 hover:bg-primary/10 transition-colors cursor-pointer"
+                              title={t("btnEdit")}
+                            >
+                              <span className="material-symbols-outlined text-sm">edit</span>
+                            </button>
+                            <button
+                              onClick={() => handleDeleteClick([tx.id])}
+                              className="w-8 h-8 rounded-lg flex items-center justify-center text-error bg-error/5 hover:bg-error/10 transition-colors cursor-pointer"
+                              title={t("btnDelete")}
+                            >
+                              <span className="material-symbols-outlined text-sm">delete</span>
+                            </button>
+                          </div>
+                        </td>
                       </tr>
                     ))
                   ) : (
                     <tr>
                       <td
-                        colSpan={6}
+                        colSpan={8}
                         className="px-3 py-16 text-center text-on-surface-variant text-sm font-medium"
                       >
                         {t("noTransactions")}

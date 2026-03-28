@@ -149,6 +149,16 @@ export const translations = {
     deleting: "Deleting...",
     notAuthenticated:
       "Your session has expired. Please log in again to scan receipts.",
+    confirmDeleteTransactionTitle: "Delete Transaction?",
+    confirmDeleteTransactionMsg: "Are you sure you want to delete this transaction?",
+    confirmDeleteSelectedTitle: "Delete Selected Transactions?",
+    confirmDeleteSelectedMsg: (n: number) => `Are you sure you want to delete ${n} selected transactions? This cannot be undone.`,
+    editTransaction: "Edit Transaction",
+    itemsSelected: (n: number) => `${n} Selected`,
+    selectAll: "Select All",
+    colActions: "Actions",
+    btnDelete: "Delete",
+    btnEdit: "Edit",
 
     // ---- FOOTER DASHBOARD ----
     footerPrecision: "© 2026 0x5zen. Precision Wealth Instruments.",
@@ -327,6 +337,16 @@ export const translations = {
     deleting: "Menghapus...",
     notAuthenticated:
       "Sesi Anda telah berakhir. Silakan masuk kembali untuk melakukan scan struk.",
+    confirmDeleteTransactionTitle: "Hapus Transaksi?",
+    confirmDeleteTransactionMsg: "Apakah Anda yakin ingin menghapus transaksi ini?",
+    confirmDeleteSelectedTitle: "Hapus Transaksi Terpilih?",
+    confirmDeleteSelectedMsg: (n: number) => `Apakah Anda yakin ingin menghapus ${n} transaksi terpilih? Tindakan ini tidak dapat dibatalkan.`,
+    editTransaction: "Edit Transaksi",
+    itemsSelected: (n: number) => `${n} Terpilih`,
+    selectAll: "Pilih Semua",
+    colActions: "Aksi",
+    btnDelete: "Hapus",
+    btnEdit: "Edit",
 
     // ---- FOOTER DASHBOARD ----
     footerPrecision: "© 2026 0x5zen. Instrumen Kekayaan Presisi.",
