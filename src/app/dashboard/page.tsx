@@ -619,6 +619,9 @@ export default function DashboardPage() {
         const formattedData = data.map((tx) => ({ ...tx, isAi: tx.is_ai }));
         setTransactions(formattedData);
       }
+    } else {
+      // Not authenticated, redirect to landing
+      window.location.href = "/";
     }
     setIsLoadingTx(false);
   };
@@ -1403,9 +1406,11 @@ export default function DashboardPage() {
       <nav className="sticky top-0 w-full z-50 bg-slate-50/80 dark:bg-slate-950/80 backdrop-blur-md border-b border-outline-variant/30">
         <div className="flex justify-between items-center w-full px-4 sm:px-6 py-2 md:py-3 max-w-7xl mx-auto">
           <div className="flex items-center gap-4 md:gap-8">
-            <span className="text-lg md:text-xl font-extrabold tracking-tighter text-indigo-700 dark:text-indigo-300 font-headline">
-              SnapFins
-            </span>
+            <Link href="/" className="flex items-center gap-2 cursor-pointer group">
+              <span className="text-lg md:text-xl font-extrabold tracking-tighter text-indigo-700 dark:text-indigo-300 font-headline group-hover:text-primary transition-colors">
+                SnapFins
+              </span>
+            </Link>
             <div className="hidden md:flex items-center gap-6 font-manrope font-semibold tracking-tight text-sm">
               <a
                 className="text-primary font-bold border-b-2 border-primary pb-1"
@@ -2258,7 +2263,7 @@ export default function DashboardPage() {
             </a>
             <a
               className="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-opacity duration-300"
-              href="#"
+              href="mailto:zen@0x5zen.dev"
             >
               {t("support")}
             </a>

@@ -10,9 +10,18 @@ export default function LandingPage() {
   const { theme, setTheme } = useTheme();
   const { lang, setLang, t } = useLang();
   const [mounted, setMounted] = useState(false);
+  const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
     setMounted(true);
+    const checkUser = async () => {
+      const supabase = createClient();
+      const { data } = await supabase.auth.getUser();
+      if (data?.user) {
+        setUser(data.user);
+      }
+    };
+    checkUser();
   }, []);
 
   const [showLoginModal, setShowLoginModal] = useState(false);
@@ -76,9 +85,9 @@ export default function LandingPage() {
       {/* Top Navigation Bar */}
       <header className="fixed top-0 w-full z-50 bg-surface/80 dark:bg-gray-950/80 backdrop-blur-xl bg-surface-container-low dark:bg-gray-900 shadow-sm border-b border-outline-variant/30">
         <div className="flex justify-between items-center px-6 py-4 max-w-7xl mx-auto">
-          <div className="flex items-center gap-2">
-            <span className="text-2xl font-extrabold tracking-tight text-on-surface dark:text-white font-headline">SnapFins</span>
-          </div>
+          <Link href="/" className="flex items-center gap-2 cursor-pointer group">
+            <span className="text-2xl font-extrabold tracking-tight text-on-surface dark:text-white font-headline group-hover:text-primary transition-colors">SnapFins</span>
+          </Link>
           <nav className="hidden md:flex items-center gap-8">
             <a className="text-primary dark:text-primary-container font-semibold transition-colors duration-200" href="#">{t('home')}</a>
             <a className="text-on-surface-variant dark:text-gray-400 hover:text-primary dark:hover:text-primary-container transition-colors duration-200" href="#">{t('features')}</a>
@@ -102,9 +111,18 @@ export default function LandingPage() {
                 )}
               </div>
             </div>
-            <button onClick={() => setShowLoginModal(true)} className="hidden md:block px-6 py-2.5 rounded-lg bg-primary text-white font-semibold hover:bg-primary-container hover:text-on-primary-container active:scale-95 transition-all duration-200 ease-in-out shadow-sm">
-              {t('login')}
-            </button>
+            {user ? (
+              <Link href="/dashboard" className="hidden md:block px-6 py-2.5 rounded-lg bg-primary text-white font-semibold hover:bg-primary-container hover:text-on-primary-container active:scale-95 transition-all duration-200 ease-in-out shadow-sm">
+                {t('navDashboard')}
+              </Link>
+            ) : (
+              <button 
+                onClick={() => setShowLoginModal(true)} 
+                className="hidden md:block px-6 py-2.5 rounded-lg bg-primary text-white font-semibold hover:bg-primary-container hover:text-on-primary-container active:scale-95 transition-all duration-200 ease-in-out shadow-sm"
+              >
+                {t('login')}
+              </button>
+            )}
           </div>
         </div>
       </header>
@@ -124,9 +142,21 @@ export default function LandingPage() {
             {t('heroSubtitle')}
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-20">
-            <button onClick={() => setShowLoginModal(true)} className="bg-gradient-to-br from-primary to-primary-container px-10 py-5 rounded-lg text-white font-bold text-lg shadow-xl shadow-primary/20 hover:shadow-primary/40 hover:-translate-y-0.5 transition-all active:scale-95 w-full sm:w-auto text-center">
-              {t('heroGetStarted')}
-            </button>
+            {user ? (
+              <Link 
+                href="/dashboard" 
+                className="bg-gradient-to-br from-primary to-primary-container px-10 py-5 rounded-lg text-white font-bold text-lg shadow-xl shadow-primary/20 hover:shadow-primary/40 hover:-translate-y-0.5 transition-all active:scale-95 w-full sm:w-auto text-center"
+              >
+                {t('navDashboard')}
+              </Link>
+            ) : (
+              <button 
+                onClick={() => setShowLoginModal(true)} 
+                className="bg-gradient-to-br from-primary to-primary-container px-10 py-5 rounded-lg text-white font-bold text-lg shadow-xl shadow-primary/20 hover:shadow-primary/40 hover:-translate-y-0.5 transition-all active:scale-95 w-full sm:w-auto text-center"
+              >
+                {t('heroGetStarted')}
+              </button>
+            )}
           </div>
           
           {/* Hero Visual: Asymmetric Mock-up */}
@@ -232,9 +262,21 @@ export default function LandingPage() {
               <h2 className="font-headline font-extrabold text-4xl md:text-5xl text-white mb-8">{t('ctaTitle')}</h2>
               <p className="text-surface-variant/80 dark:text-gray-300 text-lg mb-12">{t('ctaSubtitle')}</p>
               <div className="flex justify-center">
-                <button onClick={() => setShowLoginModal(true)} className="bg-white dark:bg-primary text-on-surface dark:text-white px-10 py-5 rounded-lg font-bold text-lg hover:bg-surface-container-lowest dark:hover:bg-primary-container transition-all hover:scale-105 duration-200 inline-block shadow-xl">
-                  {t('ctaButton')}
-                </button>
+                {user ? (
+                  <Link 
+                    href="/dashboard" 
+                    className="bg-white dark:bg-primary text-on-surface dark:text-white px-10 py-5 rounded-lg font-bold text-lg hover:bg-surface-container-lowest dark:hover:bg-primary-container transition-all hover:scale-105 duration-200 inline-block shadow-xl"
+                  >
+                    {t('navDashboard')}
+                  </Link>
+                ) : (
+                  <button 
+                    onClick={() => setShowLoginModal(true)} 
+                    className="bg-white dark:bg-primary text-on-surface dark:text-white px-10 py-5 rounded-lg font-bold text-lg hover:bg-surface-container-lowest dark:hover:bg-primary-container transition-all hover:scale-105 duration-200 inline-block shadow-xl"
+                  >
+                    {t('ctaButton')}
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -251,6 +293,7 @@ export default function LandingPage() {
           <div className="flex gap-8 font-bold tracking-widest uppercase">
             <Link className="text-on-surface-variant dark:text-gray-500 hover:text-primary dark:hover:text-white transition-colors text-sm font-medium" href="/privacy">{t('privacyPolicy')}</Link>
             <Link className="text-on-surface-variant dark:text-gray-500 hover:text-primary dark:hover:text-white transition-colors text-sm font-medium" href="/terms">{t('termsOfService')}</Link>
+            <a className="text-on-surface-variant dark:text-gray-500 hover:text-primary dark:hover:text-white transition-colors text-sm font-medium" href="mailto:zen@0x5zen.dev">{t('support')}</a>
           </div>
         </div>
       </footer>
