@@ -1,8 +1,7 @@
 export type SupportedCurrency = 'USD' | 'IDR' | 'EUR' | 'GBP' | 'JPY' | 'CNY' | 'SGD' | 'AUD' | 'BND' | 'MYR' | 'KRW';
 
-// Static base rates (USD as 1.0)
-// For MVP demo purposes. Real app would fetch these.
-export const exchangeRates: Record<SupportedCurrency, number> = {
+// Static base rates (USD as 1.0) - used as initial fallback
+const initialRates: Record<SupportedCurrency, number> = {
   USD: 1.0,
   IDR: 15850.0,
   EUR: 0.92,
@@ -15,6 +14,20 @@ export const exchangeRates: Record<SupportedCurrency, number> = {
   MYR: 4.73,
   KRW: 1345.0
 };
+
+// Global mutable object for rates
+export const exchangeRates: Record<SupportedCurrency, number> = { ...initialRates };
+
+/**
+ * Updates the global exchange rates safely
+ */
+export function updateExchangeRates(newRates: Record<string, number>) {
+  Object.keys(exchangeRates).forEach(c => {
+    if (newRates[c]) {
+      exchangeRates[c as SupportedCurrency] = newRates[c];
+    }
+  });
+}
 
 export const currencySymbols: Record<SupportedCurrency, string> = {
   USD: '$',
@@ -45,13 +58,12 @@ export const currencyNames: Record<SupportedCurrency, string> = {
 };
 
 /**
- * Converts an amount from one currency to another.
+ * Converts an amount from one currency to another using currently loaded rates.
  */
 export function convert(amount: number, from: SupportedCurrency, to: SupportedCurrency): number {
   if (from === to) return amount;
-  // Convert to USD base first
+  // Use the current state of the global exchangeRates object
   const usdAmount = amount / (exchangeRates[from] || 1);
-  // Then convert from USD to Target
   return usdAmount * (exchangeRates[to] || 1);
 }
 

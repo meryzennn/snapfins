@@ -1,28 +1,47 @@
-"use client"
+"use client";
 
 import { useTheme } from "@/hooks/useTheme";
 import { useLang } from "@/hooks/useLang";
 import { useCurrency } from "@/hooks/useCurrency";
-import { convert, formatValue, normalizeCurrency, currencySymbols, currencyNames, type SupportedCurrency } from "@/lib/currency";
+import {
+  convert,
+  formatValue,
+  normalizeCurrency,
+  updateExchangeRates,
+  currencySymbols,
+  currencyNames,
+  type SupportedCurrency,
+} from "@/lib/currency";
 import { useEffect, useState, useRef } from "react";
 import { createClient } from "@/utils/supabase/client";
 import Link from "next/link";
 
 const assignColor = (category: string) => {
   const map: Record<string, string> = {
-    DINING: "purple", GROCERY: "emerald", TECH: "blue", RETAIL: "rose", TRANSPORT: "amber", HEALTH: "rose", HOME: "slate", SALARY: "emerald"
+    DINING: "purple",
+    GROCERY: "emerald",
+    TECH: "blue",
+    RETAIL: "rose",
+    TRANSPORT: "amber",
+    HEALTH: "rose",
+    HOME: "slate",
+    SALARY: "emerald",
   };
   return map[category] || "slate";
-}
+};
 
 const getCategoryStyle = (color: string) => {
   const styles: Record<string, string> = {
     blue: "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300",
-    purple: "bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300",
-    emerald: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300",
-    amber: "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300",
+    purple:
+      "bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300",
+    emerald:
+      "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300",
+    amber:
+      "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300",
     slate: "bg-slate-200 text-slate-800 dark:bg-slate-800 dark:text-slate-300",
-    indigo: "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300",
+    indigo:
+      "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300",
     rose: "bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300",
   };
   return styles[color] || styles.slate;
@@ -36,8 +55,8 @@ export default function DashboardPage() {
   const [isScanning, setIsScanning] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
   // View & Filter States
-  const [viewMode, setViewMode] = useState<'grid' | 'pivot'>('grid');
-  const [filterCategory, setFilterCategory] = useState<string>('ALL');
+  const [viewMode, setViewMode] = useState<"grid" | "pivot">("grid");
+  const [filterCategory, setFilterCategory] = useState<string>("ALL");
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [showCurrencyDropdown, setShowCurrencyDropdown] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -46,31 +65,36 @@ export default function DashboardPage() {
   const [showManualEntry, setShowManualEntry] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [manualForm, setManualForm] = useState({
-    date: new Date().toISOString().split('T')[0],
-    category: 'GENERAL',
-    description: '',
-    type: 'Debit',
-    currency: 'IDR',
-    amount: '',
-    source: ''
+    date: new Date().toISOString().split("T")[0],
+    category: "GENERAL",
+    description: "",
+    type: "Debit",
+    currency: "IDR",
+    amount: "",
+    source: "",
   });
 
   const toggleTheme = () => {
-    const isDark = theme === 'dark';
-    const newTheme = isDark ? 'light' : 'dark';
+    const isDark = theme === "dark";
+    const newTheme = isDark ? "light" : "dark";
 
     if (!document.startViewTransition) {
       setTheme(newTheme);
       return;
     }
 
-    document.documentElement.classList.add(isDark ? 'transition-to-light' : 'transition-to-dark');
+    document.documentElement.classList.add(
+      isDark ? "transition-to-light" : "transition-to-dark",
+    );
     const transition = document.startViewTransition(() => {
       setTheme(newTheme);
     });
 
     transition.finished.finally(() => {
-      document.documentElement.classList.remove('transition-to-light', 'transition-to-dark');
+      document.documentElement.classList.remove(
+        "transition-to-light",
+        "transition-to-dark",
+      );
     });
   };
 
@@ -84,6 +108,86 @@ export default function DashboardPage() {
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [ratesInitialized, setRatesInitialized] = useState(false);
+
+  // Local alias for imported function to resolve potential bundler reference issues
+  const setRates = updateExchangeRates;
+
+  // Refs for "Click Outside" behavior
+  const userDropdownRef = useRef<HTMLDivElement>(null);
+  const currencyDropdownRef = useRef<HTMLDivElement>(null);
+  const filterDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Currency & Rate Initialization
+  useEffect(() => {
+    const initRates = async () => {
+      const CACHE_KEY = "snapfins_exchange_rates";
+      const CACHE_TTL = 6 * 60 * 60 * 1000; // 6 hours
+
+      try {
+        const cached = localStorage.getItem(CACHE_KEY);
+        if (cached) {
+          const { rates, timestamp } = JSON.parse(cached);
+          if (Date.now() - timestamp < CACHE_TTL) {
+            setRates(rates);
+            setRatesInitialized(true);
+            return;
+          }
+        }
+
+        // Fetch new rates if cache missing or expired
+        const res = await fetch("https://open.er-api.com/v6/latest/USD");
+        const data = await res.json();
+
+        if (data && data.rates) {
+          setRates(data.rates);
+          localStorage.setItem(
+            CACHE_KEY,
+            JSON.stringify({
+              rates: data.rates,
+              timestamp: Date.now(),
+            })
+          );
+        }
+      } catch (error) {
+        console.error("Failed to fetch exchange rates:", error);
+      } finally {
+        setRatesInitialized(true);
+      }
+    };
+
+    initRates();
+  }, []);
+
+  // Outside Click Listener
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      // User Profile Dropdown
+      if (
+        userDropdownRef.current &&
+        !userDropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowUserDropdown(false);
+      }
+      // Currency Dropdown
+      if (
+        currencyDropdownRef.current &&
+        !currencyDropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowCurrencyDropdown(false);
+      }
+      // Category Filter Dropdown
+      if (
+        filterDropdownRef.current &&
+        !filterDropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowFilterDropdown(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   // Reset page when filter changes
   useEffect(() => {
@@ -91,76 +195,114 @@ export default function DashboardPage() {
   }, [filterCategory]);
 
   const calculateTotals = () => {
-    let incomeCurrentMonth = 0, incomeLastMonth = 0;
-    let expenseCurrentMonth = 0, expenseLastMonth = 0;
-    let investmentCurrentMonth = 0, investmentLastMonth = 0;
-    let totalIncome = 0, totalExpense = 0;
+    let incomeCurrentMonth = 0,
+      incomeLastMonth = 0;
+    let expenseCurrentMonth = 0,
+      expenseLastMonth = 0;
+    let investmentCurrentMonth = 0,
+      investmentLastMonth = 0;
+    let totalIncome = 0,
+      totalExpense = 0;
 
     const now = new Date();
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
     const lastMonth = now.getMonth() === 0 ? 11 : now.getMonth() - 1;
-    const lastMonthYear = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+    const lastMonthYear =
+      now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
 
-    transactions.forEach(tx => {
+    transactions.forEach((tx) => {
       const txDate = new Date(tx.date);
-      const isCurrentMonth = txDate.getMonth() === currentMonth && txDate.getFullYear() === currentYear;
-      const isLastMonth = txDate.getMonth() === lastMonth && txDate.getFullYear() === lastMonthYear;
+      const isCurrentMonth =
+        txDate.getMonth() === currentMonth &&
+        txDate.getFullYear() === currentYear;
+      const isLastMonth =
+        txDate.getMonth() === lastMonth &&
+        txDate.getFullYear() === lastMonthYear;
 
       // Extract numeric value correctly
       let numStr = tx.amount;
-      const txCurrency = normalizeCurrency(tx.currency || 
-        ((numStr.includes('IDR') || numStr.includes('Rp')) ? 'IDR' : 
-         (numStr.includes('$') || numStr.includes('USD')) ? 'USD' : 
-         (numStr.includes('€') || numStr.includes('EUR')) ? 'EUR' : 
-         (numStr.includes('£') || numStr.includes('GBP')) ? 'GBP' : 
-         (numStr.includes('¥') || numStr.includes('JPY') || numStr.includes('CNY')) ? 'JPY' : 
-         (numStr.includes('₩') || numStr.includes('KRW')) ? 'KRW' : currency)
+      const txCurrency = normalizeCurrency(
+        tx.currency ||
+          (numStr.includes("IDR") || numStr.includes("Rp")
+            ? "IDR"
+            : numStr.includes("$") || numStr.includes("USD")
+              ? "USD"
+              : numStr.includes("€") || numStr.includes("EUR")
+                ? "EUR"
+                : numStr.includes("£") || numStr.includes("GBP")
+                  ? "GBP"
+                  : numStr.includes("¥") ||
+                      numStr.includes("JPY") ||
+                      numStr.includes("CNY")
+                    ? "JPY"
+                    : numStr.includes("₩") || numStr.includes("KRW")
+                      ? "KRW"
+                      : currency),
       );
-      
-      let cleanAmount = numStr.replace(/[^0-9.,-]/g, ""); 
-      if (txCurrency === 'IDR') {
-        cleanAmount = cleanAmount.replace(/\./g, "").replace(/,/g, "."); 
+
+      let cleanAmount = numStr.replace(/[^0-9.,-]/g, "");
+      if (txCurrency === "IDR") {
+        cleanAmount = cleanAmount.replace(/\./g, "").replace(/,/g, ".");
       } else {
-        cleanAmount = cleanAmount.replace(/,/g, ""); 
+        cleanAmount = cleanAmount.replace(/,/g, "");
       }
-      
+
       const rawVal = parseFloat(cleanAmount) || 0;
       const val = convert(rawVal, txCurrency, currency);
-      
+
       // Update ALL TIME totals for Net Worth
-      if (tx.type === 'Credit') totalIncome += val;
-      else if (tx.type === 'Debit' || tx.type === 'Investment') totalExpense += val;
-      
+      if (tx.type === "Credit") totalIncome += val;
+      else if (tx.type === "Debit" || tx.type === "Investment")
+        totalExpense += val;
+
       if (isCurrentMonth) {
-        if (tx.type === 'Credit') incomeCurrentMonth += val;
-        else if (tx.type === 'Debit') expenseCurrentMonth += val;
-        else if (tx.type === 'Investment') investmentCurrentMonth += val;
+        if (tx.type === "Credit") incomeCurrentMonth += val;
+        else if (tx.type === "Debit") expenseCurrentMonth += val;
+        else if (tx.type === "Investment") investmentCurrentMonth += val;
       } else if (isLastMonth) {
-        if (tx.type === 'Credit') incomeLastMonth += val;
-        else if (tx.type === 'Debit') expenseLastMonth += val;
-        else if (tx.type === 'Investment') investmentLastMonth += val;
+        if (tx.type === "Credit") incomeLastMonth += val;
+        else if (tx.type === "Debit") expenseLastMonth += val;
+        else if (tx.type === "Investment") investmentLastMonth += val;
       }
     });
 
     const netWorthNow = totalIncome - totalExpense;
     // Net Worth at start = Current Net Worth - (Total Income - Total Expense - Total Investment) of current month
-    const netWorthAtStartOfMonth = netWorthNow - (incomeCurrentMonth - expenseCurrentMonth - investmentCurrentMonth);
+    const netWorthAtStartOfMonth =
+      netWorthNow -
+      (incomeCurrentMonth - expenseCurrentMonth - investmentCurrentMonth);
 
-    const incomeTrend = incomeLastMonth === 0 ? null : ((incomeCurrentMonth - incomeLastMonth) / incomeLastMonth) * 100;
-    const expenseTrend = expenseLastMonth === 0 ? null : ((expenseCurrentMonth - expenseLastMonth) / expenseLastMonth) * 100;
-    const investmentTrend = investmentLastMonth === 0 ? null : ((investmentCurrentMonth - investmentLastMonth) / investmentLastMonth) * 100;
-    const netWorthTrend = netWorthAtStartOfMonth === 0 ? null : ((netWorthNow - netWorthAtStartOfMonth) / netWorthAtStartOfMonth) * 100;
+    const incomeTrend =
+      incomeLastMonth === 0
+        ? null
+        : ((incomeCurrentMonth - incomeLastMonth) / incomeLastMonth) * 100;
+    const expenseTrend =
+      expenseLastMonth === 0
+        ? null
+        : ((expenseCurrentMonth - expenseLastMonth) / expenseLastMonth) * 100;
+    const investmentTrend =
+      investmentLastMonth === 0
+        ? null
+        : ((investmentCurrentMonth - investmentLastMonth) /
+            investmentLastMonth) *
+          100;
+    const netWorthTrend =
+      netWorthAtStartOfMonth === 0
+        ? null
+        : ((netWorthNow - netWorthAtStartOfMonth) / netWorthAtStartOfMonth) *
+          100;
 
-    return { 
-      income: formatValue(incomeCurrentMonth, currency, lang), 
-      expense: formatValue(expenseCurrentMonth, currency, lang), 
+    return {
+      income: formatValue(incomeCurrentMonth, currency, lang),
+      expense: formatValue(expenseCurrentMonth, currency, lang),
       investment: formatValue(investmentCurrentMonth, currency, lang),
       netWorth: formatValue(netWorthNow, currency, lang),
-      incomeTrend: incomeTrend !== null ? incomeTrend.toFixed(1) : '—',
-      expenseTrend: expenseTrend !== null ? expenseTrend.toFixed(1) : '—',
-      investmentTrend: investmentTrend !== null ? investmentTrend.toFixed(1) : '—',
-      netWorthTrend: netWorthTrend !== null ? netWorthTrend.toFixed(1) : '—'
+      incomeTrend: incomeTrend !== null ? incomeTrend.toFixed(1) : "—",
+      expenseTrend: expenseTrend !== null ? expenseTrend.toFixed(1) : "—",
+      investmentTrend:
+        investmentTrend !== null ? investmentTrend.toFixed(1) : "—",
+      netWorthTrend: netWorthTrend !== null ? netWorthTrend.toFixed(1) : "—",
     };
   };
 
@@ -169,103 +311,164 @@ export default function DashboardPage() {
   // Dynamically calculate days remaining until end of current month
   const daysUntilEndOfMonth = (() => {
     const now = new Date();
-    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const lastDay = new Date(
+      now.getFullYear(),
+      now.getMonth() + 1,
+      0,
+    ).getDate();
     return lastDay - now.getDate();
   })();
 
   // Filter transactions based on active category
-  const filteredTransactions = transactions.filter(tx => 
-    filterCategory === 'ALL' || tx.category === filterCategory
+  const filteredTransactions = transactions.filter(
+    (tx) => filterCategory === "ALL" || tx.category === filterCategory,
   );
 
   // Pagination Logic
   const paginatedTransactions = filteredTransactions.slice(
     (currentPage - 1) * pageSize,
-    currentPage * pageSize
+    currentPage * pageSize,
   );
 
   // Derive available categories for filter dropdown dynamically
-  const availableCategories = ['ALL', ...Array.from(new Set(transactions.map(t => t.category)))].sort();
+  const availableCategories = [
+    "ALL",
+    ...Array.from(new Set(transactions.map((t) => t.category))),
+  ].sort();
 
   // Calculate Pivot Data (grouped by category)
-  const pivotData = filteredTransactions.reduce((acc, tx) => {
-    const numStr = tx.amount;
-    const txCurrency = normalizeCurrency(tx.currency || 
-      ((numStr.includes('IDR') || numStr.includes('Rp')) ? 'IDR' : 
-       (numStr.includes('$') || numStr.includes('USD')) ? 'USD' : 
-       (numStr.includes('€') || numStr.includes('EUR')) ? 'EUR' : 
-       (numStr.includes('£') || numStr.includes('GBP')) ? 'GBP' : 
-       (numStr.includes('¥') || numStr.includes('JPY') || numStr.includes('CNY')) ? 'JPY' : 
-       (numStr.includes('₩') || numStr.includes('KRW')) ? 'KRW' : 'USD')
-    );
-    
-    let cleanAmount = numStr.replace(/[^0-9.,-]/g, "");
-    if (txCurrency === 'IDR') {
-      cleanAmount = cleanAmount.replace(/\./g, "").replace(/,/g, ".");
-    } else {
-      cleanAmount = cleanAmount.replace(/,/g, "");
-    }
-    
-    const rawVal = parseFloat(cleanAmount) || 0;
-    const amount = convert(rawVal, txCurrency, currency);
-    
-    if (!acc[tx.category]) {
-      acc[tx.category] = { category: tx.category, spent: 0, received: 0, invested: 0 };
-    }
-    if (tx.type === 'Debit') acc[tx.category].spent += amount;
-    else if (tx.type === 'Credit') acc[tx.category].received += amount;
-    else if (tx.type === 'Investment') acc[tx.category].invested += amount;
-    
-    return acc;
-  }, {} as Record<string, {category: string, spent: number, received: number, invested: number}>);
-  
-  const pivotRows = (Object.values(pivotData) as {category: string, spent: number, received: number, invested: number}[]).sort((a, b) => b.spent - a.spent);
+  const pivotData = filteredTransactions.reduce(
+    (acc, tx) => {
+      const numStr = tx.amount;
+      const txCurrency = normalizeCurrency(
+        tx.currency ||
+          (numStr.includes("IDR") || numStr.includes("Rp")
+            ? "IDR"
+            : numStr.includes("$") || numStr.includes("USD")
+              ? "USD"
+              : numStr.includes("€") || numStr.includes("EUR")
+                ? "EUR"
+                : numStr.includes("£") || numStr.includes("GBP")
+                  ? "GBP"
+                  : numStr.includes("¥") ||
+                      numStr.includes("JPY") ||
+                      numStr.includes("CNY")
+                    ? "JPY"
+                    : numStr.includes("₩") || numStr.includes("KRW")
+                      ? "KRW"
+                      : "USD"),
+      );
+
+      let cleanAmount = numStr.replace(/[^0-9.,-]/g, "");
+      if (txCurrency === "IDR") {
+        cleanAmount = cleanAmount.replace(/\./g, "").replace(/,/g, ".");
+      } else {
+        cleanAmount = cleanAmount.replace(/,/g, "");
+      }
+
+      const rawVal = parseFloat(cleanAmount) || 0;
+      const amount = convert(rawVal, txCurrency, currency);
+
+      if (!acc[tx.category]) {
+        acc[tx.category] = {
+          category: tx.category,
+          spent: 0,
+          received: 0,
+          invested: 0,
+        };
+      }
+      if (tx.type === "Debit") acc[tx.category].spent += amount;
+      else if (tx.type === "Credit") acc[tx.category].received += amount;
+      else if (tx.type === "Investment") acc[tx.category].invested += amount;
+
+      return acc;
+    },
+    {} as Record<
+      string,
+      { category: string; spent: number; received: number; invested: number }
+    >,
+  );
+
+  const pivotRows = (
+    Object.values(pivotData) as {
+      category: string;
+      spent: number;
+      received: number;
+      invested: number;
+    }[]
+  ).sort((a, b) => b.spent - a.spent);
 
   // Pagination for Pivot if categories are many
   const paginatedPivotRows = pivotRows.slice(
     (currentPage - 1) * pageSize,
-    currentPage * pageSize
+    currentPage * pageSize,
   );
-  
-  const totalPages = viewMode === 'grid' 
-    ? Math.ceil(filteredTransactions.length / pageSize)
-    : Math.ceil(pivotRows.length / pageSize);
+
+  const totalPages =
+    viewMode === "grid"
+      ? Math.ceil(filteredTransactions.length / pageSize)
+      : Math.ceil(pivotRows.length / pageSize);
 
   const handleDownloadCSV = () => {
-    if (viewMode === 'grid') {
-      const headers = [t('colDate'), t('colCategory'), t('colDescription'), t('colType'), t('colAmount'), t('colLinkedAssets')];
-      const rows = filteredTransactions.map(tx => [
-        tx.date, 
-        tx.category, 
-        tx.description.replace(/,/g, ''), 
-        tx.type, 
-        tx.amount.replace(/[^0-9.]/g, ''), 
-        tx.source ? tx.source.replace(/,/g, '') : ''
+    if (viewMode === "grid") {
+      const headers = [
+        t("colDate"),
+        t("colCategory"),
+        t("colDescription"),
+        t("colType"),
+        t("colAmount"),
+        t("colLinkedAssets"),
+      ];
+      const rows = filteredTransactions.map((tx) => [
+        tx.date,
+        tx.category,
+        tx.description.replace(/,/g, ""),
+        tx.type,
+        tx.amount.replace(/[^0-9.]/g, ""),
+        tx.source ? tx.source.replace(/,/g, "") : "",
       ]);
-      const csvContent = [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const csvContent = [
+        headers.join(","),
+        ...rows.map((e) => e.join(",")),
+      ].join("\n");
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
       const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.setAttribute('href', url);
-      link.setAttribute('download', `snapfins_ledger_${new Date().toISOString().split('T')[0]}.csv`);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute(
+        "download",
+        `snapfins_ledger_${new Date().toISOString().split("T")[0]}.csv`,
+      );
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
     } else {
-      const headers = [t('colCategory'), t('colIncome'), t('colExpense'), t('colInvested'), t('colNetBalance')];
-      const rows = pivotRows.map(r => [
+      const headers = [
+        t("colCategory"),
+        t("colIncome"),
+        t("colExpense"),
+        t("colInvested"),
+        t("colNetBalance"),
+      ];
+      const rows = pivotRows.map((r) => [
         r.category,
         r.received,
         r.spent,
         r.invested,
-        r.received - r.spent
+        r.received - r.spent,
       ]);
-      const csvContent = [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const csvContent = [
+        headers.join(","),
+        ...rows.map((e) => e.join(",")),
+      ].join("\n");
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
       const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.setAttribute('href', url);
-      link.setAttribute('download', `snapfins_pivot_${new Date().toISOString().split('T')[0]}.csv`);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute(
+        "download",
+        `snapfins_pivot_${new Date().toISOString().split("T")[0]}.csv`,
+      );
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -276,23 +479,28 @@ export default function DashboardPage() {
     setIsLoadingTx(true);
     const supabase = createClient();
     const { data: userData } = await supabase.auth.getUser();
-    
+
     if (userData?.user) {
       const meta = userData.user.user_metadata;
       if (meta?.avatar_url) setUserAvatar(meta.avatar_url);
-      setUserName(meta?.full_name || meta?.name || userData.user.email?.split('@')[0] || 'User');
-      setUserEmail(userData.user.email || '');
-      
+      setUserName(
+        meta?.full_name ||
+          meta?.name ||
+          userData.user.email?.split("@")[0] ||
+          "User",
+      );
+      setUserEmail(userData.user.email || "");
+
       const { data, error } = await supabase
-        .from('transactions')
-        .select('*')
-        .eq('user_id', userData.user.id)
-        .order('date', { ascending: false })
-        .order('created_at', { ascending: false });
-        
+        .from("transactions")
+        .select("*")
+        .eq("user_id", userData.user.id)
+        .order("date", { ascending: false })
+        .order("created_at", { ascending: false });
+
       if (!error && data) {
         // Map data from DB format to our UI format (is_ai -> isAi)
-        const formattedData = data.map(tx => ({ ...tx, isAi: tx.is_ai }));
+        const formattedData = data.map((tx) => ({ ...tx, isAi: tx.is_ai }));
         setTransactions(formattedData);
       }
     }
@@ -314,12 +522,15 @@ export default function DashboardPage() {
     setIsDeleting(true);
     const supabase = createClient();
     const { data: userData } = await supabase.auth.getUser();
-    
+
     if (userData?.user) {
       // 1. Purge all transactions
-      await supabase.from('transactions').delete().eq('user_id', userData.user.id);
+      await supabase
+        .from("transactions")
+        .delete()
+        .eq("user_id", userData.user.id);
       // 2. Clear assets if any
-      await supabase.from('assets').delete().eq('user_id', userData.user.id);
+      await supabase.from("assets").delete().eq("user_id", userData.user.id);
       // 3. Sign Out
       await supabase.auth.signOut();
       window.location.href = "/";
@@ -330,11 +541,11 @@ export default function DashboardPage() {
   const handleManualSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    
+
     try {
       const supabase = createClient();
       const { data: userData } = await supabase.auth.getUser();
-      
+
       if (!userData?.user) throw new Error("Not authenticated");
 
       let amountStr = manualForm.amount;
@@ -352,19 +563,30 @@ export default function DashboardPage() {
         type: manualForm.type,
         amount: manualForm.amount, // Save only the numeric string
         currency: manualForm.currency, // Save explicit currency code
-        source: manualForm.source || 'Manual Entry',
-        is_ai: false
+        source: manualForm.source || "Manual Entry",
+        is_ai: false,
       };
 
-      const { data: insertedData, error } = await supabase.from('transactions').insert([newTx]).select();
+      const { data: insertedData, error } = await supabase
+        .from("transactions")
+        .insert([newTx])
+        .select();
 
       if (error) throw error;
-      
+
       if (insertedData) {
         const mappedTx = { ...insertedData[0], isAi: insertedData[0].is_ai };
-        setTransactions(prev => [mappedTx, ...prev]);
+        setTransactions((prev) => [mappedTx, ...prev]);
         setShowManualEntry(false);
-        setManualForm({ date: new Date().toISOString().split('T')[0], category: 'GENERAL', description: '', type: 'Debit', currency: 'IDR', amount: '', source: '' });
+        setManualForm({
+          date: new Date().toISOString().split("T")[0],
+          category: "GENERAL",
+          description: "",
+          type: "Debit",
+          currency: "IDR",
+          amount: "",
+          source: "",
+        });
       }
     } catch (err: any) {
       alert("Failed to save: " + err.message);
@@ -385,14 +607,16 @@ export default function DashboardPage() {
 
       const res = await fetch("/api/scan", {
         method: "POST",
-        body: formData
+        body: formData,
       });
 
       const data = await res.json();
       if (res.ok && data.transaction) {
         // Validation check for non-receipts
         if (data.transaction.isValidReceipt === false) {
-          setScanError(data.transaction.errorReason || t('tryAgainWithDifferent'));
+          setScanError(
+            data.transaction.errorReason || t("tryAgainWithDifferent"),
+          );
           return;
         }
 
@@ -405,26 +629,32 @@ export default function DashboardPage() {
           amount: data.transaction.amount,
           currency: data.transaction.currency || "IDR", // Save detected currency
           source: "Gemini Vision",
-          is_ai: true
+          is_ai: true,
         };
-        
+
         const supabase = createClient();
         const { data: userData } = await supabase.auth.getUser();
         if (userData?.user) {
-          const { data: insertedData, error } = await supabase.from('transactions').insert([{ ...newTx, user_id: userData.user.id }]).select();
+          const { data: insertedData, error } = await supabase
+            .from("transactions")
+            .insert([{ ...newTx, user_id: userData.user.id }])
+            .select();
           if (!error && insertedData) {
-            const mappedTx = { ...insertedData[0], isAi: insertedData[0].is_ai };
-            setTransactions(prev => [mappedTx, ...prev]);
+            const mappedTx = {
+              ...insertedData[0],
+              isAi: insertedData[0].is_ai,
+            };
+            setTransactions((prev) => [mappedTx, ...prev]);
           } else {
-            setScanError(t('scanErrorHint'));
+            setScanError(t("scanErrorHint"));
           }
         }
       } else {
-        setScanError(data.error || t('scanErrorHint'));
+        setScanError(data.error || t("scanErrorHint"));
       }
     } catch (error) {
       console.error(error);
-      setScanError(t('tryAgainWithDifferent'));
+      setScanError(t("tryAgainWithDifferent"));
     } finally {
       setIsScanning(false);
       // Reset input value to allow scanning same file again
@@ -437,95 +667,205 @@ export default function DashboardPage() {
       {/* Manual Entry Modal */}
       {showManualEntry && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-surface p-6 sm:p-8 rounded-3xl shadow-2xl flex flex-col w-full max-w-lg border border-outline-variant/20 animate-in fade-in zoom-in duration-200" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="bg-surface p-6 sm:p-8 rounded-3xl shadow-2xl flex flex-col w-full max-w-lg border border-outline-variant/20 animate-in fade-in zoom-in duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex justify-between items-center mb-6">
-              <h3 className="font-headline font-bold text-2xl text-on-surface">{t('manualEntryTitle')}</h3>
-              <button 
-                onClick={() => setShowManualEntry(false)} 
+              <h3 className="font-headline font-bold text-2xl text-on-surface">
+                {t("manualEntryTitle")}
+              </h3>
+              <button
+                onClick={() => setShowManualEntry(false)}
                 className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-surface-container-high transition-colors text-on-surface-variant cursor-pointer"
               >
                 <span className="material-symbols-outlined text-lg">close</span>
               </button>
             </div>
-            
+
             <form onSubmit={handleManualSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">{t('labelDate')}</label>
-                  <input type="date" required value={manualForm.date} onChange={e => setManualForm({...manualForm, date: e.target.value})} className="w-full bg-surface-container-low border border-outline-variant/30 rounded-xl px-4 py-3 text-on-surface text-sm focus:outline-none focus:border-primary transition-colors" />
+                  <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">
+                    {t("labelDate")}
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={manualForm.date}
+                    onChange={(e) =>
+                      setManualForm({ ...manualForm, date: e.target.value })
+                    }
+                    className="w-full bg-surface-container-low border border-outline-variant/30 rounded-xl px-4 py-3 text-on-surface text-sm focus:outline-none focus:border-primary transition-colors"
+                  />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">{t('labelAmount')}</label>
+                  <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">
+                    {t("labelAmount")}
+                  </label>
                   <div className="flex bg-surface-container-low border border-outline-variant/30 rounded-xl focus-within:border-primary transition-colors overflow-hidden">
-                    <select 
+                    <select
                       value={manualForm.currency}
-                      onChange={e => {
+                      onChange={(e) => {
                         const newCurrency = e.target.value;
-                        const raw = manualForm.amount.replace(/\D/g, '');
+                        const raw = manualForm.amount.replace(/\D/g, "");
                         if (raw) {
-                          const locale = (newCurrency === 'IDR') ? 'id-ID' : 'en-US';
-                          const fmt = new Intl.NumberFormat(locale).format(parseInt(raw, 10));
-                          setManualForm({...manualForm, currency: newCurrency, amount: fmt});
+                          const locale =
+                            newCurrency === "IDR" ? "id-ID" : "en-US";
+                          const fmt = new Intl.NumberFormat(locale).format(
+                            parseInt(raw, 10),
+                          );
+                          setManualForm({
+                            ...manualForm,
+                            currency: newCurrency,
+                            amount: fmt,
+                          });
                         } else {
-                          setManualForm({...manualForm, currency: newCurrency});
+                          setManualForm({
+                            ...manualForm,
+                            currency: newCurrency,
+                          });
                         }
-                      }} 
+                      }}
                       className="bg-surface-container-low text-on-surface text-xs font-black pl-3 pr-1 py-3 focus:outline-none border-r border-outline-variant/30 cursor-pointer w-20 shrink-0"
                     >
-                      {Object.keys(currencySymbols).map(c => (
-                        <option key={c} value={c} className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">{c}</option>
+                      {Object.keys(currencySymbols).map((c) => (
+                        <option
+                          key={c}
+                          value={c}
+                          className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                        >
+                          {c}
+                        </option>
                       ))}
                     </select>
-                    <input 
-                      type="text" 
-                      placeholder={manualForm.currency === 'IDR' ? "50.000" : "50,000"} 
-                      required 
-                      value={manualForm.amount} 
-                      onChange={e => {
-                        const numericStr = e.target.value.replace(/\D/g, '');
+                    <input
+                      type="text"
+                      placeholder={
+                        manualForm.currency === "IDR" ? "50.000" : "50,000"
+                      }
+                      required
+                      value={manualForm.amount}
+                      onChange={(e) => {
+                        const numericStr = e.target.value.replace(/\D/g, "");
                         if (!numericStr) {
-                          setManualForm({...manualForm, amount: ""});
+                          setManualForm({ ...manualForm, amount: "" });
                         } else {
-                          const locale = manualForm.currency === 'IDR' ? 'id-ID' : 'en-US';
-                          setManualForm({...manualForm, amount: new Intl.NumberFormat(locale).format(parseInt(numericStr, 10))});
+                          const locale =
+                            manualForm.currency === "IDR" ? "id-ID" : "en-US";
+                          setManualForm({
+                            ...manualForm,
+                            amount: new Intl.NumberFormat(locale).format(
+                              parseInt(numericStr, 10),
+                            ),
+                          });
                         }
-                      }} 
-                      className="flex-grow bg-transparent px-3 py-3 text-on-surface text-sm focus:outline-none font-mono font-bold" 
+                      }}
+                      className="flex-grow bg-transparent px-3 py-3 text-on-surface text-sm focus:outline-none font-mono font-bold"
                     />
                   </div>
                 </div>
               </div>
-              
+
               <div>
-                <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">{t('labelDescription')}</label>
-                <input type="text" placeholder={t('placeholderDescription')} required value={manualForm.description} onChange={e => setManualForm({...manualForm, description: e.target.value})} className="w-full bg-surface-container-low border border-outline-variant/30 rounded-xl px-4 py-3 text-on-surface text-sm focus:outline-none focus:border-primary transition-colors" />
+                <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">
+                  {t("labelDescription")}
+                </label>
+                <input
+                  type="text"
+                  placeholder={t("placeholderDescription")}
+                  required
+                  value={manualForm.description}
+                  onChange={(e) =>
+                    setManualForm({
+                      ...manualForm,
+                      description: e.target.value,
+                    })
+                  }
+                  className="w-full bg-surface-container-low border border-outline-variant/30 rounded-xl px-4 py-3 text-on-surface text-sm focus:outline-none focus:border-primary transition-colors"
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">{t('labelCategory')}</label>
-                  <input type="text" placeholder={t('placeholderCategory')} required value={manualForm.category} onChange={e => setManualForm({...manualForm, category: e.target.value})} className="w-full bg-surface-container-low border border-outline-variant/30 rounded-xl px-4 py-3 text-on-surface text-sm focus:outline-none focus:border-primary transition-colors uppercase" />
+                  <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">
+                    {t("labelCategory")}
+                  </label>
+                  <input
+                    type="text"
+                    placeholder={t("placeholderCategory")}
+                    required
+                    value={manualForm.category}
+                    onChange={(e) =>
+                      setManualForm({ ...manualForm, category: e.target.value })
+                    }
+                    className="w-full bg-surface-container-low border border-outline-variant/30 rounded-xl px-4 py-3 text-on-surface text-sm focus:outline-none focus:border-primary transition-colors uppercase"
+                  />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">{t('labelType')}</label>
-                  <select value={manualForm.type} onChange={e => setManualForm({...manualForm, type: e.target.value})} className="w-full bg-surface-container-low border border-outline-variant/30 rounded-xl px-4 py-3 text-on-surface text-sm focus:outline-none focus:border-primary transition-colors">
-                    <option value="Debit" className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">Debit</option>
-                    <option value="Credit" className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">Credit</option>
-                    <option value="Investment" className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">Investment</option>
+                  <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">
+                    {t("labelType")}
+                  </label>
+                  <select
+                    value={manualForm.type}
+                    onChange={(e) =>
+                      setManualForm({ ...manualForm, type: e.target.value })
+                    }
+                    className="w-full bg-surface-container-low border border-outline-variant/30 rounded-xl px-4 py-3 text-on-surface text-sm focus:outline-none focus:border-primary transition-colors"
+                  >
+                    <option
+                      value="Debit"
+                      className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                    >
+                      Debit
+                    </option>
+                    <option
+                      value="Credit"
+                      className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                    >
+                      Credit
+                    </option>
+                    <option
+                      value="Investment"
+                      className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                    >
+                      Investment
+                    </option>
                   </select>
                 </div>
               </div>
-              
+
               <div>
-                <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">{t('labelSource')}</label>
-                <input type="text" placeholder={t('placeholderSource')} value={manualForm.source} onChange={e => setManualForm({...manualForm, source: e.target.value})} className="w-full bg-surface-container-low border border-outline-variant/30 rounded-xl px-4 py-3 text-on-surface text-sm focus:outline-none focus:border-primary transition-colors" />
+                <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">
+                  {t("labelSource")}
+                </label>
+                <input
+                  type="text"
+                  placeholder={t("placeholderSource")}
+                  value={manualForm.source}
+                  onChange={(e) =>
+                    setManualForm({ ...manualForm, source: e.target.value })
+                  }
+                  className="w-full bg-surface-container-low border border-outline-variant/30 rounded-xl px-4 py-3 text-on-surface text-sm focus:outline-none focus:border-primary transition-colors"
+                />
               </div>
 
               <div className="pt-4">
-                <button type="submit" disabled={isSubmitting} className="w-full bg-primary hover:bg-primary-container text-white px-6 py-4 rounded-xl font-bold transition-all hover:shadow-lg active:scale-95 cursor-pointer disabled:opacity-70 disabled:pointer-events-none disabled:scale-100 flex items-center justify-center gap-2">
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full bg-primary hover:bg-primary-container text-white px-6 py-4 rounded-xl font-bold transition-all hover:shadow-lg active:scale-95 cursor-pointer disabled:opacity-70 disabled:pointer-events-none disabled:scale-100 flex items-center justify-center gap-2"
+                >
                   {isSubmitting ? (
-                     <><span className="material-symbols-outlined animate-spin text-sm">sync</span> {t('saving')}</>
-                  ) : t('saveTransaction')}
+                    <>
+                      <span className="material-symbols-outlined animate-spin text-sm">
+                        sync
+                      </span>{" "}
+                      {t("saving")}
+                    </>
+                  ) : (
+                    t("saveTransaction")
+                  )}
                 </button>
               </div>
             </form>
@@ -538,15 +878,21 @@ export default function DashboardPage() {
         <div className="fixed inset-0 z-[101] flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <div className="bg-surface p-8 rounded-3xl shadow-2xl flex flex-col items-center max-w-sm w-full border border-red-500/20 animate-in fade-in zoom-in duration-300">
             <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center mb-6 relative">
-              <span className="material-symbols-outlined text-red-500 text-4xl">error</span>
+              <span className="material-symbols-outlined text-red-500 text-4xl">
+                error
+              </span>
             </div>
-            <h3 className="font-headline font-bold text-xl text-on-surface mb-2">{t('scanErrorTitle')}</h3>
-            <p className="text-sm text-center text-on-surface-variant leading-relaxed mb-8">{scanError}</p>
-            <button 
+            <h3 className="font-headline font-bold text-xl text-on-surface mb-2">
+              {t("scanErrorTitle")}
+            </h3>
+            <p className="text-sm text-center text-on-surface-variant leading-relaxed mb-8">
+              {scanError}
+            </p>
+            <button
               onClick={() => setScanError(null)}
               className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-4 rounded-xl transition-colors shadow-sm active:scale-95"
             >
-              {t('tryAgain')}
+              {t("tryAgain")}
             </button>
           </div>
         </div>
@@ -557,26 +903,36 @@ export default function DashboardPage() {
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <div className="bg-surface p-8 rounded-3xl shadow-2xl flex flex-col items-center max-w-sm w-full border border-error/20 animate-in fade-in zoom-in duration-300">
             <div className="w-16 h-16 rounded-full bg-error/10 flex items-center justify-center mb-6 relative">
-              <span className="material-symbols-outlined text-error text-4xl">warning</span>
+              <span className="material-symbols-outlined text-error text-4xl">
+                warning
+              </span>
             </div>
-            <h3 className="font-headline font-bold text-xl text-on-surface mb-2">{t('deleteAccount')}?</h3>
-            <p className="text-sm text-center text-on-surface-variant leading-relaxed mb-8">{t('deleteAccountWarning')}</p>
-            
+            <h3 className="font-headline font-bold text-xl text-on-surface mb-2">
+              {t("deleteAccount")}?
+            </h3>
+            <p className="text-sm text-center text-on-surface-variant leading-relaxed mb-8">
+              {t("deleteAccountWarning")}
+            </p>
+
             <div className="flex flex-col gap-3 w-full">
-              <button 
+              <button
                 onClick={handleDeleteAccount}
                 disabled={isDeleting}
                 className="w-full bg-error hover:bg-red-600 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-sm active:scale-95 flex items-center justify-center gap-2"
               >
-                {isDeleting ? <span className="material-symbols-outlined animate-spin">sync</span> : null}
-                {isDeleting ? t('deleting') : t('confirmDelete')}
+                {isDeleting ? (
+                  <span className="material-symbols-outlined animate-spin">
+                    sync
+                  </span>
+                ) : null}
+                {isDeleting ? t("deleting") : t("confirmDelete")}
               </button>
-              <button 
+              <button
                 onClick={() => setShowDeleteConfirm(false)}
                 disabled={isDeleting}
                 className="w-full bg-surface-container hover:bg-surface-container-high text-on-surface font-bold py-3 px-4 rounded-xl transition-all active:scale-95"
               >
-                {t('cancel')}
+                {t("cancel")}
               </button>
             </div>
           </div>
@@ -588,123 +944,208 @@ export default function DashboardPage() {
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <div className="bg-surface p-8 rounded-3xl shadow-2xl flex flex-col items-center max-w-sm w-full border border-primary/20 animate-in fade-in zoom-in duration-300">
             <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-6 relative">
-              <span className="material-symbols-outlined text-primary text-3xl animate-pulse" style={{ fontVariationSettings: "'FILL' 1" }}>auto_awesome</span>
+              <span
+                className="material-symbols-outlined text-primary text-3xl animate-pulse"
+                style={{ fontVariationSettings: "'FILL' 1" }}
+              >
+                auto_awesome
+              </span>
               <div className="absolute inset-0 rounded-full border-t-2 border-primary animate-spin"></div>
             </div>
-            <h3 className="font-headline font-bold text-xl text-on-surface mb-2">{t('analyzingReceipt')}</h3>
-            <p className="text-sm text-center text-on-surface-variant">{t('analyzingHint')}</p>
+            <h3 className="font-headline font-bold text-xl text-on-surface mb-2">
+              {t("analyzingReceipt")}
+            </h3>
+            <p className="text-sm text-center text-on-surface-variant">
+              {t("analyzingHint")}
+            </p>
           </div>
         </div>
       )}
 
-      {/* TopNavBar Shared Component */}
+      {/* TopNavBar Shared Component - v2.1.1 */}
       <nav className="sticky top-0 w-full z-50 bg-slate-50/80 dark:bg-slate-950/80 backdrop-blur-md border-b border-outline-variant/30">
         <div className="flex justify-between items-center w-full px-6 py-3 max-w-7xl mx-auto">
           <div className="flex items-center gap-8">
-            <span className="text-xl font-extrabold tracking-tighter text-indigo-700 dark:text-indigo-300 font-headline">SnapFins</span>
+            <span className="text-xl font-extrabold tracking-tighter text-indigo-700 dark:text-indigo-300 font-headline">
+              SnapFins
+            </span>
             <div className="hidden md:flex items-center gap-6 font-manrope font-semibold tracking-tight text-sm">
-              <a className="text-primary font-bold border-b-2 border-primary pb-1" href="#">{t('navDashboard')}</a>
-              <a className="text-on-surface-variant hover:text-primary transition-colors" href="#">{t('navAsset')}</a>
-              <a className="text-on-surface-variant hover:text-primary transition-colors" href="#">{t('navAnalytics')}</a>
+              <a
+                className="text-primary font-bold border-b-2 border-primary pb-1"
+                href="#"
+              >
+                {t("navDashboard")}
+              </a>
+              <a
+                className="text-on-surface-variant hover:text-primary transition-colors"
+                href="#"
+              >
+                {t("navAsset")}
+              </a>
+              <a
+                className="text-on-surface-variant hover:text-primary transition-colors"
+                href="#"
+              >
+                {t("navAnalytics")}
+              </a>
             </div>
           </div>
           <div className="flex items-center gap-4">
-            
-            <div className="w-8 h-8 flex items-center justify-center">
-              {mounted && (
-                <span 
-                  className="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-primary transition-colors"
-                  onClick={toggleTheme}
-                >
-                  {theme === 'dark' ? 'light_mode' : 'dark_mode'}
-                </span>
-              )}
-            </div>
-
-            <div className="flex bg-surface-container-low border border-outline-variant/30 rounded-lg p-0.5 ml-2 relative">
-              <button 
+            <div
+              className="flex bg-surface-container-low border border-outline-variant/30 rounded-lg p-0.5 ml-2 relative"
+              ref={currencyDropdownRef}
+            >
+              <button
                 onClick={() => setShowCurrencyDropdown(!showCurrencyDropdown)}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[10px] font-black text-primary hover:bg-primary/5 transition-all cursor-pointer"
               >
-                <span className="material-symbols-outlined text-sm">payments</span>
+                <span className="material-symbols-outlined text-sm">
+                  payments
+                </span>
                 {currency}
-                <span className="material-symbols-outlined text-[10px]">{showCurrencyDropdown ? 'expand_less' : 'expand_more'}</span>
+                <span className="material-symbols-outlined text-[10px]">
+                  {showCurrencyDropdown ? "expand_less" : "expand_more"}
+                </span>
               </button>
-              
+
               {showCurrencyDropdown && (
                 <div className="absolute right-0 top-10 mt-2 w-48 bg-white dark:bg-slate-900 border border-outline-variant/20 rounded-2xl shadow-2xl z-[100] overflow-hidden text-[11px] animate-in fade-in slide-in-from-top-2 duration-200">
                   <div className="px-3 py-2 border-b border-outline-variant/10 font-black text-[9px] uppercase tracking-widest text-on-surface-variant bg-slate-50 dark:bg-slate-800">
-                    {t('preferredCurrency')}
+                    {t("preferredCurrency")}
                   </div>
                   <div className="max-h-60 overflow-y-auto py-1 scrollbar-thin">
-                    {(Object.keys(currencySymbols) as SupportedCurrency[]).map(c => (
-                      <button 
-                        key={c}
-                        onClick={() => { setCurrency(c); setShowCurrencyDropdown(false); }}
-                        className={`w-full text-left px-4 py-2.5 hover:bg-primary/5 transition-colors cursor-pointer flex items-center justify-between ${currency === c ? 'text-primary font-black bg-primary/5' : 'text-on-surface font-semibold'}`}
-                      >
-                        <span className="flex items-center gap-2">
-                          <span className="text-primary/60 font-mono w-4">{currencySymbols[c]}</span>
-                          {c}
-                        </span>
-                        {currency === c && <span className="material-symbols-outlined text-sm">check</span>}
-                      </button>
-                    ))}
+                    {(Object.keys(currencySymbols) as SupportedCurrency[]).map(
+                      (c) => (
+                        <button
+                          key={c}
+                          onClick={() => {
+                            setCurrency(c);
+                            setShowCurrencyDropdown(false);
+                          }}
+                          className={`w-full text-left px-4 py-2.5 hover:bg-primary/5 transition-colors cursor-pointer flex items-center justify-between ${currency === c ? "text-primary font-black bg-primary/5" : "text-on-surface font-semibold"}`}
+                        >
+                          <span className="flex items-center gap-2">
+                            <span className="text-primary/60 font-mono w-4">
+                              {currencySymbols[c]}
+                            </span>
+                            {c}
+                          </span>
+                          {currency === c && (
+                            <span className="material-symbols-outlined text-sm">
+                              check
+                            </span>
+                          )}
+                        </button>
+                      ),
+                    )}
                   </div>
                 </div>
               )}
             </div>
 
             <div className="flex bg-surface-container-low border border-outline-variant/30 rounded-lg p-0.5 ml-2">
-              <button 
-                onClick={() => setLang('en')}
-                className={`text-[10px] font-bold px-2 py-1.5 rounded-md transition-colors ${lang === 'en' ? 'bg-primary text-white shadow-sm' : 'text-on-surface-variant hover:text-on-surface'}`}
-              >EN</button>
-              <button 
-                onClick={() => setLang('id')}
-                className={`text-[10px] font-bold px-2 py-1.5 rounded-md transition-colors ${lang === 'id' ? 'bg-primary text-white shadow-sm' : 'text-on-surface-variant hover:text-on-surface'}`}
-              >ID</button>
+              <button
+                onClick={() => setLang("en")}
+                className={`text-[10px] font-bold px-2 py-1.5 rounded-md transition-colors ${lang === "en" ? "bg-primary text-white shadow-sm" : "text-on-surface-variant hover:text-on-surface"}`}
+              >
+                EN
+              </button>
+              <button
+                onClick={() => setLang("id")}
+                className={`text-[10px] font-bold px-2 py-1.5 rounded-md transition-colors ${lang === "id" ? "bg-primary text-white shadow-sm" : "text-on-surface-variant hover:text-on-surface"}`}
+              >
+                ID
+              </button>
             </div>
-            
-            <div className="relative border-l border-outline-variant/30 pl-4 ml-4">
-              <button 
+
+            <div
+              className="relative border-l border-outline-variant/30 pl-4 ml-4"
+              ref={userDropdownRef}
+            >
+              <button
                 onClick={() => setShowUserDropdown(!showUserDropdown)}
                 className="flex items-center gap-3 hover:bg-surface-container-low p-1 rounded-xl transition-all active:scale-95 cursor-pointer"
               >
                 <div className="text-right hidden sm:block">
-                  <p className="text-[11px] font-extrabold text-on-surface leading-tight">{userName}</p>
-                  <p className="text-[9px] font-medium text-on-surface-variant leading-tight opacity-70">{userEmail}</p>
+                  <p className="text-[11px] font-extrabold text-on-surface leading-tight">
+                    {userName}
+                  </p>
+                  <p className="text-[9px] font-medium text-on-surface-variant leading-tight opacity-70">
+                    {userEmail}
+                  </p>
                 </div>
-                <img 
-                  alt="User profile" 
-                  className="w-10 h-10 rounded-full border-2 border-primary/20 object-cover shadow-sm" 
-                  src={userAvatar || "https://lh3.googleusercontent.com/aida-public/AB6AXuBE0e9w4xGMbdwDYXMaDw5uETVXAmCsb2dhI8hfIpOO3BPWgMaL0JjQzcpHBM7CT9NYI1ldia3F2nXUV5w3qb3mMDQz-OTK-jeHMEnz039x-WujlEaGvN3up-hQu3sr7A0G-nmdIg9113_eJSO-g9Mpnz1eq1fYd6INd1L0Flb-PXWLfhqXoh5e8wARW0avQOljBQFUftRfAqKCQ6Fw-PDIi6C3txyigy8dE7NZEcNbsgG6NlCq8YmU7KjLMJ2ODW7FZcU7PiQ025U"} 
+                <img
+                  alt="User profile"
+                  className="w-10 h-10 rounded-full border-2 border-primary/20 object-cover shadow-sm"
+                  src={
+                    userAvatar ||
+                    "https://lh3.googleusercontent.com/aida-public/AB6AXuBE0e9w4xGMbdwDYXMaDw5uETVXAmCsb2dhI8hfIpOO3BPWgMaL0JjQzcpHBM7CT9NYI1ldia3F2nXUV5w3qb3mMDQz-OTK-jeHMEnz039x-WujlEaGvN3up-hQu3sr7A0G-nmdIg9113_eJSO-g9Mpnz1eq1fYd6INd1L0Flb-PXWLfhqXoh5e8wARW0avQOljBQFUftRfAqKCQ6Fw-PDIi6C3txyigy8dE7NZEcNbsgG6NlCq8YmU7KjLMJ2ODW7FZcU7PiQ025U"
+                  }
                 />
               </button>
 
               {showUserDropdown && (
                 <div className="absolute right-0 top-12 mt-2 w-64 bg-white dark:bg-slate-900 border border-outline-variant/20 rounded-2xl shadow-2xl z-[100] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
                   <div className="px-5 py-4 border-b border-outline-variant/10 bg-slate-50 dark:bg-slate-800/50">
-                    <p className="text-xs font-black uppercase tracking-widest text-primary mb-1">{t('profile')}</p>
-                    <p className="text-sm font-bold text-on-surface truncate">{userName}</p>
-                    <p className="text-[10px] text-on-surface-variant truncate opacity-60">{userEmail}</p>
+                    <p className="text-xs font-black uppercase tracking-widest text-primary mb-1">
+                      {t("profile")}
+                    </p>
+                    <p className="text-sm font-bold text-on-surface truncate">
+                      {userName}
+                    </p>
+                    <p className="text-[10px] text-on-surface-variant truncate opacity-60">
+                      {userEmail}
+                    </p>
                   </div>
-                  
+
                   <div className="p-2 space-y-1">
-                    <button 
+                    {/* Theme Toggle (Moved here) */}
+                    {mounted && (
+                      <button
+                        onClick={toggleTheme}
+                        className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-on-surface hover:bg-surface-container-low transition-colors text-sm font-bold group"
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors">
+                            {theme === "dark" ? "light_mode" : "dark_mode"}
+                          </span>
+                          <span>
+                            {theme === "dark" ? "Light Mode" : "Dark Mode"}
+                          </span>
+                        </div>
+                        <div className="w-8 h-4 bg-outline-variant/30 rounded-full relative">
+                          <div
+                            className={`absolute top-0.5 w-3 h-3 bg-primary rounded-full transition-all ${theme === "dark" ? "right-0.5" : "left-0.5"}`}
+                          ></div>
+                        </div>
+                      </button>
+                    )}
+
+                    <div className="h-px bg-outline-variant/10 my-1 mx-2" />
+
+                    <button
                       onClick={handleLogout}
                       className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-on-surface hover:bg-surface-container-low transition-colors text-sm font-bold group"
                     >
-                      <span className="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors">logout</span>
-                      {t('logout')}
+                      <span className="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors">
+                        logout
+                      </span>
+                      {t("logout")}
                     </button>
-                    
-                    <button 
-                      onClick={() => { setShowUserDropdown(false); setShowDeleteConfirm(true); }}
+
+                    <div className="h-px bg-outline-variant/10 my-1 mx-2" />
+
+                    <button
+                      onClick={() => {
+                        setShowUserDropdown(false);
+                        setShowDeleteConfirm(true);
+                      }}
                       className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-error hover:bg-error/10 transition-colors text-sm font-bold group"
                     >
-                      <span className="material-symbols-outlined text-error/70 group-hover:text-error transition-colors">delete_forever</span>
-                      {t('deleteAccount')}
+                      <span className="material-symbols-outlined text-error/70 group-hover:text-error transition-colors">
+                        delete_forever
+                      </span>
+                      {t("deleteAccount")}
                     </button>
                   </div>
                 </div>
@@ -718,30 +1159,40 @@ export default function DashboardPage() {
         {/* Header Section */}
         <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div className="space-y-1">
-            <h1 className="text-4xl font-extrabold tracking-tight text-on-surface font-headline">{t('financialOverview')}</h1>
+            <h1 className="text-4xl font-extrabold tracking-tight text-on-surface font-headline">
+              {t("financialOverview")}
+            </h1>
             <p className="text-on-surface-variant font-medium tracking-wide text-sm flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-secondary animate-pulse"></span>
-              {t('liveStatus')}
+              {t("liveStatus")}
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <input 
-              type="file" 
-              accept="image/*" 
-              capture="environment" 
-              ref={fileInputRef} 
+            <input
+              type="file"
+              accept="image/*"
+              capture="environment"
+              ref={fileInputRef}
               onChange={handleScan}
-              className="hidden" 
+              className="hidden"
             />
-            <button onClick={() => setShowManualEntry(true)} className="hidden md:flex px-5 py-2.5 rounded-lg border border-outline-variant text-on-surface font-semibold text-sm hover:bg-surface-container-low transition-all active:opacity-80 items-center gap-2 cursor-pointer">
-              {t('manualEntry')}
+            <button
+              onClick={() => setShowManualEntry(true)}
+              className="hidden md:flex px-5 py-2.5 rounded-lg border border-outline-variant text-on-surface font-semibold text-sm hover:bg-surface-container-low transition-all active:opacity-80 items-center gap-2 cursor-pointer"
+            >
+              {t("manualEntry")}
             </button>
-            <button 
+            <button
               onClick={() => fileInputRef.current?.click()}
               className="px-5 py-2.5 rounded-lg bg-gradient-to-r from-primary to-primary-container text-white font-bold text-sm shadow-[0_4px_15px_rgba(53,37,205,0.3)] hover:shadow-[0_8px_25px_rgba(53,37,205,0.4)] transition-all active:scale-[0.98] flex items-center gap-2"
             >
-              <span className="material-symbols-outlined text-lg focus:outline-none" style={{ fontVariationSettings: "'FILL' 1" }}>auto_awesome</span>
-              {t('scanReceipt')}
+              <span
+                className="material-symbols-outlined text-lg focus:outline-none"
+                style={{ fontVariationSettings: "'FILL' 1" }}
+              >
+                auto_awesome
+              </span>
+              {t("scanReceipt")}
             </button>
           </div>
         </header>
@@ -754,15 +1205,17 @@ export default function DashboardPage() {
               // Regex to separate symbol (non-digits) from number (digits/separators)
               // Matches symbol at the start and the rest as the amount
               const match = str.match(/^([^0-9\-]+)?\s?(.+)$/);
-              if (!match) return { symbol: '', amount: str };
-              return { symbol: match[1] || '', amount: match[2] || '' };
+              if (!match) return { symbol: "", amount: str };
+              return { symbol: match[1] || "", amount: match[2] || "" };
             };
 
             const renderCardData = (valStr: string) => {
               const { symbol, amount } = parseCurrency(valStr);
               return (
                 <h2 className="text-3xl font-black font-headline tracking-tighter flex items-baseline gap-1">
-                  <span className="text-base opacity-50 font-medium">{symbol}</span>
+                  <span className="text-base opacity-50 font-medium">
+                    {symbol}
+                  </span>
                   <span className="truncate">{amount}</span>
                 </h2>
               );
@@ -773,70 +1226,118 @@ export default function DashboardPage() {
                 {/* 1. Total Net Worth */}
                 <div className="glass-card p-6 rounded-2xl border border-white/40 dark:border-white/10 shadow-xl relative overflow-hidden group bg-gradient-to-br from-white/60 dark:from-slate-900/60 to-surface-container-low/40 dark:to-slate-800/40">
                   <div className="absolute -top-4 -right-4 w-24 h-24 bg-primary/5 rounded-full blur-2xl group-hover:bg-primary/10 transition-colors"></div>
+                  <div className="relative flex justify-between items-start h-6 mb-1">
+                    {mounted && totals.netWorthTrend !== "—" && (
+                      <div
+                        className={`flex items-center gap-2 w-fit px-2 py-0.5 rounded-md text-[10px] font-bold ${parseFloat(totals.netWorthTrend) >= 0 ? "text-secondary bg-secondary-container/30" : "text-error bg-error-container/30"}`}
+                      >
+                        <span className="material-symbols-outlined text-[12px]">
+                          {parseFloat(totals.netWorthTrend) >= 0
+                            ? "trending_up"
+                            : "trending_down"}
+                        </span>
+                        {totals.netWorthTrend}%
+                      </div>
+                    )}
+                  </div>
                   <div className="relative flex justify-between items-start mb-4">
                     <div>
-                      <p className="text-[10px] uppercase tracking-[0.2em] font-extrabold text-on-surface-variant mb-1">{t('totalNetWorth')}</p>
-                      <div className="text-on-surface">{renderCardData(totals.netWorth)}</div>
+                      <p className="text-[10px] uppercase tracking-[0.2em] font-extrabold text-on-surface-variant mb-1">
+                        {t("totalNetWorth")}
+                      </p>
+                      <div className="text-on-surface">
+                        {renderCardData(totals.netWorth)}
+                      </div>
                     </div>
                     <div className="w-12 h-12 flex items-center justify-center rounded-xl bg-white dark:bg-slate-800 shadow-sm border border-outline-variant/20">
-                      <span className="material-symbols-outlined text-primary text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>account_balance</span>
+                      <span
+                        className="material-symbols-outlined text-primary text-2xl"
+                        style={{ fontVariationSettings: "'FILL' 1" }}
+                      >
+                        account_balance
+                      </span>
                     </div>
                   </div>
-                  {totals.netWorthTrend !== '—' && (
-                    <div className={`mt-2 flex items-center gap-2 text-[11px] font-bold w-fit px-2 py-1 rounded-md ${parseFloat(totals.netWorthTrend) >= 0 ? 'text-secondary bg-secondary-container/30' : 'text-error bg-error-container/30'}`}>
-                      <span className="material-symbols-outlined text-sm">{parseFloat(totals.netWorthTrend) >= 0 ? 'trending_up' : 'trending_down'}</span>
-                      {totals.netWorthTrend}% {t('fromLastMonth')}
-                    </div>
-                  )}
                 </div>
 
                 {/* 2. Monthly Income */}
                 <div className="glass-card p-6 rounded-2xl border border-white/40 dark:border-white/10 shadow-xl relative overflow-hidden group bg-gradient-to-br from-white/60 dark:from-slate-900/60 to-secondary-container/10">
                   <div className="absolute -top-4 -right-4 w-24 h-24 bg-secondary/5 rounded-full blur-2xl group-hover:bg-secondary/10 transition-colors"></div>
-                  <div className="relative flex justify-between items-start mb-1">
-                    {totals.incomeTrend !== '—' && (
-                      <div className={`flex items-center gap-2 w-fit px-2 py-0.5 rounded-md text-[10px] font-bold ${parseFloat(totals.incomeTrend) >= 0 ? 'text-secondary bg-secondary-container/30' : 'text-error bg-error-container/30'}`}>
-                        <span className="material-symbols-outlined text-[12px]">{parseFloat(totals.incomeTrend) >= 0 ? 'trending_up' : 'trending_down'}</span>
+                  <div className="relative flex justify-between items-start h-6 mb-1">
+                    {mounted && totals.incomeTrend !== "—" && (
+                      <div
+                        className={`flex items-center gap-2 w-fit px-2 py-0.5 rounded-md text-[10px] font-bold ${parseFloat(totals.incomeTrend) >= 0 ? "text-secondary bg-secondary-container/30" : "text-error bg-error-container/30"}`}
+                      >
+                        <span className="material-symbols-outlined text-[12px]">
+                          {parseFloat(totals.incomeTrend) >= 0
+                            ? "trending_up"
+                            : "trending_down"}
+                        </span>
                         {totals.incomeTrend}%
                       </div>
                     )}
                   </div>
                   <div className="relative flex justify-between items-start mb-4">
                     <div>
-                      <p className="text-[10px] uppercase tracking-[0.2em] font-extrabold text-on-surface-variant mb-1">{t('monthlyIncome')}</p>
-                      <div className="text-secondary">{renderCardData(totals.income)}</div>
+                      <p className="text-[10px] uppercase tracking-[0.2em] font-extrabold text-on-surface-variant mb-1">
+                        {t("monthlyIncome")}
+                      </p>
+                      <div className="text-secondary">
+                        {renderCardData(totals.income)}
+                      </div>
                     </div>
                     <div className="w-12 h-12 flex items-center justify-center rounded-xl bg-white dark:bg-slate-800 shadow-sm border border-outline-variant/20">
-                      <span className="material-symbols-outlined text-secondary text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>insights</span>
+                      <span
+                        className="material-symbols-outlined text-secondary text-2xl"
+                        style={{ fontVariationSettings: "'FILL' 1" }}
+                      >
+                        insights
+                      </span>
                     </div>
                   </div>
                   <div className="mt-3 pt-3 border-t border-outline-variant/10 flex items-center gap-2 text-[10px] font-bold text-on-surface-variant">
-                    <span className="material-symbols-outlined text-sm">calendar_month</span>
-                    {lang === 'id' 
+                    <span className="material-symbols-outlined text-sm">
+                      calendar_month
+                    </span>
+                    {lang === "id"
                       ? `Sisa ${daysUntilEndOfMonth} hari di bulan ini`
-                      : `${daysUntilEndOfMonth} days left this month`
-                    }
+                      : `${daysUntilEndOfMonth} days left this month`}
                   </div>
                 </div>
 
                 {/* 3. Monthly Investment */}
                 <div className="glass-card p-6 rounded-2xl border border-white/40 dark:border-white/10 shadow-xl relative overflow-hidden group bg-gradient-to-br from-white/60 dark:from-slate-900/60 to-indigo-500/10">
                   <div className="absolute -top-4 -right-4 w-24 h-24 bg-indigo-500/5 rounded-full blur-2xl group-hover:bg-indigo-500/10 transition-colors"></div>
-                  <div className="relative flex justify-between items-start mb-1">
-                    {totals.investmentTrend !== '—' && (
-                      <div className={`flex items-center gap-2 w-fit px-2 py-0.5 rounded-md text-[10px] font-bold ${parseFloat(totals.investmentTrend) >= 0 ? 'text-secondary bg-secondary-container/30' : 'text-error bg-error-container/30'}`}>
-                        <span className="material-symbols-outlined text-[12px]">{parseFloat(totals.investmentTrend) >= 0 ? 'trending_up' : 'trending_down'}</span>
+                  <div className="relative flex justify-between items-start h-6 mb-1">
+                    {mounted && totals.investmentTrend !== "—" && (
+                      <div
+                        className={`flex items-center gap-2 w-fit px-2 py-0.5 rounded-md text-[10px] font-bold ${parseFloat(totals.investmentTrend) >= 0 ? "text-secondary bg-secondary-container/30" : "text-error bg-error-container/30"}`}
+                      >
+                        <span className="material-symbols-outlined text-[12px]">
+                          {parseFloat(totals.investmentTrend) >= 0
+                            ? "trending_up"
+                            : "trending_down"}
+                        </span>
                         {totals.investmentTrend}%
                       </div>
                     )}
                   </div>
                   <div className="relative flex justify-between items-start mb-4">
                     <div>
-                      <p className="text-[10px] uppercase tracking-[0.2em] font-extrabold text-on-surface-variant mb-1">{t('monthlyInvestment')}</p>
-                      <div className="text-indigo-500">{renderCardData(totals.investment)}</div>
+                      <p className="text-[10px] uppercase tracking-[0.2em] font-extrabold text-on-surface-variant mb-1">
+                        {t("monthlyInvestment")}
+                      </p>
+                      <div className="text-indigo-500">
+                        {renderCardData(totals.investment)}
+                      </div>
                     </div>
                     <div className="w-12 h-12 flex items-center justify-center rounded-xl bg-white dark:bg-slate-800 shadow-sm border border-outline-variant/20">
-                      <span className="material-symbols-outlined text-indigo-500 text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>rocket_launch</span>
+                      <span
+                        className="material-symbols-outlined text-indigo-500 text-2xl"
+                        style={{ fontVariationSettings: "'FILL' 1" }}
+                      >
+                        rocket_launch
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -844,21 +1345,36 @@ export default function DashboardPage() {
                 {/* 4. Monthly Expense */}
                 <div className="glass-card p-6 rounded-2xl border border-white/40 dark:border-white/10 shadow-xl relative overflow-hidden group bg-gradient-to-br from-white/60 dark:from-slate-900/60 to-error-container/10">
                   <div className="absolute -top-4 -right-4 w-24 h-24 bg-error/5 rounded-full blur-2xl group-hover:bg-error/10 transition-colors"></div>
-                  <div className="relative flex justify-between items-start mb-1">
-                    {totals.expenseTrend !== '—' && (
-                      <div className={`flex items-center gap-2 w-fit px-2 py-0.5 rounded-md text-[10px] font-bold ${parseFloat(totals.expenseTrend) <= 0 ? 'text-secondary bg-secondary-container/30' : 'text-error bg-error-container/30'}`}>
-                        <span className="material-symbols-outlined text-[12px]">{parseFloat(totals.expenseTrend) <= 0 ? 'trending_down' : 'trending_up'}</span>
+                  <div className="relative flex justify-between items-start h-6 mb-1">
+                    {mounted && totals.expenseTrend !== "—" && (
+                      <div
+                        className={`flex items-center gap-2 w-fit px-2 py-0.5 rounded-md text-[10px] font-bold ${parseFloat(totals.expenseTrend) <= 0 ? "text-secondary bg-secondary-container/30" : "text-error bg-error-container/30"}`}
+                      >
+                        <span className="material-symbols-outlined text-[12px]">
+                          {parseFloat(totals.expenseTrend) <= 0
+                            ? "trending_down"
+                            : "trending_up"}
+                        </span>
                         {totals.expenseTrend}%
                       </div>
                     )}
                   </div>
                   <div className="relative flex justify-between items-start mb-4">
                     <div>
-                      <p className="text-[10px] uppercase tracking-[0.2em] font-extrabold text-on-surface-variant mb-1">{t('monthlyExpense')}</p>
-                      <div className="text-error">{renderCardData(totals.expense)}</div>
+                      <p className="text-[10px] uppercase tracking-[0.2em] font-extrabold text-on-surface-variant mb-1">
+                        {t("monthlyExpense")}
+                      </p>
+                      <div className="text-error">
+                        {renderCardData(totals.expense)}
+                      </div>
                     </div>
                     <div className="w-12 h-12 flex items-center justify-center rounded-xl bg-white dark:bg-slate-800 shadow-sm border border-outline-variant/20">
-                      <span className="material-symbols-outlined text-error text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>credit_score</span>
+                      <span
+                        className="material-symbols-outlined text-error text-2xl"
+                        style={{ fontVariationSettings: "'FILL' 1" }}
+                      >
+                        credit_score
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -870,203 +1386,332 @@ export default function DashboardPage() {
         {/* Main Data Table Section */}
         <section className="space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-bold text-on-surface">{t('recentLedger')}</h3>
-            <div className="flex items-center gap-2 relative">
+            <h3 className="text-lg font-bold text-on-surface">
+              {t("recentLedger")}
+            </h3>
+            <div className="flex items-center gap-2 relative" ref={filterDropdownRef}>
               <div className="flex bg-surface-container-low dark:bg-slate-800 p-1 rounded-lg">
-                <button onClick={() => setViewMode('grid')} className={`px-3 py-1 text-xs font-bold rounded shadow-sm transition-colors cursor-pointer ${viewMode === 'grid' ? 'bg-surface-container-lowest dark:bg-slate-700 text-foreground' : 'text-on-surface-variant hover:text-on-surface'}`}>{t('btnGrid')}</button>
-                <button onClick={() => setViewMode('pivot')} className={`px-3 py-1 text-xs font-bold rounded shadow-sm transition-colors cursor-pointer ${viewMode === 'pivot' ? 'bg-surface-container-lowest dark:bg-slate-700 text-foreground' : 'text-on-surface-variant hover:text-on-surface'}`}>{t('btnPivot')}</button>
+                <button
+                  onClick={() => setViewMode("grid")}
+                  className={`px-3 py-1 text-xs font-bold rounded shadow-sm transition-colors cursor-pointer ${viewMode === "grid" ? "bg-surface-container-lowest dark:bg-slate-700 text-foreground" : "text-on-surface-variant hover:text-on-surface"}`}
+                >
+                  {t("btnGrid")}
+                </button>
+                <button
+                  onClick={() => setViewMode("pivot")}
+                  className={`px-3 py-1 text-xs font-bold rounded shadow-sm transition-colors cursor-pointer ${viewMode === "pivot" ? "bg-surface-container-lowest dark:bg-slate-700 text-foreground" : "text-on-surface-variant hover:text-on-surface"}`}
+                >
+                  {t("btnPivot")}
+                </button>
               </div>
 
               {/* Active Filter Pill */}
-              {filterCategory !== 'ALL' && (
+              {filterCategory !== "ALL" && (
                 <div className="flex items-center gap-1 bg-primary/10 border border-primary/20 text-primary px-3 py-1.5 rounded-full text-[10px] font-bold tracking-wider animate-in fade-in zoom-in duration-200 shadow-sm">
-                  <span className="opacity-70">{t('colCategory')}:</span>
-                  <span className="text-primary-container bg-primary/10 px-1 rounded">{filterCategory}</span>
-                  <button onClick={() => setFilterCategory('ALL')} className="material-symbols-outlined text-[16px] ml-1 hover:text-error transition-colors cursor-pointer p-0.5 rounded-full hover:bg-error/10" title={t('resetFilter')}>
+                  <span className="opacity-70">{t("colCategory")}:</span>
+                  <span className="text-primary-container bg-primary/10 px-1 rounded">
+                    {filterCategory}
+                  </span>
+                  <button
+                    onClick={() => setFilterCategory("ALL")}
+                    className="material-symbols-outlined text-[16px] ml-1 hover:text-error transition-colors cursor-pointer p-0.5 rounded-full hover:bg-error/10"
+                    title={t("resetFilter")}
+                  >
                     close
                   </button>
                 </div>
               )}
 
               <div className="relative flex items-center">
-                <button 
-                  onClick={() => setShowFilterDropdown(!showFilterDropdown)} 
-                  className={`flex items-center gap-1 px-3 py-1.5 rounded-lg border text-[11px] font-bold transition-all cursor-pointer ${filterCategory !== 'ALL' || showFilterDropdown ? 'border-primary bg-primary/5 text-primary' : 'border-outline-variant text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low'}`}
+                <button
+                  onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+                  className={`flex items-center gap-1 px-3 py-1.5 rounded-lg border text-[11px] font-bold transition-all cursor-pointer ${filterCategory !== "ALL" || showFilterDropdown ? "border-primary bg-primary/5 text-primary" : "border-outline-variant text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low"}`}
                 >
-                  <span className="material-symbols-outlined text-sm">filter_list</span>
-                  {t('colCategory')}
+                  <span className="material-symbols-outlined text-sm">
+                    filter_list
+                  </span>
+                  {t("colCategory")}
                 </button>
                 {showFilterDropdown && (
                   <div className="absolute right-0 top-10 mt-2 w-56 bg-white dark:bg-slate-900 border border-outline-variant/20 rounded-2xl shadow-2xl z-[100] overflow-hidden text-sm animate-in fade-in slide-in-from-top-2 duration-200">
                     <div className="px-4 py-3 border-b border-outline-variant/10 font-black text-[10px] uppercase tracking-widest text-on-surface-variant bg-slate-50 dark:bg-slate-800 flex justify-between items-center">
-                      {t('filterPrompt')}
-                      {filterCategory !== 'ALL' && (
-                        <button onClick={() => setFilterCategory('ALL')} className="text-error hover:underline text-[9px] uppercase">{t('resetFilter')}</button>
+                      {t("filterPrompt")}
+                      {filterCategory !== "ALL" && (
+                        <button
+                          onClick={() => setFilterCategory("ALL")}
+                          className="text-error hover:underline text-[9px] uppercase"
+                        >
+                          {t("resetFilter")}
+                        </button>
                       )}
                     </div>
                     <div className="max-h-72 overflow-y-auto py-1 scrollbar-thin">
-                      <button 
-                        onClick={() => { setFilterCategory('ALL'); setShowFilterDropdown(false); }}
-                        className={`w-full text-left px-4 py-3 hover:bg-primary/5 transition-colors text-xs cursor-pointer flex items-center justify-between ${filterCategory === 'ALL' ? 'text-primary font-black bg-primary/5' : 'text-on-surface font-semibold'}`}
+                      <button
+                        onClick={() => {
+                          setFilterCategory("ALL");
+                          setShowFilterDropdown(false);
+                        }}
+                        className={`w-full text-left px-4 py-3 hover:bg-primary/5 transition-colors text-xs cursor-pointer flex items-center justify-between ${filterCategory === "ALL" ? "text-primary font-black bg-primary/5" : "text-on-surface font-semibold"}`}
                       >
-                        {t('filterAll')}
-                        {filterCategory === 'ALL' && <span className="material-symbols-outlined text-sm">check</span>}
+                        {t("filterAll")}
+                        {filterCategory === "ALL" && (
+                          <span className="material-symbols-outlined text-sm">
+                            check
+                          </span>
+                        )}
                       </button>
                       <div className="h-[1px] bg-outline-variant/10 mx-2 my-1"></div>
-                      {availableCategories.filter(c => c !== 'ALL').map(cat => (
-                        <button 
-                          key={cat} 
-                          onClick={() => { setFilterCategory(cat); setShowFilterDropdown(false); }}
-                          className={`w-full text-left px-4 py-3 hover:bg-primary/5 transition-colors text-xs cursor-pointer flex items-center justify-between ${filterCategory === cat ? 'text-primary font-black bg-primary/5' : 'text-on-surface font-semibold'}`}
-                        >
-                          {cat}
-                          {filterCategory === cat && <span className="material-symbols-outlined text-sm">check</span>}
-                        </button>
-                      ))}
+                      {availableCategories
+                        .filter((c) => c !== "ALL")
+                        .map((cat) => (
+                          <button
+                            key={cat}
+                            onClick={() => {
+                              setFilterCategory(cat);
+                              setShowFilterDropdown(false);
+                            }}
+                            className={`w-full text-left px-4 py-3 hover:bg-primary/5 transition-colors text-xs cursor-pointer flex items-center justify-between ${filterCategory === cat ? "text-primary font-black bg-primary/5" : "text-on-surface font-semibold"}`}
+                          >
+                            {cat}
+                            {filterCategory === cat && (
+                              <span className="material-symbols-outlined text-sm">
+                                check
+                              </span>
+                            )}
+                          </button>
+                        ))}
                     </div>
                   </div>
                 )}
               </div>
             </div>
           </div>
-          <div className="overflow-x-auto rounded-lg shadow-sm border border-outline-variant/20 min-h-[300px]">
+          <div className="overflow-x-auto rounded-lg shadow-sm border border-outline-variant/20">
             <table className="w-full excel-grid bg-surface-container-lowest dark:bg-slate-900/50 text-xs font-body tracking-tight">
               <thead className="bg-slate-100/80 dark:bg-slate-800 text-on-surface-variant uppercase font-bold text-[10px] tracking-widest">
-                {viewMode === 'grid' ? (
+                {viewMode === "grid" ? (
                   <tr>
-                    <th className="px-3 py-2 text-left w-24">{t('colDate')}</th>
-                    <th className="px-3 py-2 text-left w-32">{t('colCategory')}</th>
-                    <th className="px-3 py-2 text-left">{t('colDescription')}</th>
-                    <th className="px-3 py-2 text-left w-24">{t('colType')}</th>
-                    <th className="px-3 py-2 text-right w-32">{t('colAmount')}</th>
-                    <th className="px-3 py-2 text-left w-40">{t('colLinkedAssets')}</th>
+                    <th className="px-3 py-2 text-left w-24">{t("colDate")}</th>
+                    <th className="px-3 py-2 text-left w-32">
+                      {t("colCategory")}
+                    </th>
+                    <th className="px-3 py-2 text-left">
+                      {t("colDescription")}
+                    </th>
+                    <th className="px-3 py-2 text-left w-24">{t("colType")}</th>
+                    <th className="px-3 py-2 text-right w-32">
+                      {t("colAmount")}
+                    </th>
+                    <th className="px-3 py-2 text-left w-40">
+                      {t("colLinkedAssets")}
+                    </th>
                   </tr>
                 ) : (
                   <tr>
-                    <th className="px-3 py-2 text-left w-40">{t('colCategory')}</th>
-                    <th className="px-3 py-2 text-right w-32">{t('colIncome')}</th>
-                    <th className="px-3 py-2 text-right w-32">{t('colExpense')}</th>
-                    <th className="px-3 py-2 text-right w-32">{t('colInvested')}</th>
-                    <th className="px-3 py-2 text-right w-32">{t('colNetBalance')}</th>
+                    <th className="px-3 py-2 text-left w-40">
+                      {t("colCategory")}
+                    </th>
+                    <th className="px-3 py-2 text-right w-32">
+                      {t("colIncome")}
+                    </th>
+                    <th className="px-3 py-2 text-right w-32">
+                      {t("colExpense")}
+                    </th>
+                    <th className="px-3 py-2 text-right w-32">
+                      {t("colInvested")}
+                    </th>
+                    <th className="px-3 py-2 text-right w-32">
+                      {t("colNetBalance")}
+                    </th>
                   </tr>
                 )}
               </thead>
               <tbody className="text-on-surface divide-y divide-outline-variant/10">
-                {viewMode === 'grid' ? (
-                  paginatedTransactions.length > 0 ? paginatedTransactions.map((tx) => (
-                    <tr key={tx.id} className="hover:bg-primary/5 transition-colors group">
-                      <td className="px-3 py-2 font-mono text-slate-500 whitespace-nowrap">
-                        {(() => {
-                          if (!tx.date) return '—';
-                          const [y, m, d] = tx.date.split('-');
-                          return `${d}/${m}/${y}`;
-                        })()}
-                      </td>
-                      <td className="px-3 py-2">
-                        <span className={`px-1.5 py-0.5 rounded font-bold uppercase text-[9px] ${getCategoryStyle(tx.color)}`}>
-                          {tx.category}
-                        </span>
-                      </td>
-                      <td className="px-3 py-2 font-medium flex items-center gap-2">
-                        {tx.description}
-                        {tx.isAi && (
-                          <span className="inline-flex items-center gap-1 text-[9px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded-full ml-2">
-                            <span className="material-symbols-outlined text-[10px]">auto_awesome</span>
-                            {t('aiScanned')}
+                {viewMode === "grid" ? (
+                  paginatedTransactions.length > 0 ? (
+                    paginatedTransactions.map((tx) => (
+                      <tr
+                        key={tx.id}
+                        className="hover:bg-primary/5 transition-colors group"
+                      >
+                        <td className="px-3 py-2 font-mono text-slate-500 whitespace-nowrap">
+                          {(() => {
+                            if (!tx.date) return "—";
+                            const [y, m, d] = tx.date.split("-");
+                            return `${d}/${m}/${y}`;
+                          })()}
+                        </td>
+                        <td className="px-3 py-2">
+                          <span
+                            className={`px-1.5 py-0.5 rounded font-bold uppercase text-[9px] ${getCategoryStyle(tx.color)}`}
+                          >
+                            {tx.category}
                           </span>
-                        )}
-                      </td>
-                      <td className={`px-3 py-2 font-bold ${tx.type === 'Credit' ? 'text-secondary' : tx.type === 'Investment' ? 'text-indigo-500' : 'text-error'}`}>
-                        {tx.type}
-                      </td>
-                      <td className={`px-3 py-2 text-right font-mono font-bold ${tx.type === 'Credit' ? 'text-secondary' : tx.type === 'Investment' ? 'text-indigo-500' : ''}`}>
-                        {(() => {
-                          // Clean the string (remove symbols if any)
-                          let cleanNum = tx.amount.replace(/[^0-9.,-]/g, "");
-                          // Normalize based on currency
-                          const txCur = normalizeCurrency(tx.currency || 
-                            ((tx.amount.includes('IDR') || tx.amount.includes('Rp')) ? 'IDR' : 'USD')
-                          );
-                          if (txCur === 'IDR') {
-                            cleanNum = cleanNum.replace(/\./g, "").replace(/,/g, ".");
-                          } else {
-                            cleanNum = cleanNum.replace(/,/g, "");
-                          }
-                          const val = parseFloat(cleanNum) || 0;
-                          const sign = tx.type === 'Credit' ? '+' : tx.type === 'Debit' ? '-' : '';
-                          return sign + formatValue(Math.abs(val), tx.currency || currency, lang);
-                        })()}
-                      </td>
-                      <td className="px-3 py-2 text-slate-400">
-                        {tx.source}
-                      </td>
-                    </tr>
-                  )) : (
+                        </td>
+                        <td className="px-3 py-2 font-medium flex items-center gap-2">
+                          {tx.description}
+                          {tx.isAi && (
+                            <span className="inline-flex items-center gap-1 text-[9px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded-full ml-2">
+                              <span className="material-symbols-outlined text-[10px]">
+                                auto_awesome
+                              </span>
+                              {t("aiScanned")}
+                            </span>
+                          )}
+                        </td>
+                        <td
+                          className={`px-3 py-2 font-bold ${tx.type === "Credit" ? "text-secondary" : tx.type === "Investment" ? "text-indigo-500" : "text-error"}`}
+                        >
+                          {tx.type}
+                        </td>
+                        <td
+                          className={`px-3 py-2 text-right font-mono font-bold ${tx.type === "Credit" ? "text-secondary" : tx.type === "Investment" ? "text-indigo-500" : ""}`}
+                        >
+                          {(() => {
+                            // Clean the string (remove symbols if any)
+                            let cleanNum = tx.amount.replace(/[^0-9.,-]/g, "");
+                            // Normalize based on currency
+                            const txCur = normalizeCurrency(
+                              tx.currency ||
+                                (tx.amount.includes("IDR") ||
+                                tx.amount.includes("Rp")
+                                  ? "IDR"
+                                  : "USD"),
+                            );
+                            if (txCur === "IDR") {
+                              cleanNum = cleanNum
+                                .replace(/\./g, "")
+                                .replace(/,/g, ".");
+                            } else {
+                              cleanNum = cleanNum.replace(/,/g, "");
+                            }
+                            const val = parseFloat(cleanNum) || 0;
+                            const sign =
+                              tx.type === "Credit"
+                                ? "+"
+                                : tx.type === "Debit"
+                                  ? "-"
+                                  : "";
+                            return (
+                              sign +
+                              formatValue(
+                                Math.abs(val),
+                                tx.currency || currency,
+                                lang,
+                              )
+                            );
+                          })()}
+                        </td>
+                        <td className="px-3 py-2 text-slate-400">
+                          {tx.source}
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
                     <tr>
-                       <td colSpan={6} className="px-3 py-16 text-center text-on-surface-variant text-sm font-medium">
-                         {t('noTransactions')}
-                       </td>
+                      <td
+                        colSpan={6}
+                        className="px-3 py-16 text-center text-on-surface-variant text-sm font-medium"
+                      >
+                        {t("noTransactions")}
+                      </td>
                     </tr>
                   )
-                ) : (
-                  paginatedPivotRows.length > 0 ? paginatedPivotRows.map((row) => {
+                ) : paginatedPivotRows.length > 0 ? (
+                  paginatedPivotRows.map((row) => {
                     const net = row.received - row.spent;
                     return (
-                      <tr key={row.category} className="hover:bg-primary/5 transition-colors group">
+                      <tr
+                        key={row.category}
+                        className="hover:bg-primary/5 transition-colors group"
+                      >
                         <td className="px-3 py-2">
-                          <span className={`px-1.5 py-0.5 rounded font-bold uppercase text-[9px] ${getCategoryStyle(assignColor(row.category))}`}>
+                          <span
+                            className={`px-1.5 py-0.5 rounded font-bold uppercase text-[9px] ${getCategoryStyle(assignColor(row.category))}`}
+                          >
                             {row.category}
                           </span>
                         </td>
-                        <td className="px-3 py-2 text-right font-mono text-secondary font-bold">{row.received > 0 ? `+${formatValue(row.received, currency, lang)}` : '-'}</td>
-                        <td className="px-3 py-2 text-right font-mono text-error font-bold">{row.spent > 0 ? `-${formatValue(row.spent, currency, lang)}` : '-'}</td>
-                        <td className="px-3 py-2 text-right font-mono text-indigo-500 font-bold">{row.invested > 0 ? formatValue(row.invested, currency, lang) : '-'}</td>
-                        <td className={`px-3 py-2 text-right font-mono font-bold ${net > 0 ? 'text-secondary' : net < 0 ? 'text-error' : 'text-slate-500'}`}>
-                          {net > 0 ? `+${formatValue(net, currency, lang)}` : net < 0 ? `-${formatValue(Math.abs(net), currency, lang)}` : formatValue(0, currency, lang)}
+                        <td className="px-3 py-2 text-right font-mono text-secondary font-bold">
+                          {row.received > 0
+                            ? `+${formatValue(row.received, currency, lang)}`
+                            : "-"}
+                        </td>
+                        <td className="px-3 py-2 text-right font-mono text-error font-bold">
+                          {row.spent > 0
+                            ? `-${formatValue(row.spent, currency, lang)}`
+                            : "-"}
+                        </td>
+                        <td className="px-3 py-2 text-right font-mono text-indigo-500 font-bold">
+                          {row.invested > 0
+                            ? formatValue(row.invested, currency, lang)
+                            : "-"}
+                        </td>
+                        <td
+                          className={`px-3 py-2 text-right font-mono font-bold ${net > 0 ? "text-secondary" : net < 0 ? "text-error" : "text-slate-500"}`}
+                        >
+                          {net > 0
+                            ? `+${formatValue(net, currency, lang)}`
+                            : net < 0
+                              ? `-${formatValue(Math.abs(net), currency, lang)}`
+                              : formatValue(0, currency, lang)}
                         </td>
                       </tr>
                     );
-                  }) : (
-                    <tr>
-                       <td colSpan={5} className="px-3 py-16 text-center text-on-surface-variant text-sm font-medium">
-                         {t('noTransactions')}
-                       </td>
-                    </tr>
-                  )
+                  })
+                ) : (
+                  <tr>
+                    <td
+                      colSpan={5}
+                      className="px-3 py-16 text-center text-on-surface-variant text-sm font-medium"
+                    >
+                      {t("noTransactions")}
+                    </td>
+                  </tr>
                 )}
               </tbody>
             </table>
           </div>
           <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-widest text-on-surface-variant py-2">
-            <span>{t('displayingResults', filteredTransactions.length)}</span>
+            <span>{t("displayingResults", filteredTransactions.length)}</span>
             <div className="flex items-center gap-4">
               {totalPages > 1 && (
                 <div className="flex items-center gap-2 mr-4 bg-surface-container-low dark:bg-slate-800 p-1 rounded-lg border border-outline-variant/10">
-                  <button 
+                  <button
                     disabled={currentPage === 1}
-                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                     className="flex items-center gap-1 px-2 py-1 rounded hover:bg-surface-container-lowest dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
                   >
-                    <span className="material-symbols-outlined text-sm">chevron_left</span>
-                    {t('btnPrev')}
+                    <span className="material-symbols-outlined text-sm">
+                      chevron_left
+                    </span>
+                    {t("btnPrev")}
                   </button>
-                  <span className="px-2 border-x border-outline-variant/20">{t('pageIndicator', currentPage, totalPages)}</span>
-                  <button 
+                  <span className="px-2 border-x border-outline-variant/20">
+                    {t("pageIndicator", currentPage, totalPages)}
+                  </span>
+                  <button
                     disabled={currentPage === totalPages}
-                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    onClick={() =>
+                      setCurrentPage((p) => Math.min(totalPages, p + 1))
+                    }
                     className="flex items-center gap-1 px-2 py-1 rounded hover:bg-surface-container-lowest dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
                   >
-                    {t('btnNext')}
-                    <span className="material-symbols-outlined text-sm">chevron_right</span>
+                    {t("btnNext")}
+                    <span className="material-symbols-outlined text-sm">
+                      chevron_right
+                    </span>
                   </button>
                 </div>
               )}
-              <button 
+              <button
                 onClick={handleDownloadCSV}
                 className="hover:text-primary transition-colors flex items-center gap-1 cursor-pointer"
               >
-                <span className="material-symbols-outlined text-sm">download</span>
-                {t('downloadCSV')}
+                <span className="material-symbols-outlined text-sm">
+                  download
+                </span>
+                {t("downloadCSV")}
               </button>
             </div>
           </div>
@@ -1076,13 +1721,32 @@ export default function DashboardPage() {
       {/* Footer Shared Component */}
       <footer className="w-full py-8 mt-auto bg-slate-100 dark:bg-slate-900 border-t border-outline-variant/30">
         <div className="flex flex-col md:flex-row justify-between items-center px-10 max-w-7xl mx-auto space-y-4 md:space-y-0">
-          <span className="text-sm font-bold text-slate-900 dark:text-slate-100">SnapFins</span>
+          <span className="text-sm font-bold text-slate-900 dark:text-slate-100">
+            SnapFins
+          </span>
           <div className="flex gap-8 font-inter text-[11px] uppercase tracking-widest font-medium">
-            <a className="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-opacity duration-300" href="/privacy">{t('privacyPolicy')}</a>
-            <a className="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-opacity duration-300" href="/terms">{t('termsOfService')}</a>
-            <a className="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-opacity duration-300" href="#">{t('support')}</a>
+            <a
+              className="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-opacity duration-300"
+              href="/privacy"
+            >
+              {t("privacyPolicy")}
+            </a>
+            <a
+              className="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-opacity duration-300"
+              href="/terms"
+            >
+              {t("termsOfService")}
+            </a>
+            <a
+              className="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-opacity duration-300"
+              href="#"
+            >
+              {t("support")}
+            </a>
           </div>
-          <p className="font-inter text-[11px] uppercase tracking-widest font-medium text-slate-500 dark:text-slate-400">{t('footerPrecision')}</p>
+          <p className="font-inter text-[11px] uppercase tracking-widest font-medium text-slate-500 dark:text-slate-400">
+            {t("footerPrecision")}
+          </p>
         </div>
       </footer>
     </>
