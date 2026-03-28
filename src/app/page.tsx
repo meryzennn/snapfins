@@ -1,12 +1,14 @@
 "use client";
 
-import { useTheme } from "next-themes";
+import { useTheme } from "@/hooks/useTheme";
+import { useLang } from "@/hooks/useLang";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/client";
 
 export default function LandingPage() {
   const { theme, setTheme } = useTheme();
+  const { lang, setLang, t } = useLang();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -14,6 +16,25 @@ export default function LandingPage() {
   }, []);
 
   const [showLoginModal, setShowLoginModal] = useState(false);
+
+  const toggleTheme = () => {
+    const isDark = theme === 'dark';
+    const newTheme = isDark ? 'light' : 'dark';
+
+    if (!document.startViewTransition) {
+      setTheme(newTheme);
+      return;
+    }
+
+    document.documentElement.classList.add(isDark ? 'transition-to-light' : 'transition-to-dark');
+    const transition = document.startViewTransition(() => {
+      setTheme(newTheme);
+    });
+
+    transition.finished.finally(() => {
+      document.documentElement.classList.remove('transition-to-light', 'transition-to-dark');
+    });
+  };
 
   const handleLogin = async (provider: 'google' | 'github') => {
     const supabase = createClient();
@@ -32,20 +53,20 @@ export default function LandingPage() {
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-surface p-8 rounded-3xl shadow-2xl flex flex-col max-w-sm w-full border border-outline-variant/20 animate-in fade-in zoom-in duration-200">
             <div className="flex justify-between items-center mb-6">
-              <h3 className="font-headline font-bold text-2xl text-on-surface">Sign In</h3>
+              <h3 className="font-headline font-bold text-2xl text-on-surface">{t('signIn')}</h3>
               <button onClick={() => setShowLoginModal(false)} className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-surface-container-high transition-colors text-on-surface-variant">
                 <span className="material-symbols-outlined text-lg">close</span>
               </button>
             </div>
-            <p className="text-sm text-on-surface-variant mb-6">Choose your preferred provider to securely log into your SnapFins account.</p>
-            <div className="space-y-3">
-              <button onClick={() => { setShowLoginModal(false); handleLogin('google'); }} className="w-full flex items-center justify-center gap-3 bg-white dark:bg-slate-800 text-slate-800 dark:text-white border border-outline-variant/30 py-3 px-4 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors font-semibold shadow-sm">
-                <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" className="w-5 h-5" />
-                Continue with Google
+            <p className="text-sm text-on-surface-variant mb-6">{t('signInSubtitle')}</p>
+            <div className="space-y-4">
+              <button onClick={() => { setShowLoginModal(false); handleLogin('google'); }} className="group cursor-pointer w-full flex items-center justify-center gap-3 bg-white dark:bg-slate-800 text-slate-800 dark:text-white border border-outline-variant/30 py-3 px-4 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-all hover:shadow-md hover:-translate-y-1 active:scale-95 duration-300 font-semibold shadow-sm">
+                <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" className="w-5 h-5 group-hover:scale-110 transition-transform duration-300" />
+                {t('continueWithGoogle')}
               </button>
-              <button onClick={() => { setShowLoginModal(false); handleLogin('github'); }} className="w-full flex items-center justify-center gap-3 bg-[#24292F] dark:bg-white text-white dark:text-gray-900 py-3 px-4 rounded-xl hover:bg-[#24292f]/90 dark:hover:bg-gray-100 transition-colors font-semibold shadow-sm">
-                <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23C10.53 4.8 11.28 4.65 12 4.65c.72 0 1.47.15 2.43.48 2.28-1.545 3.285-1.23 3.285-1.23.645 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" /></svg>
-                Continue with GitHub
+              <button onClick={() => { setShowLoginModal(false); handleLogin('github'); }} className="group cursor-pointer w-full flex items-center justify-center gap-3 bg-[#24292F] dark:bg-white text-white dark:text-gray-900 py-3 px-4 rounded-xl hover:bg-[#24292f]/90 dark:hover:bg-gray-100 transition-all hover:shadow-md hover:-translate-y-1 active:scale-95 duration-300 font-semibold shadow-sm">
+                <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 group-hover:scale-110 transition-transform duration-300"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23C10.53 4.8 11.28 4.65 12 4.65c.72 0 1.47.15 2.43.48 2.28-1.545 3.285-1.23 3.285-1.23.645 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" /></svg>
+                {t('continueWithGithub')}
               </button>
             </div>
           </div>
@@ -59,18 +80,19 @@ export default function LandingPage() {
             <span className="text-2xl font-extrabold tracking-tight text-on-surface dark:text-white font-headline">SnapFins</span>
           </div>
           <nav className="hidden md:flex items-center gap-8">
-            <a className="text-primary dark:text-primary-container font-semibold transition-colors duration-200" href="#">Home</a>
-            <a className="text-on-surface-variant dark:text-gray-400 hover:text-primary dark:hover:text-primary-container transition-colors duration-200" href="#">Features</a>
+            <a className="text-primary dark:text-primary-container font-semibold transition-colors duration-200" href="#">{t('home')}</a>
+            <a className="text-on-surface-variant dark:text-gray-400 hover:text-primary dark:hover:text-primary-container transition-colors duration-200" href="#">{t('features')}</a>
           </nav>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
-              <button className="w-10 h-10 rounded-full hover:bg-surface-container-high dark:hover:bg-gray-800 transition-colors flex items-center justify-center">
-                <span className="material-symbols-outlined text-on-surface-variant dark:text-gray-400">language</span>
-              </button>
+              <div className="flex bg-surface-container-low border border-outline-variant/30 rounded-lg p-0.5">
+                <button onClick={() => setLang('en')} className={`text-[10px] font-bold px-2 py-1.5 rounded-md transition-colors ${lang === 'en' ? 'bg-primary text-white shadow-sm' : 'text-on-surface-variant hover:text-on-surface'}`}>EN</button>
+                <button onClick={() => setLang('id')} className={`text-[10px] font-bold px-2 py-1.5 rounded-md transition-colors ${lang === 'id' ? 'bg-primary text-white shadow-sm' : 'text-on-surface-variant hover:text-on-surface'}`}>ID</button>
+              </div>
               <div className="w-10 h-10 flex items-center justify-center">
                 {mounted && (
                   <button 
-                    onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                    onClick={toggleTheme}
                     className="w-full h-full rounded-full hover:bg-surface-container-high dark:hover:bg-gray-800 transition-colors flex items-center justify-center"
                   >
                     <span className="material-symbols-outlined text-on-surface-variant dark:text-gray-400">
@@ -81,7 +103,7 @@ export default function LandingPage() {
               </div>
             </div>
             <button onClick={() => setShowLoginModal(true)} className="hidden md:block px-6 py-2.5 rounded-lg bg-primary text-white font-semibold hover:bg-primary-container hover:text-on-primary-container active:scale-95 transition-all duration-200 ease-in-out shadow-sm">
-              Login
+              {t('login')}
             </button>
           </div>
         </div>
@@ -92,22 +114,18 @@ export default function LandingPage() {
         <section className="relative px-6 py-20 md:py-32 flex flex-col items-center text-center max-w-5xl mx-auto">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-secondary-container/30 text-on-secondary-container text-xs font-semibold mb-6">
             <span className="kinetic-spark"></span>
-            LIVE ASSET TRACKING ENABLED
+            {t('heroBadge')}
           </div>
           <h1 className="font-headline font-extrabold text-5xl md:text-7xl lg:text-8xl tracking-tight text-on-surface leading-[1.1] mb-8">
-            Stop Typing. <br/>
-            <span className="text-primary-container">Start Scanning.</span>
+            {t('heroTitle1')}<br/>
+            <span className="text-primary-container">{t('heroTitle2')}</span>
           </h1>
-          <p className="text-lg md:text-xl text-on-surface-variant max-w-2xl mb-12 leading-relaxed">
-            Manage your cash flow, track crypto assets like Solana, and scan receipts instantly with Gemini AI. 
-            Experience the editorial precision of high-end wealth management.
+          <p className="text-lg md:text-xl text-on-surface-variant max-w-2xl mx-auto mb-12 leading-relaxed font-medium">
+            {t('heroSubtitle')}
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-20">
-            <Link href="/dashboard" className="bg-gradient-to-br from-primary to-primary-container px-8 py-4 rounded-lg text-white font-bold text-lg shadow-xl shadow-primary/20 hover:shadow-primary/40 hover:-translate-y-0.5 transition-all active:scale-95">
-              Get Started for Free
-            </Link>
-            <button className="px-8 py-4 rounded-lg text-on-surface font-semibold hover:bg-surface-container-low transition-colors">
-              View Demo
+            <button onClick={() => setShowLoginModal(true)} className="bg-gradient-to-br from-primary to-primary-container px-10 py-5 rounded-lg text-white font-bold text-lg shadow-xl shadow-primary/20 hover:shadow-primary/40 hover:-translate-y-0.5 transition-all active:scale-95 w-full sm:w-auto text-center">
+              {t('heroGetStarted')}
             </button>
           </div>
           
@@ -177,36 +195,30 @@ export default function LandingPage() {
         <section className="py-24 px-6 bg-surface-container-low">
           <div className="max-w-7xl mx-auto">
             <div className="mb-16">
-              <h2 className="font-headline font-bold text-3xl md:text-4xl text-on-surface mb-4">Precision Instruments for Wealth.</h2>
-              <p className="text-on-surface-variant max-w-xl">Every feature is designed with the clarity of a high-end ledger.</p>
+              <h2 className="font-headline font-bold text-3xl md:text-4xl text-on-surface mb-4">{t('featuresSectionTitle')}</h2>
+              <p className="text-on-surface-variant max-w-xl">{t('featuresSectionSubtitle')}</p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="bg-surface-container-lowest p-8 rounded-xl border border-outline-variant/10 hover:shadow-lg transition-all">
                 <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-6">
                   <span className="material-symbols-outlined text-primary text-3xl">photo_camera</span>
                 </div>
-                <h3 className="font-headline font-bold text-xl text-on-surface mb-3">✨ AI Receipt Scanner</h3>
-                <p className="text-on-surface-variant text-sm leading-relaxed">
-                  Powered by Gemini AI, our scanner extracts line items, taxes, and merchant info with 99.9% accuracy. No more manual entry.
-                </p>
+                <h3 className="font-headline font-bold text-xl text-on-surface mb-3">{t('feature1Title')}</h3>
+                <p className="text-on-surface-variant text-sm leading-relaxed">{t('feature1Desc')}</p>
               </div>
               <div className="bg-surface-container-lowest p-8 rounded-xl border border-outline-variant/10 hover:shadow-lg transition-all">
                 <div className="w-12 h-12 bg-secondary/10 rounded-lg flex items-center justify-center mb-6">
                   <span className="material-symbols-outlined text-secondary text-3xl">grid_view</span>
                 </div>
-                <h3 className="font-headline font-bold text-xl text-on-surface mb-3">📊 Spreadsheet UI</h3>
-                <p className="text-on-surface-variant text-sm leading-relaxed">
-                  Familiar yet powerful. Experience a high-performance data grid that handles thousands of rows with instant filtering and pivot views.
-                </p>
+                <h3 className="font-headline font-bold text-xl text-on-surface mb-3">{t('feature2Title')}</h3>
+                <p className="text-on-surface-variant text-sm leading-relaxed">{t('feature2Desc')}</p>
               </div>
               <div className="bg-surface-container-lowest p-8 rounded-xl border border-outline-variant/10 hover:shadow-lg transition-all">
                 <div className="w-12 h-12 bg-tertiary-container/10 rounded-lg flex items-center justify-center mb-6">
                   <span className="material-symbols-outlined text-tertiary-container text-3xl">account_balance_wallet</span>
                 </div>
-                <h3 className="font-headline font-bold text-xl text-on-surface mb-3">💰 Multi-Asset Tracking</h3>
-                <p className="text-on-surface-variant text-sm leading-relaxed">
-                  From Solana and Bitcoin to physical Gold and traditional stocks. Sync your entire portfolio in one unified dashboard.
-                </p>
+                <h3 className="font-headline font-bold text-xl text-on-surface mb-3">{t('feature3Title')}</h3>
+                <p className="text-on-surface-variant text-sm leading-relaxed">{t('feature3Desc')}</p>
               </div>
             </div>
           </div>
@@ -217,11 +229,11 @@ export default function LandingPage() {
           <div className="bg-on-surface dark:bg-surface-container-high rounded-3xl p-12 md:p-24 relative overflow-hidden">
             <div className="absolute top-0 right-0 w-1/2 h-full bg-primary/20 blur-[120px] rounded-full"></div>
             <div className="relative z-10 text-center max-w-3xl mx-auto">
-              <h2 className="font-headline font-extrabold text-4xl md:text-5xl text-white mb-8">Ready to reclaim your time?</h2>
-              <p className="text-surface-variant/80 dark:text-gray-300 text-lg mb-12">Join SnapFins today and transform the way you see your financial future.</p>
+              <h2 className="font-headline font-extrabold text-4xl md:text-5xl text-white mb-8">{t('ctaTitle')}</h2>
+              <p className="text-surface-variant/80 dark:text-gray-300 text-lg mb-12">{t('ctaSubtitle')}</p>
               <div className="flex justify-center">
                 <button onClick={() => setShowLoginModal(true)} className="bg-white dark:bg-primary text-on-surface dark:text-white px-10 py-5 rounded-lg font-bold text-lg hover:bg-surface-container-lowest dark:hover:bg-primary-container transition-all hover:scale-105 duration-200 inline-block shadow-xl">
-                  Create Your Free Account
+                  {t('ctaButton')}
                 </button>
               </div>
             </div>
@@ -234,12 +246,11 @@ export default function LandingPage() {
         <div className="flex flex-col md:flex-row justify-between items-center px-8 py-12 w-full max-w-7xl mx-auto">
           <div className="mb-8 md:mb-0">
             <span className="text-lg font-bold text-on-surface dark:text-white font-headline">SnapFins</span>
-            <p className="text-on-surface-variant dark:text-gray-500 text-sm mt-2">© 2024 SnapFins. All rights reserved.</p>
+            <p className="text-on-surface-variant dark:text-gray-500 text-sm mt-2 font-bold uppercase tracking-widest">{t('footerRights')}</p>
           </div>
-          <div className="flex gap-8">
-            <a className="text-on-surface-variant dark:text-gray-500 hover:text-primary dark:hover:text-white transition-colors text-sm font-medium" href="#">X</a>
-            <a className="text-on-surface-variant dark:text-gray-500 hover:text-primary dark:hover:text-white transition-colors text-sm font-medium" href="#">LinkedIn</a>
-            <a className="text-on-surface-variant dark:text-gray-500 hover:text-primary dark:hover:text-white transition-colors text-sm font-medium" href="#">Discord</a>
+          <div className="flex gap-8 font-bold tracking-widest uppercase">
+            <Link className="text-on-surface-variant dark:text-gray-500 hover:text-primary dark:hover:text-white transition-colors text-sm font-medium" href="/privacy">{t('privacyPolicy')}</Link>
+            <Link className="text-on-surface-variant dark:text-gray-500 hover:text-primary dark:hover:text-white transition-colors text-sm font-medium" href="/terms">{t('termsOfService')}</Link>
           </div>
         </div>
       </footer>
