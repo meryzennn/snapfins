@@ -109,7 +109,7 @@ export default function DashboardPage() {
     category: "GENERAL",
     description: "",
     type: "Expense",
-    currency: "IDR",
+    currency: currency, // Use user's preference
     amount: "",
     source: "",
   });
@@ -1236,7 +1236,7 @@ export default function DashboardPage() {
                       <select
                         value={manualForm.currency}
                         onChange={(e) => {
-                          const newCurrency = e.target.value;
+                          const newCurrency = e.target.value as SupportedCurrency;
                           const raw = manualForm.amount.replace(/\D/g, "");
                           if (raw) {
                             const locale =
@@ -1598,7 +1598,7 @@ export default function DashboardPage() {
                 <span className="material-symbols-outlined text-xs md:text-sm">
                   payments
                 </span>
-                <span className="hidden xs:inline">{currency}</span>
+                <span className="xs:inline">{currency}</span>
                 <span className="material-symbols-outlined text-[10px]">
                   {showCurrencyDropdown ? "expand_less" : "expand_more"}
                 </span>
