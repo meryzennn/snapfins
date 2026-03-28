@@ -127,29 +127,33 @@ export default function DashboardPage() {
     }, [mounted, trend]);
 
     if (!mounted || trend === "—") return null;
-    const val = parseFloat(trend.replace(/\s+/g, ""));
-    const colorClass = isExpense ? (val <= 0 ? "text-secondary bg-secondary-container/20" : "text-error bg-error-container/20") : (val >= 0 ? "text-secondary bg-secondary-container/20" : "text-error bg-error-container/20");
+    const val = parseFloat(trend.replace(/[^\d.-]/g, ""));
+    const isUp = val > 0;
+    const isDown = val < 0;
+    const colorClass = isExpense 
+      ? (isDown ? "text-secondary bg-secondary-container/20" : isUp ? "text-error bg-error-container/20" : "text-on-surface-variant bg-surface-container/20") 
+      : (isUp ? "text-secondary bg-secondary-container/20" : isDown ? "text-error bg-error-container/20" : "text-on-surface-variant bg-surface-container/20");
     const strokeColor = "currentColor";
 
     return (
-      <div key={animationKey} className="flex flex-col gap-1 items-start">
-        <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-bold ${colorClass} shrink-0 w-fit`}>
-          <svg width="22" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="overflow-visible shrink-0">
-            {val >= 0 ? (
+      <div key={animationKey} className="flex items-center gap-2">
+        <div className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-bold ${colorClass} shrink-0 w-fit transition-all duration-500 hover:scale-105 shadow-sm`}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="overflow-visible shrink-0">
+            {isUp || val === 0 ? (
               <>
-                <path key={`up-path-${animationKey}`} d="M2 18L8 12L12 16L22 6" stroke={strokeColor} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="animate-draw-path" />
-                <path key={`up-arrow-${animationKey}`} d="M16 6H22V12" stroke={strokeColor} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="animate-fade-scale" />
+                <path key={`up-path-${animationKey}`} d="M2 18L8 12L12 16L22 6" stroke={strokeColor} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="animate-draw-path" />
+                <path key={`up-arrow-${animationKey}`} d="M16 6H22V12" stroke={strokeColor} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="animate-fade-scale" />
               </>
             ) : (
               <>
-                <path key={`down-path-${animationKey}`} d="M2 6L8 12L12 8L22 18" stroke={strokeColor} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="animate-draw-path" />
-                <path key={`down-arrow-${animationKey}`} d="M16 18H22V12" stroke={strokeColor} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="animate-fade-scale" />
+                <path key={`down-path-${animationKey}`} d="M2 6L8 12L12 8L22 18" stroke={strokeColor} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="animate-draw-path" />
+                <path key={`down-arrow-${animationKey}`} d="M16 18H22V12" stroke={strokeColor} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="animate-fade-scale" />
               </>
             )}
           </svg>
-          <span>{Math.abs(val).toFixed(1)}%</span>
+          <span className="tabular-nums">{Math.abs(val).toFixed(1)}%</span>
         </div>
-        {context && <span className="text-[9px] font-medium text-on-surface-variant/50 ml-0.5">{context}</span>}
+        {context && <span className="text-[10px] font-bold text-on-surface-variant/40 whitespace-nowrap uppercase tracking-wider">{context}</span>}
       </div>
     );
   };
@@ -393,23 +397,22 @@ export default function DashboardPage() {
     const periodBalance = incomeCurrent - expenseCurrent - investmentCurrent;
     const netWorthAtStart = netWorthNow - periodBalance;
 
-    const computeTrend = (curr: number, prev: number, baseline?: number) => {
+    const computeTrend = (curr: number, prev: number) => {
       if (prev === 0) {
-        if (baseline && baseline > 0) return (curr / baseline) * 100;
-        return curr > 0 ? 100.0 : (curr < 0 ? -100.0 : null);
+        if (curr === 0) return null;
+        return curr > 0 ? 100.0 : -100.0;
       }
       const diff = curr - prev;
-      if (Math.abs(diff) < 0.01) return null;
-      return (diff / Math.abs(prev)) * 100;
+      if (Math.abs(diff) < 0.01) return 0.0;
+      return (diff / Math.abs(prev)) * 100.0;
     };
 
     const iTrend = computeTrend(incomeCurrent, incomePrev);
-    const eTrend = computeTrend(expenseCurrent, expensePrev, incomeCurrent);
-    const invTrend = computeTrend(investmentCurrent, investmentPrev, incomeCurrent);
-    const nwTrend =
-      netWorthAtStart === 0
-        ? (incomeCurrent > 0 ? (periodBalance / incomeCurrent) * 100 : (periodBalance > 0 ? 100.0 : (periodBalance < 0 ? -100.0 : null)))
-        : (periodBalance / Math.abs(netWorthAtStart)) * 100;
+    const eTrend = computeTrend(expenseCurrent, expensePrev);
+    const invTrend = computeTrend(investmentCurrent, investmentPrev);
+    
+    // Net Worth Trend: Current Total Net Worth vs Start of Period Net Worth
+    const nwTrend = computeTrend(netWorthNow, netWorthAtStart);
 
     const hasHistory = incomePrev > 0 || expensePrev > 0 || investmentPrev > 0;
     const comparisonContext = isAllMonths
@@ -1828,7 +1831,7 @@ export default function DashboardPage() {
           {/* 1. Total Net Worth */}
           <div className="glass-card p-6 rounded-2xl border border-white/40 dark:border-white/10 shadow-xl relative overflow-hidden group bg-gradient-to-br from-white/60 dark:from-slate-900/60 to-surface-container-low/40 dark:to-slate-800/40">
             <div className="absolute -top-4 -right-4 w-24 h-24 bg-primary/5 rounded-full blur-2xl group-hover:bg-primary/10 transition-colors"></div>
-            <div className="h-6 mb-2">
+            <div className="min-h-6 mb-3">
               {totals.netWorthTrend !== "—" && totals.netWorthTrend !== "0.0" && (
                 <div className="relative flex justify-between items-start">
                   <TrendIndicator trend={totals.netWorthTrend} context={totals.comparisonContext} />
@@ -1861,7 +1864,7 @@ export default function DashboardPage() {
           {/* 2. Monthly Income */}
           <div className="glass-card p-6 rounded-2xl border border-white/40 dark:border-white/10 shadow-xl relative overflow-hidden group bg-gradient-to-br from-white/60 dark:from-slate-900/60 to-secondary-container/10">
             <div className="absolute -top-4 -right-4 w-24 h-24 bg-secondary/5 rounded-full blur-2xl group-hover:bg-secondary/10 transition-colors"></div>
-            <div className="h-6 mb-2">
+            <div className="min-h-6 mb-3">
               {totals.incomeTrend !== "—" && totals.incomeTrend !== "0.0" && (
                 <div className="relative flex justify-between items-start">
                   <TrendIndicator trend={totals.incomeTrend} context={totals.comparisonContext} />
@@ -1904,7 +1907,7 @@ export default function DashboardPage() {
           {/* 3. Monthly Investment */}
           <div className="glass-card p-6 rounded-2xl border border-white/40 dark:border-white/10 shadow-xl relative overflow-hidden group bg-gradient-to-br from-white/60 dark:from-slate-900/60 to-indigo-500/10">
             <div className="absolute -top-4 -right-4 w-24 h-24 bg-indigo-500/5 rounded-full blur-2xl group-hover:bg-indigo-500/10 transition-colors"></div>
-            <div className="h-6 mb-2">
+            <div className="min-h-6 mb-3">
               {totals.investmentTrend !== "—" && totals.investmentTrend !== "0.0" && (
                 <div className="relative flex justify-between items-start">
                   <TrendIndicator trend={totals.investmentTrend} context={totals.comparisonContext} />
@@ -1937,7 +1940,7 @@ export default function DashboardPage() {
           {/* 4. Monthly Expense */}
           <div className="glass-card p-6 rounded-2xl border border-white/40 dark:border-white/10 shadow-xl relative overflow-hidden group bg-gradient-to-br from-white/60 dark:from-slate-900/60 to-error-container/10">
             <div className="absolute -top-4 -right-4 w-24 h-24 bg-error/5 rounded-full blur-2xl group-hover:bg-error/10 transition-colors"></div>
-            <div className="h-6 mb-2">
+            <div className="min-h-6 mb-3">
               {totals.expenseTrend !== "—" && totals.expenseTrend !== "0.0" && (
                 <div className="relative flex justify-between items-start">
                   <TrendIndicator trend={totals.expenseTrend} isExpense context={totals.comparisonContext} />
