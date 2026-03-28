@@ -54,6 +54,9 @@
   --font-headline: "Manrope", sans-serif;
   --font-body: "Inter", sans-serif;
   --font-label: "Inter", sans-serif;
+
+  /* Custom Timing Functions */
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 /* Base styles and dark mode support */
@@ -277,4 +280,11 @@ html, body {
   .pb-mobile-nav {
     padding-bottom: 0;
   }
+}
+
+/* Perfect bi-directional dropdown transitions */
+.dropdown-transition {
+  transition: opacity 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), 
+              transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1),
+              visibility 0.4s;
 }

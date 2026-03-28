@@ -47,6 +47,37 @@ const getCategoryStyle = (color: string) => {
   return styles[color] || styles.slate;
 };
 
+const SelectionToggle = ({
+  checked,
+  indeterminate,
+  onChange,
+}: {
+  checked: boolean;
+  indeterminate?: boolean;
+  onChange: () => void;
+}) => (
+  <button
+    onClick={(e) => {
+      e.stopPropagation();
+      onChange();
+    }}
+    className={`w-5 h-5 rounded-md border-2 transition-all duration-300 flex items-center justify-center cursor-pointer group/toggle relative overflow-hidden active:scale-90
+      ${checked || indeterminate ? "bg-primary border-primary shadow-lg shadow-primary/20" : "border-outline-variant/60 hover:border-primary bg-transparent"}
+    `}
+  >
+    {(checked || indeterminate) && (
+      <div className="absolute inset-0 bg-white/20 animate-ping [animation-duration:1.5s]"></div>
+    )}
+    <span
+      className={`material-symbols-outlined text-white text-[14px] font-black transition-all duration-300 transform relative z-10
+      ${checked || indeterminate ? "scale-100 opacity-100" : "scale-0 opacity-0"}
+    `}
+    >
+      {indeterminate ? "remove" : "check"}
+    </span>
+  </button>
+);
+
 export default function DashboardPage() {
   const { theme, setTheme } = useTheme();
   const { lang, setLang, t } = useLang();
@@ -66,6 +97,8 @@ export default function DashboardPage() {
   );
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [showCurrencyDropdown, setShowCurrencyDropdown] = useState(false);
+  const [showYearDropdown, setShowYearDropdown] = useState(false);
+  const [showMonthDropdown, setShowMonthDropdown] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 50;
   // Manual Entry States
@@ -75,8 +108,8 @@ export default function DashboardPage() {
     date: new Date().toISOString().split("T")[0],
     category: "GENERAL",
     description: "",
-    type: "Debit",
-    currency: "IDR",
+    type: "Expense",
+    currency: currency, // Use user's preference
     amount: "",
     source: "",
   });
@@ -94,29 +127,33 @@ export default function DashboardPage() {
     }, [mounted, trend]);
 
     if (!mounted || trend === "—") return null;
-    const val = parseFloat(trend.replace(/\s+/g, ""));
-    const colorClass = isExpense ? (val <= 0 ? "text-secondary bg-secondary-container/20" : "text-error bg-error-container/20") : (val >= 0 ? "text-secondary bg-secondary-container/20" : "text-error bg-error-container/20");
+    const val = parseFloat(trend.replace(/[^\d.-]/g, ""));
+    const isUp = val > 0;
+    const isDown = val < 0;
+    const colorClass = isExpense 
+      ? (isDown ? "text-secondary bg-secondary-container/20" : isUp ? "text-error bg-error-container/20" : "text-on-surface-variant bg-surface-container/20") 
+      : (isUp ? "text-secondary bg-secondary-container/20" : isDown ? "text-error bg-error-container/20" : "text-on-surface-variant bg-surface-container/20");
     const strokeColor = "currentColor";
 
     return (
-      <div key={animationKey} className="flex flex-col gap-1 items-start">
-        <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-bold ${colorClass} shrink-0 w-fit`}>
-          <svg width="22" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="overflow-visible shrink-0">
-            {val >= 0 ? (
+      <div key={animationKey} className="flex items-center gap-2">
+        <div className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-bold ${colorClass} shrink-0 w-fit transition-all duration-500 hover:scale-105 shadow-sm`}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="overflow-visible shrink-0">
+            {isUp || val === 0 ? (
               <>
-                <path key={`up-path-${animationKey}`} d="M2 18L8 12L12 16L22 6" stroke={strokeColor} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="animate-draw-path" />
-                <path key={`up-arrow-${animationKey}`} d="M16 6H22V12" stroke={strokeColor} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="animate-fade-scale" />
+                <path key={`up-path-${animationKey}`} d="M2 18L8 12L12 16L22 6" stroke={strokeColor} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="animate-draw-path" />
+                <path key={`up-arrow-${animationKey}`} d="M16 6H22V12" stroke={strokeColor} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="animate-fade-scale" />
               </>
             ) : (
               <>
-                <path key={`down-path-${animationKey}`} d="M2 6L8 12L12 8L22 18" stroke={strokeColor} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="animate-draw-path" />
-                <path key={`down-arrow-${animationKey}`} d="M16 18H22V12" stroke={strokeColor} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="animate-fade-scale" />
+                <path key={`down-path-${animationKey}`} d="M2 6L8 12L12 8L22 18" stroke={strokeColor} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="animate-draw-path" />
+                <path key={`down-arrow-${animationKey}`} d="M16 18H22V12" stroke={strokeColor} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="animate-fade-scale" />
               </>
             )}
           </svg>
-          <span>{Math.abs(val).toFixed(1)}%</span>
+          <span className="tabular-nums">{Math.abs(val).toFixed(1)}%</span>
         </div>
-        {context && <span className="text-[9px] font-medium text-on-surface-variant/50 ml-0.5">{context}</span>}
+        {context && <span className="text-[10px] font-bold text-on-surface-variant/40 whitespace-nowrap uppercase tracking-wider">{context}</span>}
       </div>
     );
   };
@@ -154,6 +191,13 @@ export default function DashboardPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [ratesInitialized, setRatesInitialized] = useState(false);
+  
+  // Selection & Action States
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [editingTx, setEditingTx] = useState<any>(null);
+  const [showDeleteTxModal, setShowDeleteTxModal] = useState(false);
+  const [deleteQueue, setDeleteQueue] = useState<string[]>([]);
+  const [isDeletingRows, setIsDeletingRows] = useState(false);
 
   // Local alias for imported function to resolve potential bundler reference issues
   const setRates = updateExchangeRates;
@@ -162,6 +206,8 @@ export default function DashboardPage() {
   const userDropdownRef = useRef<HTMLDivElement>(null);
   const currencyDropdownRef = useRef<HTMLDivElement>(null);
   const filterDropdownRef = useRef<HTMLDivElement>(null);
+  const yearDropdownRef = useRef<HTMLDivElement>(null);
+  const monthDropdownRef = useRef<HTMLDivElement>(null);
 
   // Immersive Scan States (New)
   const [showScanModal, setShowScanModal] = useState(false);
@@ -238,6 +284,20 @@ export default function DashboardPage() {
       ) {
         setShowFilterDropdown(false);
       }
+      // Year Dropdown
+      if (
+        yearDropdownRef.current &&
+        !yearDropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowYearDropdown(false);
+      }
+      // Month Dropdown
+      if (
+        monthDropdownRef.current &&
+        !monthDropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowMonthDropdown(false);
+      }
     };
 
     document.addEventListener("mousedown", handleClickOutside);
@@ -300,19 +360,19 @@ export default function DashboardPage() {
       const val = convert(rawVal, txCurrency, currency);
 
       // Update ALL TIME totals for Net Worth
-      if (tx.type === "Credit") totalIncome += val;
-      else if (tx.type === "Debit" || tx.type === "Investment")
+      if (tx.type === "Credit" || tx.type === "Income") totalIncome += val;
+      else if (tx.type === "Debit" || tx.type === "Expense" || tx.type === "Investment")
         totalExpense += val;
 
       if (isAllMonths) {
         // Compare Current Year vs Previous Year
         if (txYear === selectedYear) {
-          if (tx.type === "Credit") incomeCurrent += val;
-          else if (tx.type === "Debit") expenseCurrent += val;
+          if (tx.type === "Credit" || tx.type === "Income") incomeCurrent += val;
+          else if (tx.type === "Debit" || tx.type === "Expense") expenseCurrent += val;
           else if (tx.type === "Investment") investmentCurrent += val;
         } else if (txYear === selectedYear - 1) {
-          if (tx.type === "Credit") incomePrev += val;
-          else if (tx.type === "Debit") expensePrev += val;
+          if (tx.type === "Credit" || tx.type === "Income") incomePrev += val;
+          else if (tx.type === "Debit" || tx.type === "Expense") expensePrev += val;
           else if (tx.type === "Investment") investmentPrev += val;
         }
       } else {
@@ -322,12 +382,12 @@ export default function DashboardPage() {
           selectedMonth === 0 ? selectedYear - 1 : selectedYear;
 
         if (txMonth === selectedMonth && txYear === selectedYear) {
-          if (tx.type === "Credit") incomeCurrent += val;
-          else if (tx.type === "Debit") expenseCurrent += val;
+          if (tx.type === "Credit" || tx.type === "Income") incomeCurrent += val;
+          else if (tx.type === "Debit" || tx.type === "Expense") expenseCurrent += val;
           else if (tx.type === "Investment") investmentCurrent += val;
         } else if (txMonth === prevMonth && txYear === prevMonthYear) {
-          if (tx.type === "Credit") incomePrev += val;
-          else if (tx.type === "Debit") expensePrev += val;
+          if (tx.type === "Credit" || tx.type === "Income") incomePrev += val;
+          else if (tx.type === "Debit" || tx.type === "Expense") expensePrev += val;
           else if (tx.type === "Investment") investmentPrev += val;
         }
       }
@@ -337,23 +397,22 @@ export default function DashboardPage() {
     const periodBalance = incomeCurrent - expenseCurrent - investmentCurrent;
     const netWorthAtStart = netWorthNow - periodBalance;
 
-    const computeTrend = (curr: number, prev: number, baseline?: number) => {
+    const computeTrend = (curr: number, prev: number) => {
       if (prev === 0) {
-        if (baseline && baseline > 0) return (curr / baseline) * 100;
-        return curr > 0 ? 100.0 : (curr < 0 ? -100.0 : null);
+        if (curr === 0) return null;
+        return curr > 0 ? 100.0 : -100.0;
       }
       const diff = curr - prev;
-      if (Math.abs(diff) < 0.01) return null;
-      return (diff / Math.abs(prev)) * 100;
+      if (Math.abs(diff) < 0.01) return 0.0;
+      return (diff / Math.abs(prev)) * 100.0;
     };
 
     const iTrend = computeTrend(incomeCurrent, incomePrev);
-    const eTrend = computeTrend(expenseCurrent, expensePrev, incomeCurrent);
-    const invTrend = computeTrend(investmentCurrent, investmentPrev, incomeCurrent);
-    const nwTrend =
-      netWorthAtStart === 0
-        ? (incomeCurrent > 0 ? (periodBalance / incomeCurrent) * 100 : (periodBalance > 0 ? 100.0 : (periodBalance < 0 ? -100.0 : null)))
-        : (periodBalance / Math.abs(netWorthAtStart)) * 100;
+    const eTrend = computeTrend(expenseCurrent, expensePrev);
+    const invTrend = computeTrend(investmentCurrent, investmentPrev);
+    
+    // Net Worth Trend: Current Total Net Worth vs Start of Period Net Worth
+    const nwTrend = computeTrend(netWorthNow, netWorthAtStart);
 
     const hasHistory = incomePrev > 0 || expensePrev > 0 || investmentPrev > 0;
     const comparisonContext = isAllMonths
@@ -364,7 +423,7 @@ export default function DashboardPage() {
       income: formatValue(incomeCurrent, currency, lang),
       expense: formatValue(expenseCurrent, currency, lang),
       investment: formatValue(investmentCurrent, currency, lang),
-      netWorth: formatValue(netWorthNow, currency, lang),
+      netWorth: formatValue(periodBalance, currency, lang),
       incomeTrend: iTrend !== null ? iTrend.toFixed(1) : "—",
       expenseTrend: eTrend !== null ? eTrend.toFixed(1) : "—",
       investmentTrend: invTrend !== null ? invTrend.toFixed(1) : "—",
@@ -471,8 +530,8 @@ export default function DashboardPage() {
           invested: 0,
         };
       }
-      if (tx.type === "Debit") acc[tx.category].spent += amount;
-      else if (tx.type === "Credit") acc[tx.category].received += amount;
+      if (tx.type === "Debit" || tx.type === "Expense") acc[tx.category].spent += amount;
+      else if (tx.type === "Credit" || tx.type === "Income") acc[tx.category].received += amount;
       else if (tx.type === "Investment") acc[tx.category].invested += amount;
 
       return acc;
@@ -601,8 +660,77 @@ export default function DashboardPage() {
         const formattedData = data.map((tx) => ({ ...tx, isAi: tx.is_ai }));
         setTransactions(formattedData);
       }
+    } else {
+      // Not authenticated, redirect to landing
+      window.location.href = "/";
     }
     setIsLoadingTx(false);
+  };
+
+  const handleSelectRow = (id: string) => {
+    setSelectedIds(prev => 
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
+  const handleSelectAll = (ids: string[]) => {
+    if (selectedIds.length === ids.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(ids);
+    }
+  };
+
+  const handleEdit = (tx: any) => {
+    setEditingTx(tx);
+    
+    // Determine the locale for formatting the initial field value
+    const editCurrency = tx.currency || currency;
+    const locale = editCurrency === "IDR" ? "id-ID" : "en-US";
+    
+    // Ensure amount is a number and format it for the input field
+    const numericAmount = parseFloat(tx.amount.toString().replace(/[^0-9.-]/g, "")) || 0;
+    const formattedAmount = new Intl.NumberFormat(locale).format(numericAmount);
+
+    setManualForm({
+      date: tx.date || new Date().toISOString().split("T")[0],
+      category: tx.category || "GENERAL",
+      description: tx.description || "",
+      type: tx.type === "Debit" ? "Expense" : tx.type === "Credit" ? "Income" : tx.type,
+      currency: editCurrency,
+      amount: formattedAmount,
+      source: tx.source || "",
+    });
+    setShowManualEntry(true);
+  };
+
+  const handleDeleteClick = (ids: string[]) => {
+    setDeleteQueue(ids);
+    setShowDeleteTxModal(true);
+  };
+
+  const confirmDeleteBatch = async () => {
+    if (deleteQueue.length === 0) return;
+    setIsDeletingRows(true);
+    const supabase = createClient();
+    
+    try {
+      const { error } = await supabase
+        .from("transactions")
+        .delete()
+        .in("id", deleteQueue);
+
+      if (!error) {
+        setTransactions(prev => prev.filter(tx => !deleteQueue.includes(tx.id)));
+        setSelectedIds(prev => prev.filter(id => !deleteQueue.includes(id)));
+        setShowDeleteTxModal(false);
+        setDeleteQueue([]);
+      }
+    } catch (err) {
+      console.error("Delete failed:", err);
+    } finally {
+      setIsDeletingRows(false);
+    }
   };
 
   useEffect(() => {
@@ -668,46 +796,151 @@ export default function DashboardPage() {
 
       if (!userData?.user) throw new Error("Not authenticated");
 
-      let amountStr = manualForm.amount;
-      // Provide a clean format like "Rp 250,000" or "$ 25.00"
-      if (!amountStr.startsWith(manualForm.currency)) {
-        amountStr = `${manualForm.currency} ${amountStr}`;
+      // 1. Smart Locale-Aware Parser
+      const isIDR = manualForm.currency === "IDR";
+      const rawText = manualForm.amount.toString();
+      let finalAmount: number;
+      
+      if (isIDR) {
+        const cleaned = rawText.replace(/\./g, "").replace(/,/g, ".");
+        finalAmount = parseFloat(cleaned);
+      } else {
+        const cleaned = rawText.replace(/,/g, "");
+        finalAmount = parseFloat(cleaned);
       }
 
-      const newTx = {
-        user_id: userData.user.id,
+      if (isNaN(finalAmount)) throw new Error("Invalid amount entered");
+
+      // 2. Map UI labels to DB internal types (CRITICAL FOR DB INTEGRITY)
+      const dbType = manualForm.type === "Expense" ? "Debit" 
+                   : manualForm.type === "Income" ? "Credit" 
+                   : manualForm.type;
+
+      // 3. Build SURGICAL Payload (Explicitly include user_id for RLS policies)
+      const txPayload: any = {
+        user_id: userData.user.id, // Re-confirming ownership to satisfy DB 'WITH CHECK'
         date: manualForm.date,
         category: manualForm.category.toUpperCase(),
-        color: assignColor(manualForm.category.toUpperCase()),
         description: manualForm.description,
-        type: manualForm.type,
-        amount: manualForm.amount, // Save only the numeric string
-        currency: manualForm.currency, // Save explicit currency code
-        source: manualForm.source || "Manual Entry",
-        is_ai: false,
+        type: dbType, // 'Credit' or 'Debit'
+        amount: Number(finalAmount), 
+        currency: manualForm.currency,
+        source: manualForm.source || (editingTx ? editingTx.source : "Manual Entry"),
       };
 
-      const { data: insertedData, error } = await supabase
-        .from("transactions")
-        .insert([newTx])
-        .select();
+      if (editingTx) {
+        // --- FINAL SURGICAL UPDATE ---
+        const targetId = editingTx.id;
+        const { data: updatedData, error: updateError } = await supabase
+          .from("transactions")
+          .update(txPayload)
+          .eq("id", targetId)
+          .select();
 
-      if (error) throw error;
+        if (updateError) {
+          throw new Error(`DB Error: ${updateError.message} (${updateError.code})`);
+        }
 
-      if (insertedData) {
-        const mappedTx = { ...insertedData[0], isAi: insertedData[0].is_ai };
-        setTransactions((prev) => [mappedTx, ...prev]);
-        setShowManualEntry(false);
-        setManualForm({
-          date: new Date().toISOString().split("T")[0],
-          category: "GENERAL",
-          description: "",
-          type: "Debit",
-          currency: "IDR",
-          amount: "",
-          source: "",
-        });
+        if (updatedData && updatedData.length > 0) {
+          // Success! Map internal status back to UI state
+          const mappedTx = { ...updatedData[0], isAi: updatedData[0].is_ai };
+          setTransactions((prev) => 
+            prev.map(tx => tx.id === targetId ? mappedTx : tx)
+          );
+          setShowManualEntry(false);
+          setEditingTx(null);
+          fetchTransactions(); 
+        } else {
+          // --- MULTI-STAGE FIELD ISOLATION TEST ---
+          
+          // Test 1: Category Case Sensitivity (Try "General" instead of "GENERAL")
+          const { data: catData } = await supabase
+            .from("transactions")
+            .update({ category: "General" })
+            .eq("id", targetId)
+            .eq("user_id", userData.user.id)
+            .select();
+          
+          if (catData && catData.length > 0) {
+            throw new Error("ISOLATION SUCCESS: The database rejected 'GENERAL' (All Caps). Try using 'General' or other standard cases.");
+          }
+
+          // Test 2: Amount Limit (Try a small number, e.g., 10)
+          const { data: amtData } = await supabase
+            .from("transactions")
+            .update({ amount: 10 })
+            .eq("id", targetId)
+            .eq("user_id", userData.user.id)
+            .select();
+          
+          if (amtData && amtData.length > 0) {
+            throw new Error("ISOLATION SUCCESS: The database rejected your amount. You likely hit a maximum limit (e.g., 1,000,000) or a check constraint.");
+          }
+
+          // Test 3: Minimal Description (Is the whole row locked?)
+          const { data: descData } = await supabase
+            .from("transactions")
+            .update({ description: "[Diagnostic Update]" })
+            .eq("id", targetId)
+            .eq("user_id", userData.user.id)
+            .select();
+
+          if (descData && descData.length > 0) {
+            throw new Error("ISOLATION SUCCESS: The 'Description' updated but Date/Type/Source failed. Check those specific fields.");
+          }
+
+          // --- LAST RESORT DIAGNOSTIC ---
+          const { data: checkData, error: checkError } = await supabase
+            .from("transactions")
+            .select("id, user_id")
+            .eq("id", targetId)
+            .maybeSingle();
+          
+          if (checkData) {
+            const rowOwner = checkData.user_id;
+            const myId = userData.user.id;
+            
+            if (rowOwner !== myId) {
+              throw new Error(`ATTRIBUTION BUG: This transaction belongs to User ID [${rowOwner}], but you are logged in as [${myId}]. You can see it but not edit it.`);
+            } else {
+              throw new Error(`DATABASE PERMISSION BUG: You OWN this row (ID: ${myId}), but your database has NO 'UPDATE' policy for the transactions table. Please add one in Supabase!`);
+            }
+          } else {
+            throw new Error(`Row ID "${targetId}" not found during final scan.`);
+          }
+        }
+      } else {
+        // INSERT New Transaction
+        txPayload.user_id = userData.user.id;
+        txPayload.is_ai = false;
+        txPayload.color = assignColor(manualForm.category.toUpperCase());
+
+        const { data: insertedData, error: insertError } = await supabase
+          .from("transactions")
+          .insert([txPayload])
+          .select();
+
+        if (insertError) throw insertError;
+
+        if (insertedData && insertedData.length > 0) {
+          const mappedTx = { ...insertedData[0], isAi: insertedData[0].is_ai };
+          setTransactions((prev) => [mappedTx, ...prev]);
+          setShowManualEntry(false);
+          fetchTransactions(); // Sync totals
+        }
       }
+
+      // Reset Form
+      setManualForm({
+        date: new Date().toISOString().split("T")[0],
+        category: "GENERAL",
+        description: "",
+        type: "Expense",
+        currency,
+        amount: "",
+        source: "",
+      });
+
     } catch (err: any) {
       alert("Failed to save: " + err.message);
     } finally {
@@ -835,7 +1068,7 @@ export default function DashboardPage() {
         category: tempScanData.category || "GENERAL",
         color: assignColor(tempScanData.category || "GENERAL"),
         description: tempScanData.description,
-        type: "Debit",
+        type: "Expense",
         amount: tempScanData.amount,
         currency: tempScanData.currency || "IDR",
         source: "Gemini Vision",
@@ -1067,7 +1300,7 @@ export default function DashboardPage() {
           >
             <div className="flex justify-between items-center mb-6">
               <h3 className="font-headline font-bold text-2xl text-on-surface">
-                {t("manualEntryTitle")}
+                {editingTx ? t("editTransaction") : t("manualEntryTitle")}
               </h3>
               <button
                 onClick={() => setShowManualEntry(false)}
@@ -1102,14 +1335,14 @@ export default function DashboardPage() {
                       <select
                         value={manualForm.currency}
                         onChange={(e) => {
-                          const newCurrency = e.target.value;
-                          const raw = manualForm.amount.replace(/\D/g, "");
+                          const newCurrency = e.target.value as SupportedCurrency;
+                          const raw = manualForm.amount.replace(/[^0-9]/g, "");
+                          
                           if (raw) {
-                            const locale =
-                              newCurrency === "IDR" ? "id-ID" : "en-US";
-                            const fmt = new Intl.NumberFormat(locale).format(
-                              parseInt(raw, 10),
-                            );
+                            const locale = newCurrency === "IDR" ? "id-ID" : "en-US";
+                            const numericVal = parseInt(raw, 10);
+                            const fmt = new Intl.NumberFormat(locale).format(numericVal);
+                            
                             setManualForm({
                               ...manualForm,
                               currency: newCurrency,
@@ -1213,22 +1446,22 @@ export default function DashboardPage() {
                     className="w-full bg-surface-container-low border border-outline-variant/30 rounded-xl px-4 py-3 text-on-surface text-sm focus:outline-none focus:border-primary transition-colors"
                   >
                     <option
-                      value="Debit"
+                      value="Expense"
                       className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
                     >
-                      Debit
+                      {t("typeExpense")}
                     </option>
                     <option
-                      value="Credit"
+                      value="Income"
                       className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
                     >
-                      Credit
+                      {t("typeIncome")}
                     </option>
                     <option
                       value="Investment"
                       className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
                     >
-                      Investment
+                      {t("typeInvestment")}
                     </option>
                   </select>
                 </div>
@@ -1263,11 +1496,52 @@ export default function DashboardPage() {
                       {t("saving")}
                     </>
                   ) : (
-                    t("saveTransaction")
+                    editingTx ? t("btnEdit") : t("saveTransaction")
                   )}
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Transaction Confirmation Modal */}
+      {showDeleteTxModal && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-surface p-8 rounded-3xl shadow-2xl flex flex-col items-center max-w-sm w-full border border-error/20 animate-in fade-in zoom-in duration-300">
+            <div className="w-16 h-16 rounded-full bg-error/10 flex items-center justify-center mb-6 relative">
+              <span className="material-symbols-outlined text-error text-4xl">
+                warning
+              </span>
+            </div>
+            <h3 className="font-headline font-bold text-xl text-on-surface mb-2 text-center">
+              {deleteQueue.length > 1 ? t("confirmDeleteSelectedTitle") : t("confirmDeleteTransactionTitle")}
+            </h3>
+            <p className="text-sm text-center text-on-surface-variant leading-relaxed mb-8">
+              {deleteQueue.length > 1 ? t("confirmDeleteSelectedMsg", deleteQueue.length) : t("confirmDeleteTransactionMsg")}
+            </p>
+
+            <div className="flex flex-col gap-3 w-full">
+              <button
+                onClick={confirmDeleteBatch}
+                disabled={isDeletingRows}
+                className="w-full bg-error hover:bg-red-600 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-sm active:scale-95 flex items-center justify-center gap-2"
+              >
+                {isDeletingRows ? (
+                  <span className="material-symbols-outlined animate-spin text-sm">
+                    sync
+                  </span>
+                ) : null}
+                {isDeletingRows ? t("deleting") : t("btnDelete")}
+              </button>
+              <button
+                onClick={() => setShowDeleteTxModal(false)}
+                disabled={isDeletingRows}
+                className="w-full bg-surface-container hover:bg-surface-container-high text-on-surface font-bold py-3 px-4 rounded-xl transition-all active:scale-95"
+              >
+                {t("cancel")}
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -1385,9 +1659,11 @@ export default function DashboardPage() {
       <nav className="sticky top-0 w-full z-50 bg-slate-50/80 dark:bg-slate-950/80 backdrop-blur-md border-b border-outline-variant/30">
         <div className="flex justify-between items-center w-full px-4 sm:px-6 py-2 md:py-3 max-w-7xl mx-auto">
           <div className="flex items-center gap-4 md:gap-8">
-            <span className="text-lg md:text-xl font-extrabold tracking-tighter text-indigo-700 dark:text-indigo-300 font-headline">
-              SnapFins
-            </span>
+            <Link href="/" className="flex items-center gap-2 cursor-pointer group">
+              <span className="text-lg md:text-xl font-extrabold tracking-tighter text-indigo-700 dark:text-indigo-300 font-headline group-hover:text-primary transition-colors">
+                SnapFins
+              </span>
+            </Link>
             <div className="hidden md:flex items-center gap-6 font-manrope font-semibold tracking-tight text-sm">
               <a
                 className="text-primary font-bold border-b-2 border-primary pb-1"
@@ -1421,14 +1697,19 @@ export default function DashboardPage() {
                 <span className="material-symbols-outlined text-xs md:text-sm">
                   payments
                 </span>
-                <span className="hidden xs:inline">{currency}</span>
+                <span className="xs:inline">{currency}</span>
                 <span className="material-symbols-outlined text-[10px]">
                   {showCurrencyDropdown ? "expand_less" : "expand_more"}
                 </span>
               </button>
 
-              {showCurrencyDropdown && (
-                <div className="absolute right-0 top-10 mt-2 w-48 bg-white dark:bg-slate-900 border border-outline-variant/20 rounded-2xl shadow-2xl z-[100] overflow-hidden text-[11px] animate-in fade-in slide-in-from-top-2 duration-200">
+                <div 
+                  className={`absolute right-0 lg:left-0 top-10 mt-2 w-48 bg-white dark:bg-slate-900 border border-outline-variant/20 rounded-2xl shadow-2xl z-[100] overflow-hidden text-[11px] dropdown-transition origin-top-right lg:origin-top-left ${
+                    showCurrencyDropdown 
+                      ? "opacity-100 translate-y-0 scale-100 pointer-events-auto visible" 
+                      : "opacity-0 -translate-y-8 scale-90 pointer-events-none invisible"
+                  }`}
+                >
                   <div className="px-3 py-2 border-b border-outline-variant/10 font-black text-[9px] uppercase tracking-widest text-on-surface-variant bg-slate-50 dark:bg-slate-800">
                     {t("preferredCurrency")}
                   </div>
@@ -1459,7 +1740,6 @@ export default function DashboardPage() {
                     )}
                   </div>
                 </div>
-              )}
             </div>
 
             <div className="flex bg-surface-container-low border border-outline-variant/30 rounded-lg p-0.5">
@@ -1503,8 +1783,13 @@ export default function DashboardPage() {
                 />
               </button>
 
-              {showUserDropdown && (
-                <div className="absolute right-0 top-12 mt-2 w-64 bg-white dark:bg-slate-900 border border-outline-variant/20 rounded-2xl shadow-2xl z-[100] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                <div 
+                  className={`absolute right-0 top-12 mt-2 w-64 bg-white dark:bg-slate-900 border border-outline-variant/20 rounded-2xl shadow-2xl z-[100] overflow-hidden dropdown-transition origin-top-right ${
+                    showUserDropdown 
+                      ? "opacity-100 translate-y-0 scale-100 pointer-events-auto visible" 
+                      : "opacity-0 -translate-y-8 scale-90 pointer-events-none invisible"
+                  }`}
+                >
                   <div className="px-5 py-4 border-b border-outline-variant/10 bg-slate-50 dark:bg-slate-800/50">
                     <p className="text-xs font-black uppercase tracking-widest text-primary mb-1">
                       {t("profile")}
@@ -1568,7 +1853,6 @@ export default function DashboardPage() {
                     </button>
                   </div>
                 </div>
-              )}
             </div>
           </div>
         </div>
@@ -1587,14 +1871,38 @@ export default function DashboardPage() {
           </div>
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             <button
-              onClick={() => setShowManualEntry(true)}
+              onClick={() => {
+                setEditingTx(null);
+                setManualForm({
+                  date: new Date().toISOString().split("T")[0],
+                  category: "GENERAL",
+                  description: "",
+                  type: "Expense",
+                  currency,
+                  amount: "",
+                  source: "",
+                });
+                setShowManualEntry(true);
+              }}
               className="flex sm:hidden px-5 py-3 rounded-xl border border-outline-variant text-on-surface font-bold text-sm hover:bg-surface-container-low transition-all active:scale-[0.98] items-center justify-center gap-2 cursor-pointer"
             >
               <span className="material-symbols-outlined text-lg">edit_note</span>
               {t("manualEntry")}
             </button>
             <button
-              onClick={() => setShowManualEntry(true)}
+              onClick={() => {
+                setEditingTx(null);
+                setManualForm({
+                  date: new Date().toISOString().split("T")[0],
+                  category: "GENERAL",
+                  description: "",
+                  type: "Expense",
+                  currency,
+                  amount: "",
+                  source: "",
+                });
+                setShowManualEntry(true);
+              }}
               className="hidden sm:flex md:flex px-5 py-2.5 rounded-lg border border-outline-variant text-on-surface font-semibold text-sm hover:bg-surface-container-low transition-all active:opacity-80 items-center gap-2 cursor-pointer"
             >
               {t("manualEntry")}
@@ -1619,7 +1927,7 @@ export default function DashboardPage() {
           {/* 1. Total Net Worth */}
           <div className="glass-card p-6 rounded-2xl border border-white/40 dark:border-white/10 shadow-xl relative overflow-hidden group bg-gradient-to-br from-white/60 dark:from-slate-900/60 to-surface-container-low/40 dark:to-slate-800/40">
             <div className="absolute -top-4 -right-4 w-24 h-24 bg-primary/5 rounded-full blur-2xl group-hover:bg-primary/10 transition-colors"></div>
-            <div className="h-6 mb-2">
+            <div className="min-h-6 mb-3">
               {totals.netWorthTrend !== "—" && totals.netWorthTrend !== "0.0" && (
                 <div className="relative flex justify-between items-start">
                   <TrendIndicator trend={totals.netWorthTrend} context={totals.comparisonContext} />
@@ -1652,7 +1960,7 @@ export default function DashboardPage() {
           {/* 2. Monthly Income */}
           <div className="glass-card p-6 rounded-2xl border border-white/40 dark:border-white/10 shadow-xl relative overflow-hidden group bg-gradient-to-br from-white/60 dark:from-slate-900/60 to-secondary-container/10">
             <div className="absolute -top-4 -right-4 w-24 h-24 bg-secondary/5 rounded-full blur-2xl group-hover:bg-secondary/10 transition-colors"></div>
-            <div className="h-6 mb-2">
+            <div className="min-h-6 mb-3">
               {totals.incomeTrend !== "—" && totals.incomeTrend !== "0.0" && (
                 <div className="relative flex justify-between items-start">
                   <TrendIndicator trend={totals.incomeTrend} context={totals.comparisonContext} />
@@ -1695,7 +2003,7 @@ export default function DashboardPage() {
           {/* 3. Monthly Investment */}
           <div className="glass-card p-6 rounded-2xl border border-white/40 dark:border-white/10 shadow-xl relative overflow-hidden group bg-gradient-to-br from-white/60 dark:from-slate-900/60 to-indigo-500/10">
             <div className="absolute -top-4 -right-4 w-24 h-24 bg-indigo-500/5 rounded-full blur-2xl group-hover:bg-indigo-500/10 transition-colors"></div>
-            <div className="h-6 mb-2">
+            <div className="min-h-6 mb-3">
               {totals.investmentTrend !== "—" && totals.investmentTrend !== "0.0" && (
                 <div className="relative flex justify-between items-start">
                   <TrendIndicator trend={totals.investmentTrend} context={totals.comparisonContext} />
@@ -1728,7 +2036,7 @@ export default function DashboardPage() {
           {/* 4. Monthly Expense */}
           <div className="glass-card p-6 rounded-2xl border border-white/40 dark:border-white/10 shadow-xl relative overflow-hidden group bg-gradient-to-br from-white/60 dark:from-slate-900/60 to-error-container/10">
             <div className="absolute -top-4 -right-4 w-24 h-24 bg-error/5 rounded-full blur-2xl group-hover:bg-error/10 transition-colors"></div>
-            <div className="h-6 mb-2">
+            <div className="min-h-6 mb-3">
               {totals.expenseTrend !== "—" && totals.expenseTrend !== "0.0" && (
                 <div className="relative flex justify-between items-start">
                   <TrendIndicator trend={totals.expenseTrend} isExpense context={totals.comparisonContext} />
@@ -1761,62 +2069,125 @@ export default function DashboardPage() {
 
         {/* Main Data Table Section */}
         <section className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-bold text-on-surface">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <h3 className="text-xl font-black text-on-surface font-headline tracking-tight">
               {t("recentLedger")}
             </h3>
-            <div className="flex items-center gap-2 relative" ref={filterDropdownRef}>
+            <div className="flex flex-wrap items-center gap-2 sm:gap-4 relative" ref={filterDropdownRef}>
               {mounted && (
                 <>
-                  <div className="flex bg-surface-container-low dark:bg-slate-800 p-1 rounded-lg">
+                  {/* View Toggle */}
+                  <div className="flex bg-surface-container-low dark:bg-slate-800 p-1 rounded-xl shadow-inner-sm">
                     <button
                       onClick={() => setViewMode("grid")}
-                      className={`px-3 py-1 text-xs font-bold rounded shadow-sm transition-colors cursor-pointer ${viewMode === "grid" ? "bg-surface-container-lowest dark:bg-slate-700 text-foreground" : "text-on-surface-variant hover:text-on-surface"}`}
+                      className={`px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all duration-200 cursor-pointer ${viewMode === "grid" ? "bg-white dark:bg-slate-700 text-primary shadow-sm scale-105" : "text-on-surface-variant hover:text-on-surface"}`}
                     >
                       {t("btnGrid")}
                     </button>
                     <button
                       onClick={() => setViewMode("pivot")}
-                      className={`px-3 py-1 text-xs font-bold rounded shadow-sm transition-colors cursor-pointer ${viewMode === "pivot" ? "bg-surface-container-lowest dark:bg-slate-700 text-foreground" : "text-on-surface-variant hover:text-on-surface"}`}
+                      className={`px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all duration-200 cursor-pointer ${viewMode === "pivot" ? "bg-white dark:bg-slate-700 text-primary shadow-sm scale-105" : "text-on-surface-variant hover:text-on-surface"}`}
                     >
                       {t("btnPivot")}
                     </button>
                   </div>
 
-                  {/* Period Selector (Year/Month) */}
-                  <div className="flex flex-wrap items-center gap-2">
-                    {/* Year Select */}
-                    <div className="relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-outline-variant bg-surface-container-lowest text-on-surface shadow-sm transition-all focus-within:ring-2 focus-within:ring-primary/20">
-                      <span className="material-symbols-outlined text-sm text-primary opacity-70">calendar_month</span>
-                      <select 
-                        value={selectedYear}
-                        onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-                        className="bg-transparent border-none text-[11px] font-bold outline-none cursor-pointer p-0 m-0 pr-4 text-on-surface appearance-none"
+                  <div className="h-4 w-px bg-outline-variant/30 hidden sm:block"></div>
+
+                  {/* Period Selector Group */}
+                  <div className="flex items-center gap-2">
+                    {/* Year Selector */}
+                    <div className="relative" ref={yearDropdownRef}>
+                      <button 
+                        onClick={() => setShowYearDropdown(!showYearDropdown)}
+                        className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border border-outline-variant/30 bg-surface-container-low text-on-surface shadow-sm transition-all hover:border-outline-variant cursor-pointer ${showYearDropdown ? "ring-2 ring-primary/20 border-primary" : ""}`}
                       >
-                        {availableYears.map(year => (
-                          <option key={year} value={year} className="bg-surface-container-lowest text-on-surface">{year}</option>
-                        ))}
-                      </select>
-                      <span className="material-symbols-outlined absolute right-2 pointer-events-none text-xs text-on-surface-variant opacity-50">
-                        expand_more
-                      </span>
+                        <span className="material-symbols-outlined text-sm text-primary/70">calendar_month</span>
+                        <span className="text-[11px] font-bold">{selectedYear}</span>
+                        <span className="material-symbols-outlined text-xs text-on-surface-variant opacity-50">
+                          {showYearDropdown ? "expand_less" : "expand_more"}
+                        </span>
+                      </button>
+
+                      <div 
+                        className={`absolute left-0 lg:left-0 top-11 w-32 bg-white dark:bg-slate-900 border border-outline-variant/20 rounded-2xl shadow-2xl z-[100] overflow-hidden dropdown-transition origin-top-left ${
+                          showYearDropdown 
+                            ? "opacity-100 translate-y-0 scale-100 pointer-events-auto visible" 
+                            : "opacity-0 -translate-y-8 scale-90 pointer-events-none invisible"
+                        }`}
+                      >
+                        <div className="max-h-60 overflow-y-auto py-1 scrollbar-thin">
+                          {availableYears.map(year => (
+                            <button
+                              key={year}
+                              onClick={() => {
+                                setSelectedYear(year);
+                                setShowYearDropdown(false);
+                              }}
+                              className={`w-full text-left px-4 py-2.5 hover:bg-primary/5 transition-colors cursor-pointer flex items-center justify-between text-[11px] ${selectedYear === year ? "text-primary font-black bg-primary/5" : "text-on-surface font-semibold"}`}
+                            >
+                              {year}
+                              {selectedYear === year && (
+                                <span className="material-symbols-outlined text-sm">check</span>
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
                     </div>
 
-                    {/* Month Select */}
-                    <div className="relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-outline-variant bg-surface-container-lowest text-on-surface shadow-sm transition-all focus-within:ring-2 focus-within:ring-primary/20">
-                      <select 
-                        value={selectedMonth}
-                        onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
-                        className="bg-transparent border-none text-[11px] font-bold outline-none cursor-pointer p-0 m-0 pr-4 text-on-surface appearance-none"
+                    {/* Month Selector */}
+                    <div className="relative" ref={monthDropdownRef}>
+                      <button 
+                        onClick={() => setShowMonthDropdown(!showMonthDropdown)}
+                        className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border border-outline-variant/30 bg-surface-container-low text-on-surface shadow-sm transition-all hover:border-outline-variant cursor-pointer ${showMonthDropdown ? "ring-2 ring-primary/20 border-primary" : ""}`}
                       >
-                        <option value={-1} className="bg-surface-container-lowest text-on-surface">{t("allMonths")}</option>
-                        {(t("months") as unknown as string[]).map((m, idx) => (
-                          <option key={idx} value={idx} className="bg-surface-container-lowest text-on-surface">{m}</option>
-                        ))}
-                      </select>
-                      <span className="material-symbols-outlined absolute right-2 pointer-events-none text-xs text-on-surface-variant opacity-50">
-                        expand_more
-                      </span>
+                        <span className="text-[11px] font-bold">
+                          {selectedMonth === -1 ? t("allMonths") : (t("months") as unknown as string[])[selectedMonth]}
+                        </span>
+                        <span className="material-symbols-outlined text-xs text-on-surface-variant opacity-50">
+                          {showMonthDropdown ? "expand_less" : "expand_more"}
+                        </span>
+                      </button>
+
+                      <div 
+                        className={`absolute left-0 lg:left-0 top-11 w-44 bg-white dark:bg-slate-900 border border-outline-variant/20 rounded-2xl shadow-2xl z-[100] overflow-hidden dropdown-transition origin-top-left ${
+                          showMonthDropdown 
+                            ? "opacity-100 translate-y-0 scale-100 pointer-events-auto visible" 
+                            : "opacity-0 -translate-y-8 scale-90 pointer-events-none invisible"
+                        }`}
+                      >
+                        <div className="max-h-72 overflow-y-auto py-1 scrollbar-thin">
+                          <button
+                            onClick={() => {
+                              setSelectedMonth(-1);
+                              setShowMonthDropdown(false);
+                            }}
+                            className={`w-full text-left px-4 py-2.5 hover:bg-primary/5 transition-colors cursor-pointer flex items-center justify-between text-[11px] ${selectedMonth === -1 ? "text-primary font-black bg-primary/5" : "text-on-surface font-semibold"}`}
+                          >
+                            {t("allMonths")}
+                            {selectedMonth === -1 && (
+                              <span className="material-symbols-outlined text-sm">check</span>
+                            )}
+                          </button>
+                          <div className="h-[1px] bg-outline-variant/10 mx-2 my-1"></div>
+                          {(t("months") as unknown as string[]).map((m, idx) => (
+                            <button
+                              key={idx}
+                              onClick={() => {
+                                setSelectedMonth(idx);
+                                setShowMonthDropdown(false);
+                              }}
+                              className={`w-full text-left px-4 py-2.5 hover:bg-primary/5 transition-colors cursor-pointer flex items-center justify-between text-[11px] ${selectedMonth === idx ? "text-primary font-black bg-primary/5" : "text-on-surface font-semibold"}`}
+                            >
+                              {m}
+                              {selectedMonth === idx && (
+                                <span className="material-symbols-outlined text-sm">check</span>
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
                     </div>
                   </div>
 
@@ -1844,72 +2215,115 @@ export default function DashboardPage() {
               <div className="relative flex items-center" ref={filterDropdownRef}>
                 <button
                   onClick={() => setShowFilterDropdown(!showFilterDropdown)}
-                  className={`flex items-center gap-1 px-3 py-1.5 rounded-lg border text-[11px] font-bold transition-all cursor-pointer ${filterCategory !== "ALL" || showFilterDropdown ? "border-primary bg-primary/5 text-primary" : "border-outline-variant text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low"}`}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl border text-[11px] font-black uppercase tracking-wider transition-all duration-300 cursor-pointer shadow-sm ${filterCategory !== "ALL" || showFilterDropdown ? "border-primary bg-primary/10 text-primary" : "border-outline-variant/30 text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low"}`}
                 >
                   <span className="material-symbols-outlined text-sm">
                     filter_list
                   </span>
                   {t("colCategory")}
+                  {filterCategory !== "ALL" && (
+                     <span className="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+                  )}
                 </button>
-                {showFilterDropdown && (
-                  <div className="absolute right-0 top-10 mt-2 w-56 bg-white dark:bg-slate-900 border border-outline-variant/20 rounded-2xl shadow-2xl z-[100] overflow-hidden text-sm animate-in fade-in slide-in-from-top-2 duration-200">
-                    <div className="px-4 py-3 border-b border-outline-variant/10 font-black text-[10px] uppercase tracking-widest text-on-surface-variant bg-slate-50 dark:bg-slate-800 flex justify-between items-center">
-                      {t("filterPrompt")}
-                      {filterCategory !== "ALL" && (
-                        <button
-                          onClick={() => setFilterCategory("ALL")}
-                          className="text-error hover:underline text-[9px] uppercase"
-                        >
-                          {t("resetFilter")}
-                        </button>
-                      )}
-                    </div>
-                    <div className="max-h-72 overflow-y-auto py-1 scrollbar-thin">
+                <div 
+                  className={`absolute right-0 top-12 mt-2 w-56 bg-white dark:bg-slate-900 border border-outline-variant/20 rounded-2xl shadow-2xl z-[100] overflow-hidden text-sm dropdown-transition origin-top-right ${
+                    showFilterDropdown 
+                      ? "opacity-100 translate-y-0 scale-100 pointer-events-auto visible" 
+                      : "opacity-0 -translate-y-8 scale-90 pointer-events-none invisible"
+                  }`}
+                >
+                  <div className="px-4 py-3 border-b border-outline-variant/10 font-black text-[10px] uppercase tracking-widest text-on-surface-variant bg-slate-50 dark:bg-slate-800 flex justify-between items-center">
+                    {t("filterPrompt")}
+                    {filterCategory !== "ALL" && (
                       <button
-                        onClick={() => {
-                          setFilterCategory("ALL");
-                          setShowFilterDropdown(false);
-                        }}
-                        className={`w-full text-left px-4 py-3 hover:bg-primary/5 transition-colors text-xs cursor-pointer flex items-center justify-between ${filterCategory === "ALL" ? "text-primary font-black bg-primary/5" : "text-on-surface font-semibold"}`}
+                        onClick={() => setFilterCategory("ALL")}
+                        className="text-error hover:underline text-[9px] uppercase"
                       >
-                        {t("filterAll")}
-                        {filterCategory === "ALL" && (
-                          <span className="material-symbols-outlined text-sm">
-                            check
-                          </span>
-                        )}
+                        {t("resetFilter")}
                       </button>
-                      <div className="h-[1px] bg-outline-variant/10 mx-2 my-1"></div>
-                      {availableCategories
-                        .filter((c) => c !== "ALL")
-                        .map((cat) => (
-                          <button
-                            key={cat}
-                            onClick={() => {
-                              setFilterCategory(cat);
-                              setShowFilterDropdown(false);
-                            }}
-                            className={`w-full text-left px-4 py-3 hover:bg-primary/5 transition-colors text-xs cursor-pointer flex items-center justify-between ${filterCategory === cat ? "text-primary font-black bg-primary/5" : "text-on-surface font-semibold"}`}
-                          >
-                            {cat}
-                            {filterCategory === cat && (
-                              <span className="material-symbols-outlined text-sm">
-                                check
-                              </span>
-                            )}
-                          </button>
-                        ))}
-                    </div>
+                    )}
                   </div>
-                )}
+                  <div className="max-h-72 overflow-y-auto py-1 scrollbar-thin">
+                    <button
+                      onClick={() => {
+                        setFilterCategory("ALL");
+                        setShowFilterDropdown(false);
+                      }}
+                      className={`w-full text-left px-4 py-3 hover:bg-primary/5 transition-colors text-xs cursor-pointer flex items-center justify-between ${filterCategory === "ALL" ? "text-primary font-black bg-primary/5" : "text-on-surface font-semibold"}`}
+                    >
+                      {t("filterAll")}
+                      {filterCategory === "ALL" && (
+                        <span className="material-symbols-outlined text-sm">
+                          check
+                        </span>
+                      )}
+                    </button>
+                    <div className="h-[1px] bg-outline-variant/10 mx-2 my-1"></div>
+                    {availableCategories
+                      .filter((c) => c !== "ALL")
+                      .map((cat) => (
+                        <button
+                          key={cat}
+                          onClick={() => {
+                            setFilterCategory(cat);
+                            setShowFilterDropdown(false);
+                          }}
+                          className={`w-full text-left px-4 py-3 hover:bg-primary/5 transition-colors text-xs cursor-pointer flex items-center justify-between ${filterCategory === cat ? "text-primary font-black bg-primary/5" : "text-on-surface font-semibold"}`}
+                        >
+                          {cat}
+                          {filterCategory === cat && (
+                            <span className="material-symbols-outlined text-sm">
+                              check
+                            </span>
+                          )}
+                        </button>
+                      ))}
+                  </div>
+                </div>
               </div>
             </div>
+            
+            {/* Bulk Action Bar */}
+            {selectedIds.length > 0 && (
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-6 py-4 bg-primary/5 border border-primary/20 rounded-2xl animate-in slide-in-from-top-4 duration-300">
+                <div className="flex items-center gap-3">
+                  <span className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white text-xs font-black">
+                    {selectedIds.length}
+                  </span>
+                  <p className="text-sm font-bold text-on-surface">
+                    {typeof t("itemsSelected") === 'function' ? t("itemsSelected", selectedIds.length) : `${selectedIds.length} items Selected`}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <button
+                    onClick={() => setSelectedIds([])}
+                    className="flex-1 sm:flex-none px-4 py-2 rounded-xl text-on-surface-variant hover:text-on-surface font-bold text-xs transition-colors cursor-pointer"
+                  >
+                    {t("cancel")}
+                  </button>
+                  <button
+                    onClick={() => handleDeleteClick(selectedIds)}
+                    className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2 rounded-xl bg-error text-white font-black text-xs shadow-lg shadow-error/20 hover:brightness-110 active:scale-95 transition-all cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-sm">delete</span>
+                    {t("btnDelete")}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
           <div className="overflow-x-auto rounded-lg shadow-sm border border-outline-variant/20">
             <table className="w-full excel-grid bg-surface-container-lowest dark:bg-slate-900/50 text-xs font-body tracking-tight">
               <thead className="bg-slate-100/80 dark:bg-slate-800 text-on-surface-variant uppercase font-bold text-[10px] tracking-widest">
                 {viewMode === "grid" ? (
                   <tr>
+                    <th className="px-3 py-2 text-center w-10">
+                      <SelectionToggle
+                        checked={selectedIds.length > 0 && selectedIds.length === paginatedTransactions.length}
+                        indeterminate={selectedIds.length > 0 && selectedIds.length < paginatedTransactions.length}
+                        onChange={() => handleSelectAll(paginatedTransactions.map(tx => tx.id))}
+                      />
+                    </th>
                     <th className="px-3 py-2 text-left w-24">{t("colDate")}</th>
                     <th className="px-3 py-2 text-left w-32">
                       {t("colCategory")}
@@ -1924,6 +2338,7 @@ export default function DashboardPage() {
                     <th className="px-3 py-2 text-left w-40">
                       {t("colLinkedAssets")}
                     </th>
+                    <th className="px-3 py-2 text-center w-24">{t("colActions")}</th>
                   </tr>
                 ) : (
                   <tr>
@@ -1951,8 +2366,14 @@ export default function DashboardPage() {
                     paginatedTransactions.map((tx) => (
                       <tr
                         key={tx.id}
-                        className="hover:bg-primary/5 transition-colors group"
+                        className={`hover:bg-primary/5 transition-all duration-300 group ${selectedIds.includes(tx.id) ? "bg-primary/[0.08]" : ""}`}
                       >
+                        <td className="px-3 py-2 text-center">
+                          <SelectionToggle
+                            checked={selectedIds.includes(tx.id)}
+                            onChange={() => handleSelectRow(tx.id)}
+                          />
+                        </td>
                         <td className="px-3 py-2 font-mono text-slate-500 whitespace-nowrap">
                           {(() => {
                             if (!tx.date) return "—";
@@ -1981,12 +2402,12 @@ export default function DashboardPage() {
                           </div>
                         </td>
                         <td
-                          className={`px-3 py-2 font-bold ${tx.type === "Credit" ? "text-secondary" : tx.type === "Investment" ? "text-indigo-500" : "text-error"}`}
+                          className={`px-3 py-2 font-bold ${tx.type === "Credit" || tx.type === "Income" ? "text-secondary" : tx.type === "Investment" ? "text-indigo-500" : "text-error"}`}
                         >
-                          {tx.type}
+                          {tx.type === "Credit" || tx.type === "Income" ? t("typeIncome") : tx.type === "Debit" || tx.type === "Expense" ? t("typeExpense") : t("typeInvestment")}
                         </td>
                         <td
-                          className={`px-3 py-2 text-right font-mono font-bold whitespace-nowrap ${tx.type === "Credit" ? "text-secondary" : tx.type === "Investment" ? "text-indigo-500" : ""}`}
+                          className={`px-3 py-2 text-right font-mono font-bold whitespace-nowrap ${tx.type === "Credit" || tx.type === "Income" ? "text-secondary" : tx.type === "Investment" ? "text-indigo-500" : ""}`}
                         >
                           <div className={tx.amount.length > 18 ? "text-[9px]" : tx.amount.length > 15 ? "text-[10px]" : ""}>
                           {(() => {
@@ -2009,9 +2430,9 @@ export default function DashboardPage() {
                             }
                             const val = parseFloat(cleanNum) || 0;
                             const sign =
-                              tx.type === "Credit"
+                              tx.type === "Credit" || tx.type === "Income"
                                 ? "+"
-                                : tx.type === "Debit"
+                                : tx.type === "Debit" || tx.type === "Expense"
                                   ? "-"
                                   : "";
                             return (
@@ -2028,12 +2449,30 @@ export default function DashboardPage() {
                         <td className="px-3 py-2 text-slate-400">
                           {tx.source}
                         </td>
+                        <td className="px-3 py-2 text-center opacity-60 group-hover:opacity-100 transition-all duration-300 whitespace-nowrap">
+                          <div className="flex items-center justify-center gap-1">
+                            <button
+                              onClick={() => handleEdit(tx)}
+                              className="w-8 h-8 rounded-lg flex items-center justify-center text-primary-container bg-primary/5 hover:bg-primary/10 transition-colors cursor-pointer"
+                              title={t("btnEdit")}
+                            >
+                              <span className="material-symbols-outlined text-sm">edit</span>
+                            </button>
+                            <button
+                              onClick={() => handleDeleteClick([tx.id])}
+                              className="w-8 h-8 rounded-lg flex items-center justify-center text-error bg-error/5 hover:bg-error/10 transition-colors cursor-pointer"
+                              title={t("btnDelete")}
+                            >
+                              <span className="material-symbols-outlined text-sm">delete</span>
+                            </button>
+                          </div>
+                        </td>
                       </tr>
                     ))
                   ) : (
                     <tr>
                       <td
-                        colSpan={6}
+                        colSpan={8}
                         className="px-3 py-16 text-center text-on-surface-variant text-sm font-medium"
                       >
                         {t("noTransactions")}
@@ -2142,11 +2581,11 @@ export default function DashboardPage() {
       </main>
 
       {/* Footer Shared Component */}
-      <footer className="w-full py-8 mt-auto bg-slate-100 dark:bg-slate-900 border-t border-outline-variant/30">
-        <div className="flex flex-col md:flex-row justify-between items-center px-10 max-w-7xl mx-auto space-y-4 md:space-y-0">
-          <span className="text-sm font-bold text-slate-900 dark:text-slate-100">
+      <footer className="w-full border-t border-outline-variant/10 py-12 pb-36 md:pb-12 bg-surface-container-lowest dark:bg-slate-900/30">
+        <div className="max-w-7xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-8">
+          <p className="font-headline font-black text-2xl tracking-tighter opacity-20 dark:opacity-40">
             SnapFins
-          </span>
+          </p>
           <div className="flex gap-8 font-inter text-[11px] uppercase tracking-widest font-medium">
             <a
               className="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-opacity duration-300"
@@ -2162,7 +2601,7 @@ export default function DashboardPage() {
             </a>
             <a
               className="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-opacity duration-300"
-              href="#"
+              href="mailto:zen@0x5zen.dev"
             >
               {t("support")}
             </a>
@@ -2172,7 +2611,7 @@ export default function DashboardPage() {
           </p>
         </div>
       </footer>
-      {/* Mobile Bottom Navigation - v1.0.0 */}
+      {/* Mobile Bottom Navigation - v1.0.1 */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 z-[100] px-4 pb-4">
         <div className="bg-surface/80 dark:bg-slate-900/80 backdrop-blur-xl border border-outline-variant/20 rounded-2xl shadow-[0_-10px_40px_rgba(0,0,0,0.1)] flex justify-around items-center py-3">
           <button className="flex flex-col items-center gap-1 group">
@@ -2191,12 +2630,6 @@ export default function DashboardPage() {
             <div className="w-8 h-1 bg-transparent rounded-full mb-1"></div>
             <span className="material-symbols-outlined text-on-surface-variant">monitoring</span>
             <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">{t("navAnalytics")}</span>
-          </button>
-          
-          <button className="flex flex-col items-center gap-1 group opacity-60 hover:opacity-100 transition-opacity" onClick={() => setShowUserDropdown(!showUserDropdown)}>
-            <div className="w-8 h-1 bg-transparent rounded-full mb-1"></div>
-            <span className="material-symbols-outlined text-on-surface-variant">person</span>
-            <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">{lang === "id" ? "PROFIL" : "PROFILE"}</span>
           </button>
         </div>
       </div>
