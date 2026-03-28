@@ -6,6 +6,14 @@ export async function updateSession(request: NextRequest) {
     request,
   });
 
+  const isMissingEnv = !process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (isMissingEnv) {
+    // If we're on dashboard and missing env vars, something is wrong, 
+    // but at least don't crash the whole app with a 500.
+    return supabaseResponse;
+  }
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
