@@ -66,6 +66,8 @@ export default function DashboardPage() {
   );
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [showCurrencyDropdown, setShowCurrencyDropdown] = useState(false);
+  const [showYearDropdown, setShowYearDropdown] = useState(false);
+  const [showMonthDropdown, setShowMonthDropdown] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 50;
   // Manual Entry States
@@ -162,6 +164,8 @@ export default function DashboardPage() {
   const userDropdownRef = useRef<HTMLDivElement>(null);
   const currencyDropdownRef = useRef<HTMLDivElement>(null);
   const filterDropdownRef = useRef<HTMLDivElement>(null);
+  const yearDropdownRef = useRef<HTMLDivElement>(null);
+  const monthDropdownRef = useRef<HTMLDivElement>(null);
 
   // Immersive Scan States (New)
   const [showScanModal, setShowScanModal] = useState(false);
@@ -237,6 +241,20 @@ export default function DashboardPage() {
         !filterDropdownRef.current.contains(event.target as Node)
       ) {
         setShowFilterDropdown(false);
+      }
+      // Year Dropdown
+      if (
+        yearDropdownRef.current &&
+        !yearDropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowYearDropdown(false);
+      }
+      // Month Dropdown
+      if (
+        monthDropdownRef.current &&
+        !monthDropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowMonthDropdown(false);
       }
     };
 
@@ -1796,38 +1814,98 @@ export default function DashboardPage() {
 
                   {/* Period Selector Group */}
                   <div className="flex items-center gap-2">
-                    {/* Year Select */}
-                    <div className="relative flex items-center gap-1.5 px-3 py-2 rounded-xl border border-outline-variant/30 bg-surface-container-low text-on-surface shadow-sm transition-all focus-within:ring-2 focus-within:ring-primary/20 hover:border-outline-variant">
-                      <span className="material-symbols-outlined text-sm text-primary/70">calendar_month</span>
-                      <select 
-                        value={selectedYear}
-                        onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-                        className="bg-transparent border-none text-[11px] font-bold outline-none cursor-pointer p-0 m-0 pr-5 text-on-surface appearance-none"
+                    {/* Year Selector */}
+                    <div className="relative" ref={yearDropdownRef}>
+                      <button 
+                        onClick={() => setShowYearDropdown(!showYearDropdown)}
+                        className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border border-outline-variant/30 bg-surface-container-low text-on-surface shadow-sm transition-all hover:border-outline-variant cursor-pointer ${showYearDropdown ? "ring-2 ring-primary/20 border-primary" : ""}`}
                       >
-                        {availableYears.map(year => (
-                          <option key={year} value={year} className="bg-surface-container-lowest text-on-surface">{year}</option>
-                        ))}
-                      </select>
-                      <span className="material-symbols-outlined absolute right-2 pointer-events-none text-xs text-on-surface-variant opacity-50">
-                        expand_more
-                      </span>
+                        <span className="material-symbols-outlined text-sm text-primary/70">calendar_month</span>
+                        <span className="text-[11px] font-bold">{selectedYear}</span>
+                        <span className="material-symbols-outlined text-xs text-on-surface-variant opacity-50">
+                          {showYearDropdown ? "expand_less" : "expand_more"}
+                        </span>
+                      </button>
+
+                      <div 
+                        className={`absolute left-0 lg:left-0 top-11 w-32 bg-white dark:bg-slate-900 border border-outline-variant/20 rounded-2xl shadow-2xl z-[100] overflow-hidden dropdown-transition origin-top-left ${
+                          showYearDropdown 
+                            ? "opacity-100 translate-y-0 scale-100 pointer-events-auto visible" 
+                            : "opacity-0 -translate-y-8 scale-90 pointer-events-none invisible"
+                        }`}
+                      >
+                        <div className="max-h-60 overflow-y-auto py-1 scrollbar-thin">
+                          {availableYears.map(year => (
+                            <button
+                              key={year}
+                              onClick={() => {
+                                setSelectedYear(year);
+                                setShowYearDropdown(false);
+                              }}
+                              className={`w-full text-left px-4 py-2.5 hover:bg-primary/5 transition-colors cursor-pointer flex items-center justify-between text-[11px] ${selectedYear === year ? "text-primary font-black bg-primary/5" : "text-on-surface font-semibold"}`}
+                            >
+                              {year}
+                              {selectedYear === year && (
+                                <span className="material-symbols-outlined text-sm">check</span>
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
                     </div>
 
-                    {/* Month Select */}
-                    <div className="relative flex items-center gap-1.5 px-3 py-2 rounded-xl border border-outline-variant/30 bg-surface-container-low text-on-surface shadow-sm transition-all focus-within:ring-2 focus-within:ring-primary/20 hover:border-outline-variant">
-                      <select 
-                        value={selectedMonth}
-                        onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
-                        className="bg-transparent border-none text-[11px] font-bold outline-none cursor-pointer p-0 m-0 pr-5 text-on-surface appearance-none"
+                    {/* Month Selector */}
+                    <div className="relative" ref={monthDropdownRef}>
+                      <button 
+                        onClick={() => setShowMonthDropdown(!showMonthDropdown)}
+                        className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border border-outline-variant/30 bg-surface-container-low text-on-surface shadow-sm transition-all hover:border-outline-variant cursor-pointer ${showMonthDropdown ? "ring-2 ring-primary/20 border-primary" : ""}`}
                       >
-                        <option value={-1} className="bg-surface-container-lowest text-on-surface">{t("allMonths")}</option>
-                        {(t("months") as unknown as string[]).map((m, idx) => (
-                          <option key={idx} value={idx} className="bg-surface-container-lowest text-on-surface">{m}</option>
-                        ))}
-                      </select>
-                      <span className="material-symbols-outlined absolute right-2 pointer-events-none text-xs text-on-surface-variant opacity-50">
-                        expand_more
-                      </span>
+                        <span className="text-[11px] font-bold">
+                          {selectedMonth === -1 ? t("allMonths") : (t("months") as unknown as string[])[selectedMonth]}
+                        </span>
+                        <span className="material-symbols-outlined text-xs text-on-surface-variant opacity-50">
+                          {showMonthDropdown ? "expand_less" : "expand_more"}
+                        </span>
+                      </button>
+
+                      <div 
+                        className={`absolute left-0 lg:left-0 top-11 w-44 bg-white dark:bg-slate-900 border border-outline-variant/20 rounded-2xl shadow-2xl z-[100] overflow-hidden dropdown-transition origin-top-left ${
+                          showMonthDropdown 
+                            ? "opacity-100 translate-y-0 scale-100 pointer-events-auto visible" 
+                            : "opacity-0 -translate-y-8 scale-90 pointer-events-none invisible"
+                        }`}
+                      >
+                        <div className="max-h-72 overflow-y-auto py-1 scrollbar-thin">
+                          <button
+                            onClick={() => {
+                              setSelectedMonth(-1);
+                              setShowMonthDropdown(false);
+                            }}
+                            className={`w-full text-left px-4 py-2.5 hover:bg-primary/5 transition-colors cursor-pointer flex items-center justify-between text-[11px] ${selectedMonth === -1 ? "text-primary font-black bg-primary/5" : "text-on-surface font-semibold"}`}
+                          >
+                            {t("allMonths")}
+                            {selectedMonth === -1 && (
+                              <span className="material-symbols-outlined text-sm">check</span>
+                            )}
+                          </button>
+                          <div className="h-[1px] bg-outline-variant/10 mx-2 my-1"></div>
+                          {(t("months") as unknown as string[]).map((m, idx) => (
+                            <button
+                              key={idx}
+                              onClick={() => {
+                                setSelectedMonth(idx);
+                                setShowMonthDropdown(false);
+                              }}
+                              className={`w-full text-left px-4 py-2.5 hover:bg-primary/5 transition-colors cursor-pointer flex items-center justify-between text-[11px] ${selectedMonth === idx ? "text-primary font-black bg-primary/5" : "text-on-surface font-semibold"}`}
+                            >
+                              {m}
+                              {selectedMonth === idx && (
+                                <span className="material-symbols-outlined text-sm">check</span>
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
                     </div>
                   </div>
 
