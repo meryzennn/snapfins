@@ -262,3 +262,19 @@ body {
   z-index: 20;
   filter: drop-shadow(0 0 5px var(--color-primary));
 }
+
+html, body {
+  overflow-x: hidden;
+  position: relative;
+  width: 100%;
+}
+
+.pb-mobile-nav {
+  padding-bottom: 5rem; /* space for bottom nav */
+}
+
+@media (min-width: 768px) {
+  .pb-mobile-nav {
+    padding-bottom: 0;
+  }
+}
