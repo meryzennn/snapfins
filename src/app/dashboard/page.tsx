@@ -1378,9 +1378,11 @@ export default function DashboardPage() {
           {/* 1. Total Net Worth */}
           <div className="glass-card p-6 rounded-2xl border border-white/40 dark:border-white/10 shadow-xl relative overflow-hidden group bg-gradient-to-br from-white/60 dark:from-slate-900/60 to-surface-container-low/40 dark:to-slate-800/40">
             <div className="absolute -top-4 -right-4 w-24 h-24 bg-primary/5 rounded-full blur-2xl group-hover:bg-primary/10 transition-colors"></div>
-            <div className="relative flex justify-between items-start min-h-[2.5rem] mb-2">
+            <div className="h-6 mb-2">
               {totals.netWorthTrend !== "—" && totals.netWorthTrend !== "0.0" && (
-                <TrendIndicator trend={totals.netWorthTrend} context={totals.comparisonContext} />
+                <div className="relative flex justify-between items-start">
+                  <TrendIndicator trend={totals.netWorthTrend} context={totals.comparisonContext} />
+                </div>
               )}
             </div>
             <div className="relative flex justify-between items-start mb-4 gap-4">
@@ -1389,7 +1391,7 @@ export default function DashboardPage() {
                   {t("totalNetWorth")}
                 </p>
                 <div 
-                  className="text-on-surface text-3xl font-black font-headline tracking-tighter truncate" 
+                  className={`${totals.netWorth.length > 18 ? "text-lg" : totals.netWorth.length > 15 ? "text-xl" : totals.netWorth.length > 12 ? "text-2xl" : "text-3xl"} text-on-surface font-black font-headline tracking-tighter whitespace-nowrap`} 
                   title={totals.netWorth}
                 >
                   {totals.netWorth}
@@ -1409,9 +1411,11 @@ export default function DashboardPage() {
           {/* 2. Monthly Income */}
           <div className="glass-card p-6 rounded-2xl border border-white/40 dark:border-white/10 shadow-xl relative overflow-hidden group bg-gradient-to-br from-white/60 dark:from-slate-900/60 to-secondary-container/10">
             <div className="absolute -top-4 -right-4 w-24 h-24 bg-secondary/5 rounded-full blur-2xl group-hover:bg-secondary/10 transition-colors"></div>
-            <div className="relative flex justify-between items-start min-h-[2.5rem] mb-2">
+            <div className="h-6 mb-2">
               {totals.incomeTrend !== "—" && totals.incomeTrend !== "0.0" && (
-                <TrendIndicator trend={totals.incomeTrend} context={totals.comparisonContext} />
+                <div className="relative flex justify-between items-start">
+                  <TrendIndicator trend={totals.incomeTrend} context={totals.comparisonContext} />
+                </div>
               )}
             </div>
             <div className="relative flex justify-between items-start mb-4 gap-4">
@@ -1420,7 +1424,7 @@ export default function DashboardPage() {
                   {selectedMonth === -1 ? t("annualIncome") : t("monthlyIncome")}
                 </p>
                 <div 
-                  className="text-secondary text-3xl font-black font-headline tracking-tighter truncate" 
+                  className={`${totals.income.length > 18 ? "text-lg" : totals.income.length > 15 ? "text-xl" : totals.income.length > 12 ? "text-2xl" : "text-3xl"} text-secondary font-black font-headline tracking-tighter whitespace-nowrap`} 
                   title={totals.income}
                 >
                   {totals.income}
@@ -1450,9 +1454,11 @@ export default function DashboardPage() {
           {/* 3. Monthly Investment */}
           <div className="glass-card p-6 rounded-2xl border border-white/40 dark:border-white/10 shadow-xl relative overflow-hidden group bg-gradient-to-br from-white/60 dark:from-slate-900/60 to-indigo-500/10">
             <div className="absolute -top-4 -right-4 w-24 h-24 bg-indigo-500/5 rounded-full blur-2xl group-hover:bg-indigo-500/10 transition-colors"></div>
-            <div className="relative flex justify-between items-start min-h-[2.5rem] mb-2">
+            <div className="h-6 mb-2">
               {totals.investmentTrend !== "—" && totals.investmentTrend !== "0.0" && (
-                <TrendIndicator trend={totals.investmentTrend} context={totals.comparisonContext} />
+                <div className="relative flex justify-between items-start">
+                  <TrendIndicator trend={totals.investmentTrend} context={totals.comparisonContext} />
+                </div>
               )}
             </div>
             <div className="relative flex justify-between items-start mb-4 gap-4">
@@ -1461,7 +1467,7 @@ export default function DashboardPage() {
                   {selectedMonth === -1 ? t("annualInvestment") : t("monthlyInvestment")}
                 </p>
                 <div 
-                  className="text-indigo-500 text-3xl font-black font-headline tracking-tighter truncate" 
+                  className={`${totals.investment.length > 18 ? "text-lg" : totals.investment.length > 15 ? "text-xl" : totals.investment.length > 12 ? "text-2xl" : "text-3xl"} text-indigo-500 font-black font-headline tracking-tighter whitespace-nowrap`} 
                   title={totals.investment}
                 >
                   {totals.investment}
@@ -1481,9 +1487,11 @@ export default function DashboardPage() {
           {/* 4. Monthly Expense */}
           <div className="glass-card p-6 rounded-2xl border border-white/40 dark:border-white/10 shadow-xl relative overflow-hidden group bg-gradient-to-br from-white/60 dark:from-slate-900/60 to-error-container/10">
             <div className="absolute -top-4 -right-4 w-24 h-24 bg-error/5 rounded-full blur-2xl group-hover:bg-error/10 transition-colors"></div>
-            <div className="relative flex justify-between items-start min-h-[2.5rem] mb-2">
+            <div className="h-6 mb-2">
               {totals.expenseTrend !== "—" && totals.expenseTrend !== "0.0" && (
-                <TrendIndicator trend={totals.expenseTrend} isExpense context={totals.comparisonContext} />
+                <div className="relative flex justify-between items-start">
+                  <TrendIndicator trend={totals.expenseTrend} isExpense context={totals.comparisonContext} />
+                </div>
               )}
             </div>
             <div className="relative flex justify-between items-start mb-4 gap-4">
@@ -1492,7 +1500,7 @@ export default function DashboardPage() {
                   {selectedMonth === -1 ? t("annualExpense") : t("monthlyExpense")}
                 </p>
                 <div 
-                  className="text-error text-3xl font-black font-headline tracking-tighter truncate" 
+                  className={`${totals.expense.length > 18 ? "text-lg" : totals.expense.length > 15 ? "text-xl" : totals.expense.length > 12 ? "text-2xl" : "text-3xl"} text-error font-black font-headline tracking-tighter whitespace-nowrap`} 
                   title={totals.expense}
                 >
                   {totals.expense}
@@ -1669,7 +1677,7 @@ export default function DashboardPage() {
                       {t("colDescription")}
                     </th>
                     <th className="px-3 py-2 text-left w-24">{t("colType")}</th>
-                    <th className="px-3 py-2 text-right w-32">
+                    <th className="px-3 py-2 text-right min-w-[150px]">
                       {t("colAmount")}
                     </th>
                     <th className="px-3 py-2 text-left w-40">
@@ -1696,7 +1704,7 @@ export default function DashboardPage() {
                   </tr>
                 )}
               </thead>
-              <tbody className="text-on-surface divide-y divide-outline-variant/10">
+              <tbody className="text-on-surface">
                 {viewMode === "grid" ? (
                   paginatedTransactions.length > 0 ? (
                     paginatedTransactions.map((tx) => (
@@ -1718,16 +1726,18 @@ export default function DashboardPage() {
                             {tx.category}
                           </span>
                         </td>
-                        <td className="px-3 py-2 font-medium flex items-center gap-2">
-                          {tx.description}
-                          {tx.isAi && (
-                            <span className="inline-flex items-center gap-1 text-[9px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded-full ml-2">
-                              <span className="material-symbols-outlined text-[10px]">
-                                auto_awesome
+                        <td className="px-3 py-2 font-medium">
+                          <div className="flex items-center gap-2">
+                            {tx.description}
+                            {tx.isAi && (
+                              <span className="inline-flex items-center gap-1 text-[9px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded-full ml-2">
+                                <span className="material-symbols-outlined text-[10px]">
+                                  auto_awesome
+                                </span>
+                                {t("aiScanned")}
                               </span>
-                              {t("aiScanned")}
-                            </span>
-                          )}
+                            )}
+                          </div>
                         </td>
                         <td
                           className={`px-3 py-2 font-bold ${tx.type === "Credit" ? "text-secondary" : tx.type === "Investment" ? "text-indigo-500" : "text-error"}`}
@@ -1735,8 +1745,9 @@ export default function DashboardPage() {
                           {tx.type}
                         </td>
                         <td
-                          className={`px-3 py-2 text-right font-mono font-bold ${tx.type === "Credit" ? "text-secondary" : tx.type === "Investment" ? "text-indigo-500" : ""}`}
+                          className={`px-3 py-2 text-right font-mono font-bold whitespace-nowrap ${tx.type === "Credit" ? "text-secondary" : tx.type === "Investment" ? "text-indigo-500" : ""}`}
                         >
+                          <div className={tx.amount.length > 18 ? "text-[9px]" : tx.amount.length > 15 ? "text-[10px]" : ""}>
                           {(() => {
                             // Clean the string (remove symbols if any)
                             let cleanNum = tx.amount.replace(/[^0-9.,-]/g, "");
@@ -1771,6 +1782,7 @@ export default function DashboardPage() {
                               )
                             );
                           })()}
+                          </div>
                         </td>
                         <td className="px-3 py-2 text-slate-400">
                           {tx.source}
