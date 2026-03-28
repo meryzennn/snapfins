@@ -1,65 +1,248 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useTheme } from "next-themes";
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { createClient } from "@/utils/supabase/client";
+
+export default function LandingPage() {
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const [showLoginModal, setShowLoginModal] = useState(false);
+
+  const handleLogin = async (provider: 'google' | 'github') => {
+    const supabase = createClient();
+    await supabase.auth.signInWithOAuth({
+      provider: provider,
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
+  };
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
+    <div className="font-body bg-surface text-on-surface antialiased min-h-screen">
+      {/* Login Modal */}
+      {showLoginModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-surface p-8 rounded-3xl shadow-2xl flex flex-col max-w-sm w-full border border-outline-variant/20 animate-in fade-in zoom-in duration-200">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="font-headline font-bold text-2xl text-on-surface">Sign In</h3>
+              <button onClick={() => setShowLoginModal(false)} className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-surface-container-high transition-colors text-on-surface-variant">
+                <span className="material-symbols-outlined text-lg">close</span>
+              </button>
+            </div>
+            <p className="text-sm text-on-surface-variant mb-6">Choose your preferred provider to securely log into your SnapFins account.</p>
+            <div className="space-y-3">
+              <button onClick={() => { setShowLoginModal(false); handleLogin('google'); }} className="w-full flex items-center justify-center gap-3 bg-white dark:bg-slate-800 text-slate-800 dark:text-white border border-outline-variant/30 py-3 px-4 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors font-semibold shadow-sm">
+                <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" className="w-5 h-5" />
+                Continue with Google
+              </button>
+              <button onClick={() => { setShowLoginModal(false); handleLogin('github'); }} className="w-full flex items-center justify-center gap-3 bg-[#24292F] dark:bg-white text-white dark:text-gray-900 py-3 px-4 rounded-xl hover:bg-[#24292f]/90 dark:hover:bg-gray-100 transition-colors font-semibold shadow-sm">
+                <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23C10.53 4.8 11.28 4.65 12 4.65c.72 0 1.47.15 2.43.48 2.28-1.545 3.285-1.23 3.285-1.23.645 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" /></svg>
+                Continue with GitHub
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Top Navigation Bar */}
+      <header className="fixed top-0 w-full z-50 bg-surface/80 dark:bg-gray-950/80 backdrop-blur-xl bg-surface-container-low dark:bg-gray-900 shadow-sm border-b border-outline-variant/30">
+        <div className="flex justify-between items-center px-6 py-4 max-w-7xl mx-auto">
+          <div className="flex items-center gap-2">
+            <span className="text-2xl font-extrabold tracking-tight text-on-surface dark:text-white font-headline">SnapFins</span>
+          </div>
+          <nav className="hidden md:flex items-center gap-8">
+            <a className="text-primary dark:text-primary-container font-semibold transition-colors duration-200" href="#">Home</a>
+            <a className="text-on-surface-variant dark:text-gray-400 hover:text-primary dark:hover:text-primary-container transition-colors duration-200" href="#">Features</a>
+          </nav>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <button className="w-10 h-10 rounded-full hover:bg-surface-container-high dark:hover:bg-gray-800 transition-colors flex items-center justify-center">
+                <span className="material-symbols-outlined text-on-surface-variant dark:text-gray-400">language</span>
+              </button>
+              <div className="w-10 h-10 flex items-center justify-center">
+                {mounted && (
+                  <button 
+                    onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                    className="w-full h-full rounded-full hover:bg-surface-container-high dark:hover:bg-gray-800 transition-colors flex items-center justify-center"
+                  >
+                    <span className="material-symbols-outlined text-on-surface-variant dark:text-gray-400">
+                      {theme === 'dark' ? 'light_mode' : 'dark_mode'}
+                    </span>
+                  </button>
+                )}
+              </div>
+            </div>
+            <button onClick={() => setShowLoginModal(true)} className="hidden md:block px-6 py-2.5 rounded-lg bg-primary text-white font-semibold hover:bg-primary-container hover:text-on-primary-container active:scale-95 transition-all duration-200 ease-in-out shadow-sm">
+              Login
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main className="pt-24 overflow-hidden">
+        {/* Hero Section */}
+        <section className="relative px-6 py-20 md:py-32 flex flex-col items-center text-center max-w-5xl mx-auto">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-secondary-container/30 text-on-secondary-container text-xs font-semibold mb-6">
+            <span className="kinetic-spark"></span>
+            LIVE ASSET TRACKING ENABLED
+          </div>
+          <h1 className="font-headline font-extrabold text-5xl md:text-7xl lg:text-8xl tracking-tight text-on-surface leading-[1.1] mb-8">
+            Stop Typing. <br/>
+            <span className="text-primary-container">Start Scanning.</span>
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+          <p className="text-lg md:text-xl text-on-surface-variant max-w-2xl mb-12 leading-relaxed">
+            Manage your cash flow, track crypto assets like Solana, and scan receipts instantly with Gemini AI. 
+            Experience the editorial precision of high-end wealth management.
           </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-20">
+            <Link href="/dashboard" className="bg-gradient-to-br from-primary to-primary-container px-8 py-4 rounded-lg text-white font-bold text-lg shadow-xl shadow-primary/20 hover:shadow-primary/40 hover:-translate-y-0.5 transition-all active:scale-95">
+              Get Started for Free
+            </Link>
+            <button className="px-8 py-4 rounded-lg text-on-surface font-semibold hover:bg-surface-container-low transition-colors">
+              View Demo
+            </button>
+          </div>
+          
+          {/* Hero Visual: Asymmetric Mock-up */}
+          <div className="relative w-full max-w-6xl mt-12 group">
+            <div className="absolute -top-12 -left-12 w-64 h-64 bg-primary/10 rounded-full blur-3xl -z-10"></div>
+            <div className="absolute -bottom-12 -right-12 w-96 h-96 bg-secondary/10 rounded-full blur-3xl -z-10"></div>
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+              {/* Receipt Scan Visual */}
+              <div className="md:col-span-5 bg-surface-container-lowest rounded-2xl p-8 shadow-2xl shadow-on-surface/5 transform -rotate-3 hover:rotate-0 transition-transform duration-500 border border-outline-variant/10">
+                <img 
+                  className="w-full aspect-[3/4] object-cover rounded-lg mb-6 grayscale hover:grayscale-0 transition-all duration-700" 
+                  alt="Close-up of a paper receipt on a dark slate surface with a glowing green neon laser line" 
+                  src="https://lh3.googleusercontent.com/aida-public/AB6AXuCql1V3pS9DzpjkWluWFOXIAhS3_C2oH6btFY-n_PyCmG38hnRzqLEgKxY8NPtJb025KCIXoZyeXnTommVWlrgteiMj8QDsVqhJZ7Yk0AzLb8db0wsJJYfD8pqzqDF-fbPm7u3MNrwUTOXnGjCO2dMZRD3fz2oI23pLm2V7nJFEll7WEqJQBzksLEAP9g2BfnbGRgSQ4OpxwBBZvkA5LOXN1OBIw8nQAQnMzLUkVNLpmBX1ToUQzv2RKI41YP_NG36KIJkEonKznoc" 
+                />
+                <div className="space-y-3">
+                  <div className="h-2 w-3/4 bg-surface-container-high rounded hidden md:block border border-outline-variant/10"></div>
+                  <div className="h-2 w-1/2 bg-surface-container-high rounded hidden md:block border border-outline-variant/10"></div>
+                </div>
+              </div>
+              
+              {/* Transition Arrow */}
+              <div className="hidden md:flex md:col-span-2 justify-center">
+                <span className="material-symbols-outlined text-primary text-5xl">trending_flat</span>
+              </div>
+              
+              {/* Spreadsheet Results Visual */}
+              <div className="md:col-span-5 bg-surface-container-lowest rounded-2xl p-8 shadow-2xl shadow-on-surface/5 transform rotate-2 hover:rotate-0 transition-transform duration-500 border border-outline-variant/10">
+                <div className="overflow-hidden rounded-lg">
+                  <table className="w-full text-left text-sm">
+                    <thead className="bg-surface-container-low text-on-surface-variant font-medium">
+                      <tr>
+                        <th className="p-3">Date</th>
+                        <th className="p-3">Merchant</th>
+                        <th className="p-3 text-right">Amount</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-surface-container">
+                      <tr>
+                        <td className="p-3">Oct 24</td>
+                        <td className="p-3 font-semibold">Starbucks</td>
+                        <td className="p-3 text-secondary text-right font-bold">$5.40</td>
+                      </tr>
+                      <tr>
+                        <td className="p-3">Oct 23</td>
+                        <td className="p-3 font-semibold">Amazon</td>
+                        <td className="p-3 text-secondary text-right font-bold">$124.99</td>
+                      </tr>
+                      <tr className="bg-primary/5">
+                        <td className="p-3">Oct 23</td>
+                        <td className="p-3 font-semibold text-primary">Solana Purchase</td>
+                        <td className="p-3 text-primary text-right font-bold">$500.00</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div className="mt-6 flex justify-between items-center hidden md:flex">
+                  <span className="text-label-sm text-xs font-semibold text-on-surface-variant">Exported to Sheets</span>
+                  <span className="material-symbols-outlined text-secondary" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Features Bento Grid */}
+        <section className="py-24 px-6 bg-surface-container-low">
+          <div className="max-w-7xl mx-auto">
+            <div className="mb-16">
+              <h2 className="font-headline font-bold text-3xl md:text-4xl text-on-surface mb-4">Precision Instruments for Wealth.</h2>
+              <p className="text-on-surface-variant max-w-xl">Every feature is designed with the clarity of a high-end ledger.</p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="bg-surface-container-lowest p-8 rounded-xl border border-outline-variant/10 hover:shadow-lg transition-all">
+                <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-6">
+                  <span className="material-symbols-outlined text-primary text-3xl">photo_camera</span>
+                </div>
+                <h3 className="font-headline font-bold text-xl text-on-surface mb-3">✨ AI Receipt Scanner</h3>
+                <p className="text-on-surface-variant text-sm leading-relaxed">
+                  Powered by Gemini AI, our scanner extracts line items, taxes, and merchant info with 99.9% accuracy. No more manual entry.
+                </p>
+              </div>
+              <div className="bg-surface-container-lowest p-8 rounded-xl border border-outline-variant/10 hover:shadow-lg transition-all">
+                <div className="w-12 h-12 bg-secondary/10 rounded-lg flex items-center justify-center mb-6">
+                  <span className="material-symbols-outlined text-secondary text-3xl">grid_view</span>
+                </div>
+                <h3 className="font-headline font-bold text-xl text-on-surface mb-3">📊 Spreadsheet UI</h3>
+                <p className="text-on-surface-variant text-sm leading-relaxed">
+                  Familiar yet powerful. Experience a high-performance data grid that handles thousands of rows with instant filtering and pivot views.
+                </p>
+              </div>
+              <div className="bg-surface-container-lowest p-8 rounded-xl border border-outline-variant/10 hover:shadow-lg transition-all">
+                <div className="w-12 h-12 bg-tertiary-container/10 rounded-lg flex items-center justify-center mb-6">
+                  <span className="material-symbols-outlined text-tertiary-container text-3xl">account_balance_wallet</span>
+                </div>
+                <h3 className="font-headline font-bold text-xl text-on-surface mb-3">💰 Multi-Asset Tracking</h3>
+                <p className="text-on-surface-variant text-sm leading-relaxed">
+                  From Solana and Bitcoin to physical Gold and traditional stocks. Sync your entire portfolio in one unified dashboard.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* CTA Section */}
+        <section className="py-24 px-6 max-w-7xl mx-auto">
+          <div className="bg-on-surface dark:bg-surface-container-high rounded-3xl p-12 md:p-24 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-1/2 h-full bg-primary/20 blur-[120px] rounded-full"></div>
+            <div className="relative z-10 text-center max-w-3xl mx-auto">
+              <h2 className="font-headline font-extrabold text-4xl md:text-5xl text-white mb-8">Ready to reclaim your time?</h2>
+              <p className="text-surface-variant/80 dark:text-gray-300 text-lg mb-12">Join SnapFins today and transform the way you see your financial future.</p>
+              <div className="flex justify-center">
+                <button onClick={() => setShowLoginModal(true)} className="bg-white dark:bg-primary text-on-surface dark:text-white px-10 py-5 rounded-lg font-bold text-lg hover:bg-surface-container-lowest dark:hover:bg-primary-container transition-all hover:scale-105 duration-200 inline-block shadow-xl">
+                  Create Your Free Account
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
       </main>
+
+      {/* Footer */}
+      <footer className="w-full border-t-0 bg-surface-container-low dark:bg-gray-950">
+        <div className="flex flex-col md:flex-row justify-between items-center px-8 py-12 w-full max-w-7xl mx-auto">
+          <div className="mb-8 md:mb-0">
+            <span className="text-lg font-bold text-on-surface dark:text-white font-headline">SnapFins</span>
+            <p className="text-on-surface-variant dark:text-gray-500 text-sm mt-2">© 2024 SnapFins. All rights reserved.</p>
+          </div>
+          <div className="flex gap-8">
+            <a className="text-on-surface-variant dark:text-gray-500 hover:text-primary dark:hover:text-white transition-colors text-sm font-medium" href="#">X</a>
+            <a className="text-on-surface-variant dark:text-gray-500 hover:text-primary dark:hover:text-white transition-colors text-sm font-medium" href="#">LinkedIn</a>
+            <a className="text-on-surface-variant dark:text-gray-500 hover:text-primary dark:hover:text-white transition-colors text-sm font-medium" href="#">Discord</a>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
