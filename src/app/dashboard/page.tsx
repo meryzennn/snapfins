@@ -1360,15 +1360,15 @@ export default function DashboardPage() {
             </button>
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="px-5 py-2.5 rounded-lg bg-gradient-to-r from-primary to-primary-container text-white font-bold text-sm shadow-[0_4px_15px_rgba(53,37,205,0.3)] hover:shadow-[0_8px_25px_rgba(53,37,205,0.4)] transition-all active:scale-[0.98] flex items-center gap-2"
+              className="px-5 py-2.5 rounded-lg bg-gradient-to-r from-primary to-primary-container text-white font-bold text-sm shadow-[0_4px_15px_rgba(53,37,205,0.3)] transition-all active:scale-[0.98] flex items-center gap-2 magic-glow-hover cursor-pointer overflow-hidden group"
             >
               <span
-                className="material-symbols-outlined text-lg focus:outline-none"
+                className="material-symbols-outlined text-lg focus:outline-none animate-stars-float"
                 style={{ fontVariationSettings: "'FILL' 1" }}
               >
                 auto_awesome
               </span>
-              {t("scanReceipt")}
+              <span className="relative z-10">{t("scanReceipt")}</span>
             </button>
           </div>
         </header>

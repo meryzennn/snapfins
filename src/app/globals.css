@@ -200,3 +200,22 @@ body {
 .animate-fade-scale {
   animation: fadeInScale 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) 0.8s backwards;
 }
+
+@keyframes float-stars {
+  0%, 100% { transform: translateY(0) rotate(0); filter: drop-shadow(0 0 2px rgba(255,255,255,0.3)); }
+  50% { transform: translateY(-4px) rotate(10deg); filter: drop-shadow(0 0 8px rgba(255,255,255,0.6)); }
+}
+
+.animate-stars-float {
+  animation: float-stars 2.5s ease-in-out infinite;
+}
+
+.magic-glow-hover {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.magic-glow-hover:hover {
+  box-shadow: 0 0 30px rgba(53, 37, 205, 0.6), 0 0 60px rgba(53, 37, 205, 0.2);
+  transform: translateY(-2px) scale(1.02);
+  filter: brightness(1.1);
+}
