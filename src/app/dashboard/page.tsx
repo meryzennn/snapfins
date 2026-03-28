@@ -423,7 +423,7 @@ export default function DashboardPage() {
       income: formatValue(incomeCurrent, currency, lang),
       expense: formatValue(expenseCurrent, currency, lang),
       investment: formatValue(investmentCurrent, currency, lang),
-      netWorth: formatValue(netWorthNow, currency, lang),
+      netWorth: formatValue(periodBalance, currency, lang),
       incomeTrend: iTrend !== null ? iTrend.toFixed(1) : "—",
       expenseTrend: eTrend !== null ? eTrend.toFixed(1) : "—",
       investmentTrend: invTrend !== null ? invTrend.toFixed(1) : "—",
@@ -787,14 +787,23 @@ export default function DashboardPage() {
 
       if (!userData?.user) throw new Error("Not authenticated");
 
-      const txPayload = {
-        user_id: userData.user.id,
+      // Normalize amount (remove separators if any, convert to number)
+      const cleanAmountStr = manualForm.amount.toString()
+        .replace(/\./g, "") // remove thousands dots if any
+        .replace(/,/g, "."); // replace comma with dot decimal
+      
+      const finalAmount = parseFloat(cleanAmountStr) || parseFloat(manualForm.amount.toString().replace(/[^0-9.-]/g, ""));
+
+      if (isNaN(finalAmount)) throw new Error("Invalid amount entered");
+
+      // Shared Payload
+      const txPayload: any = {
         date: manualForm.date,
         category: manualForm.category.toUpperCase(),
         color: assignColor(manualForm.category.toUpperCase()),
         description: manualForm.description,
         type: manualForm.type,
-        amount: manualForm.amount,
+        amount: finalAmount, 
         currency: manualForm.currency,
         source: manualForm.source || (editingTx ? editingTx.source : "Manual Entry"),
         is_ai: editingTx ? editingTx.isAi : false,
@@ -802,6 +811,7 @@ export default function DashboardPage() {
 
       if (editingTx) {
         // UPDATE Existing Transaction
+        // IMPORTANT: Do not set user_id in the update to avoid policy issues
         const { data: updatedData, error } = await supabase
           .from("transactions")
           .update(txPayload)
@@ -810,16 +820,20 @@ export default function DashboardPage() {
 
         if (error) throw error;
 
-        if (updatedData) {
+        if (updatedData && updatedData.length > 0) {
           const mappedTx = { ...updatedData[0], isAi: updatedData[0].is_ai };
           setTransactions((prev) => 
             prev.map(tx => tx.id === editingTx.id ? mappedTx : tx)
           );
           setShowManualEntry(false);
           setEditingTx(null);
+        } else {
+          throw new Error("No rows were updated. The transaction may no longer exist or you do not have permission.");
         }
       } else {
         // INSERT New Transaction
+        // Set user_id ONLY on insert
+        txPayload.user_id = userData.user.id;
         const { data: insertedData, error } = await supabase
           .from("transactions")
           .insert([txPayload])
@@ -827,10 +841,12 @@ export default function DashboardPage() {
 
         if (error) throw error;
 
-        if (insertedData) {
+        if (insertedData && insertedData.length > 0) {
           const mappedTx = { ...insertedData[0], isAi: insertedData[0].is_ai };
           setTransactions((prev) => [mappedTx, ...prev]);
           setShowManualEntry(false);
+        } else {
+          throw new Error("Failed to insert transaction.");
         }
       }
 
