@@ -520,22 +520,44 @@ export default function DashboardPage() {
 
   const handleDeleteAccount = async () => {
     setIsDeleting(true);
-    const supabase = createClient();
-    const { data: userData } = await supabase.auth.getUser();
+    try {
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
-    if (userData?.user) {
-      // 1. Purge all transactions
-      await supabase
+      if (!user) throw new Error("User not found");
+
+      // 1. Purge all transactions for this user
+      const { count: txCount, error: txError } = await supabase
         .from("transactions")
-        .delete()
-        .eq("user_id", userData.user.id);
+        .delete({ count: "exact" })
+        .eq("user_id", user.id);
+
+      if (txError) throw txError;
+
       // 2. Clear assets if any
-      await supabase.from("assets").delete().eq("user_id", userData.user.id);
-      // 3. Sign Out
+      const { count: assetCount, error: assetError } = await supabase
+        .from("assets")
+        .delete({ count: "exact" })
+        .eq("user_id", user.id);
+
+      if (assetError) console.warn("Asset deletion skip/fail:", assetError);
+
+      // 3. Clear local storage cache
+      localStorage.removeItem("snapfins_exchange_rates");
+      localStorage.removeItem("snapfins-currency");
+      localStorage.removeItem("snapfins-lang");
+
+      // 4. Sign Out and redirect
       await supabase.auth.signOut();
       window.location.href = "/";
+    } catch (err: any) {
+      console.error("Delete failed:", err);
+      alert(t("deleteAccount") + " failed: " + err.message);
+    } finally {
+      setIsDeleting(false);
     }
-    setIsDeleting(false);
   };
 
   const handleManualSubmit = async (e: React.FormEvent) => {
@@ -727,7 +749,7 @@ export default function DashboardPage() {
                           });
                         }
                       }}
-                      className="bg-surface-container-low text-on-surface text-xs font-black pl-3 pr-1 py-3 focus:outline-none border-r border-outline-variant/30 cursor-pointer w-20 shrink-0"
+                      className="bg-transparent text-on-surface text-xs font-black pl-3 pr-1 py-3 focus:outline-none border-r border-outline-variant/30 cursor-pointer w-20 shrink-0 appearance-none"
                     >
                       {Object.keys(currencySymbols).map((c) => (
                         <option
