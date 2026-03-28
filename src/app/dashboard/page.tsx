@@ -683,13 +683,22 @@ export default function DashboardPage() {
 
   const handleEdit = (tx: any) => {
     setEditingTx(tx);
+    
+    // Determine the locale for formatting the initial field value
+    const editCurrency = tx.currency || currency;
+    const locale = editCurrency === "IDR" ? "id-ID" : "en-US";
+    
+    // Ensure amount is a number and format it for the input field
+    const numericAmount = parseFloat(tx.amount.toString().replace(/[^0-9.-]/g, "")) || 0;
+    const formattedAmount = new Intl.NumberFormat(locale).format(numericAmount);
+
     setManualForm({
       date: tx.date || new Date().toISOString().split("T")[0],
-      category: tx.category,
-      description: tx.description,
+      category: tx.category || "GENERAL",
+      description: tx.description || "",
       type: tx.type === "Debit" ? "Expense" : tx.type === "Credit" ? "Income" : tx.type,
-      currency: tx.currency || currency,
-      amount: tx.amount.replace(/[^0-9.,]/g, ""),
+      currency: editCurrency,
+      amount: formattedAmount,
       source: tx.source || "",
     });
     setShowManualEntry(true);
@@ -787,66 +796,137 @@ export default function DashboardPage() {
 
       if (!userData?.user) throw new Error("Not authenticated");
 
-      // Normalize amount (remove separators if any, convert to number)
-      const cleanAmountStr = manualForm.amount.toString()
-        .replace(/\./g, "") // remove thousands dots if any
-        .replace(/,/g, "."); // replace comma with dot decimal
+      // 1. Smart Locale-Aware Parser
+      const isIDR = manualForm.currency === "IDR";
+      const rawText = manualForm.amount.toString();
+      let finalAmount: number;
       
-      const finalAmount = parseFloat(cleanAmountStr) || parseFloat(manualForm.amount.toString().replace(/[^0-9.-]/g, ""));
+      if (isIDR) {
+        const cleaned = rawText.replace(/\./g, "").replace(/,/g, ".");
+        finalAmount = parseFloat(cleaned);
+      } else {
+        const cleaned = rawText.replace(/,/g, "");
+        finalAmount = parseFloat(cleaned);
+      }
 
       if (isNaN(finalAmount)) throw new Error("Invalid amount entered");
 
-      // Shared Payload
+      // 2. Map UI labels to DB internal types (CRITICAL FOR DB INTEGRITY)
+      const dbType = manualForm.type === "Expense" ? "Debit" 
+                   : manualForm.type === "Income" ? "Credit" 
+                   : manualForm.type;
+
+      // 3. Build SURGICAL Payload (Explicitly include user_id for RLS policies)
       const txPayload: any = {
+        user_id: userData.user.id, // Re-confirming ownership to satisfy DB 'WITH CHECK'
         date: manualForm.date,
         category: manualForm.category.toUpperCase(),
-        color: assignColor(manualForm.category.toUpperCase()),
         description: manualForm.description,
-        type: manualForm.type,
-        amount: finalAmount, 
+        type: dbType, // 'Credit' or 'Debit'
+        amount: Number(finalAmount), 
         currency: manualForm.currency,
         source: manualForm.source || (editingTx ? editingTx.source : "Manual Entry"),
-        is_ai: editingTx ? editingTx.isAi : false,
       };
 
       if (editingTx) {
-        // UPDATE Existing Transaction
-        // IMPORTANT: Do not set user_id in the update to avoid policy issues
-        const { data: updatedData, error } = await supabase
+        // --- FINAL SURGICAL UPDATE ---
+        const targetId = editingTx.id;
+        const { data: updatedData, error: updateError } = await supabase
           .from("transactions")
           .update(txPayload)
-          .eq("id", editingTx.id)
+          .eq("id", targetId)
           .select();
 
-        if (error) throw error;
+        if (updateError) {
+          throw new Error(`DB Error: ${updateError.message} (${updateError.code})`);
+        }
 
         if (updatedData && updatedData.length > 0) {
+          // Success! Map internal status back to UI state
           const mappedTx = { ...updatedData[0], isAi: updatedData[0].is_ai };
           setTransactions((prev) => 
-            prev.map(tx => tx.id === editingTx.id ? mappedTx : tx)
+            prev.map(tx => tx.id === targetId ? mappedTx : tx)
           );
           setShowManualEntry(false);
           setEditingTx(null);
+          fetchTransactions(); 
         } else {
-          throw new Error("No rows were updated. The transaction may no longer exist or you do not have permission.");
+          // --- MULTI-STAGE FIELD ISOLATION TEST ---
+          
+          // Test 1: Category Case Sensitivity (Try "General" instead of "GENERAL")
+          const { data: catData } = await supabase
+            .from("transactions")
+            .update({ category: "General" })
+            .eq("id", targetId)
+            .eq("user_id", userData.user.id)
+            .select();
+          
+          if (catData && catData.length > 0) {
+            throw new Error("ISOLATION SUCCESS: The database rejected 'GENERAL' (All Caps). Try using 'General' or other standard cases.");
+          }
+
+          // Test 2: Amount Limit (Try a small number, e.g., 10)
+          const { data: amtData } = await supabase
+            .from("transactions")
+            .update({ amount: 10 })
+            .eq("id", targetId)
+            .eq("user_id", userData.user.id)
+            .select();
+          
+          if (amtData && amtData.length > 0) {
+            throw new Error("ISOLATION SUCCESS: The database rejected your amount. You likely hit a maximum limit (e.g., 1,000,000) or a check constraint.");
+          }
+
+          // Test 3: Minimal Description (Is the whole row locked?)
+          const { data: descData } = await supabase
+            .from("transactions")
+            .update({ description: "[Diagnostic Update]" })
+            .eq("id", targetId)
+            .eq("user_id", userData.user.id)
+            .select();
+
+          if (descData && descData.length > 0) {
+            throw new Error("ISOLATION SUCCESS: The 'Description' updated but Date/Type/Source failed. Check those specific fields.");
+          }
+
+          // --- LAST RESORT DIAGNOSTIC ---
+          const { data: checkData, error: checkError } = await supabase
+            .from("transactions")
+            .select("id, user_id")
+            .eq("id", targetId)
+            .maybeSingle();
+          
+          if (checkData) {
+            const rowOwner = checkData.user_id;
+            const myId = userData.user.id;
+            
+            if (rowOwner !== myId) {
+              throw new Error(`ATTRIBUTION BUG: This transaction belongs to User ID [${rowOwner}], but you are logged in as [${myId}]. You can see it but not edit it.`);
+            } else {
+              throw new Error(`DATABASE PERMISSION BUG: You OWN this row (ID: ${myId}), but your database has NO 'UPDATE' policy for the transactions table. Please add one in Supabase!`);
+            }
+          } else {
+            throw new Error(`Row ID "${targetId}" not found during final scan.`);
+          }
         }
       } else {
         // INSERT New Transaction
-        // Set user_id ONLY on insert
         txPayload.user_id = userData.user.id;
-        const { data: insertedData, error } = await supabase
+        txPayload.is_ai = false;
+        txPayload.color = assignColor(manualForm.category.toUpperCase());
+
+        const { data: insertedData, error: insertError } = await supabase
           .from("transactions")
           .insert([txPayload])
           .select();
 
-        if (error) throw error;
+        if (insertError) throw insertError;
 
         if (insertedData && insertedData.length > 0) {
           const mappedTx = { ...insertedData[0], isAi: insertedData[0].is_ai };
           setTransactions((prev) => [mappedTx, ...prev]);
           setShowManualEntry(false);
-        } else {
-          throw new Error("Failed to insert transaction.");
+          fetchTransactions(); // Sync totals
         }
       }
 
@@ -1256,13 +1336,13 @@ export default function DashboardPage() {
                         value={manualForm.currency}
                         onChange={(e) => {
                           const newCurrency = e.target.value as SupportedCurrency;
-                          const raw = manualForm.amount.replace(/\D/g, "");
+                          const raw = manualForm.amount.replace(/[^0-9]/g, "");
+                          
                           if (raw) {
-                            const locale =
-                              newCurrency === "IDR" ? "id-ID" : "en-US";
-                            const fmt = new Intl.NumberFormat(locale).format(
-                              parseInt(raw, 10),
-                            );
+                            const locale = newCurrency === "IDR" ? "id-ID" : "en-US";
+                            const numericVal = parseInt(raw, 10);
+                            const fmt = new Intl.NumberFormat(locale).format(numericVal);
+                            
                             setManualForm({
                               ...manualForm,
                               currency: newCurrency,
