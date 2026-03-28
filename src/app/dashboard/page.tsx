@@ -1381,11 +1381,11 @@ export default function DashboardPage() {
       )}
 
 
-      {/* TopNavBar Shared Component - v2.1.1 */}
+      {/* TopNavBar Shared Component - v2.2.0 (Mobile Ready) */}
       <nav className="sticky top-0 w-full z-50 bg-slate-50/80 dark:bg-slate-950/80 backdrop-blur-md border-b border-outline-variant/30">
-        <div className="flex justify-between items-center w-full px-6 py-3 max-w-7xl mx-auto">
-          <div className="flex items-center gap-8">
-            <span className="text-xl font-extrabold tracking-tighter text-indigo-700 dark:text-indigo-300 font-headline">
+        <div className="flex justify-between items-center w-full px-4 sm:px-6 py-2 md:py-3 max-w-7xl mx-auto">
+          <div className="flex items-center gap-4 md:gap-8">
+            <span className="text-lg md:text-xl font-extrabold tracking-tighter text-indigo-700 dark:text-indigo-300 font-headline">
               SnapFins
             </span>
             <div className="hidden md:flex items-center gap-6 font-manrope font-semibold tracking-tight text-sm">
@@ -1409,19 +1409,19 @@ export default function DashboardPage() {
               </a>
             </div>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 md:gap-4">
             <div
-              className="flex bg-surface-container-low border border-outline-variant/30 rounded-lg p-0.5 ml-2 relative"
+              className={`flex bg-surface-container-low border border-outline-variant/30 rounded-lg p-0.5 relative ${showCurrencyDropdown ? "z-[60]" : ""}`}
               ref={currencyDropdownRef}
             >
               <button
                 onClick={() => setShowCurrencyDropdown(!showCurrencyDropdown)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[10px] font-black text-primary hover:bg-primary/5 transition-all cursor-pointer"
+                className="flex items-center gap-1 px-2 md:px-3 py-1.5 md:py-1.5 rounded-md text-[9px] md:text-[10px] font-black text-primary hover:bg-primary/5 transition-all cursor-pointer"
               >
-                <span className="material-symbols-outlined text-sm">
+                <span className="material-symbols-outlined text-xs md:text-sm">
                   payments
                 </span>
-                {currency}
+                <span className="hidden xs:inline">{currency}</span>
                 <span className="material-symbols-outlined text-[10px]">
                   {showCurrencyDropdown ? "expand_less" : "expand_more"}
                 </span>
@@ -1462,28 +1462,28 @@ export default function DashboardPage() {
               )}
             </div>
 
-            <div className="flex bg-surface-container-low border border-outline-variant/30 rounded-lg p-0.5 ml-2">
+            <div className="flex bg-surface-container-low border border-outline-variant/30 rounded-lg p-0.5">
               <button
                 onClick={() => setLang("en")}
-                className={`text-[10px] font-bold px-2 py-1.5 rounded-md transition-colors ${lang === "en" ? "bg-primary text-white shadow-sm" : "text-on-surface-variant hover:text-on-surface"}`}
+                className={`text-[9px] md:text-[10px] font-bold px-1.5 md:px-2 py-1.5 rounded-md transition-colors ${lang === "en" ? "bg-primary text-white shadow-sm" : "text-on-surface-variant hover:text-on-surface"}`}
               >
                 EN
               </button>
               <button
                 onClick={() => setLang("id")}
-                className={`text-[10px] font-bold px-2 py-1.5 rounded-md transition-colors ${lang === "id" ? "bg-primary text-white shadow-sm" : "text-on-surface-variant hover:text-on-surface"}`}
+                className={`text-[9px] md:text-[10px] font-bold px-1.5 md:px-2 py-1.5 rounded-md transition-colors ${lang === "id" ? "bg-primary text-white shadow-sm" : "text-on-surface-variant hover:text-on-surface"}`}
               >
                 ID
               </button>
             </div>
 
             <div
-              className="relative border-l border-outline-variant/30 pl-4 ml-4"
+              className="relative border-l border-outline-variant/30 pl-2 md:pl-4 ml-1 md:ml-4"
               ref={userDropdownRef}
             >
               <button
                 onClick={() => setShowUserDropdown(!showUserDropdown)}
-                className="flex items-center gap-3 hover:bg-surface-container-low p-1 rounded-xl transition-all active:scale-95 cursor-pointer"
+                className="flex items-center gap-2 md:gap-3 hover:bg-surface-container-low p-1 rounded-xl transition-all active:scale-95 cursor-pointer"
               >
                 <div className="text-right hidden sm:block">
                   <p className="text-[11px] font-extrabold text-on-surface leading-tight">
@@ -1495,7 +1495,7 @@ export default function DashboardPage() {
                 </div>
                 <img
                   alt="User profile"
-                  className="w-10 h-10 rounded-full border-2 border-primary/20 object-cover shadow-sm"
+                  className="w-8 h-8 md:w-10 md:h-10 rounded-full border-2 border-primary/20 object-cover shadow-sm"
                   src={
                     userAvatar ||
                     "https://lh3.googleusercontent.com/aida-public/AB6AXuBE0e9w4xGMbdwDYXMaDw5uETVXAmCsb2dhI8hfIpOO3BPWgMaL0JjQzcpHBM7CT9NYI1ldia3F2nXUV5w3qb3mMDQz-OTK-jeHMEnz039x-WujlEaGvN3up-hQu3sr7A0G-nmdIg9113_eJSO-g9Mpnz1eq1fYd6INd1L0Flb-PXWLfhqXoh5e8wARW0avQOljBQFUftRfAqKCQ6Fw-PDIi6C3txyigy8dE7NZEcNbsgG6NlCq8YmU7KjLMJ2ODW7FZcU7PiQ025U"
@@ -1574,35 +1574,34 @@ export default function DashboardPage() {
         </div>
       </nav>
 
-      <main className="flex-grow max-w-7xl mx-auto w-full px-6 py-10 space-y-10">
+      <main className="flex-grow max-w-7xl mx-auto w-full px-4 sm:px-6 md:px-8 py-6 md:py-10 space-y-8 md:space-y-10 pb-32 md:pb-8">
         {/* Header Section */}
-        <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <header className="flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-6">
           <div className="space-y-1">
-            <h1 className="text-4xl font-extrabold tracking-tight text-on-surface font-headline">
+            <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-on-surface font-headline">
               {t("financialOverview")}
             </h1>
-            <p className="text-on-surface-variant font-black tracking-[0.2em] uppercase text-[10px] opacity-60 hover:opacity-100 transition-opacity">
+            <p className="text-on-surface-variant font-black tracking-[0.2em] uppercase text-[9px] md:text-[10px] opacity-60 hover:opacity-100 transition-opacity">
               {t("liveStatus")}
             </p>
           </div>
-          <div className="flex items-center gap-3">
-            <input
-              type="file"
-              accept="image/*"
-              capture="environment"
-              ref={fileInputRef}
-              onChange={handleScan}
-              className="hidden"
-            />
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             <button
               onClick={() => setShowManualEntry(true)}
-              className="hidden md:flex px-5 py-2.5 rounded-lg border border-outline-variant text-on-surface font-semibold text-sm hover:bg-surface-container-low transition-all active:opacity-80 items-center gap-2 cursor-pointer"
+              className="flex sm:hidden px-5 py-3 rounded-xl border border-outline-variant text-on-surface font-bold text-sm hover:bg-surface-container-low transition-all active:scale-[0.98] items-center justify-center gap-2 cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-lg">edit_note</span>
+              {t("manualEntry")}
+            </button>
+            <button
+              onClick={() => setShowManualEntry(true)}
+              className="hidden sm:flex md:flex px-5 py-2.5 rounded-lg border border-outline-variant text-on-surface font-semibold text-sm hover:bg-surface-container-low transition-all active:opacity-80 items-center gap-2 cursor-pointer"
             >
               {t("manualEntry")}
             </button>
             <button
               onClick={() => setShowScanModal(true)}
-              className="px-5 py-2.5 rounded-lg bg-gradient-to-r from-primary to-primary-container text-white font-bold text-sm shadow-[0_4px_15px_rgba(53,37,205,0.3)] transition-all active:scale-[0.98] flex items-center gap-2 magic-glow-hover cursor-pointer overflow-hidden group"
+              className="px-5 py-4 sm:py-2.5 rounded-xl sm:rounded-lg bg-gradient-to-r from-primary to-primary-container text-white font-bold text-sm shadow-[0_4px_15px_rgba(53,37,205,0.3)] transition-all active:scale-[0.98] flex items-center justify-center gap-2 magic-glow-hover cursor-pointer overflow-hidden group"
             >
               <span
                 className="material-symbols-outlined text-lg focus:outline-none animate-stars-float"
@@ -1633,7 +1632,7 @@ export default function DashboardPage() {
                   {t("totalNetWorth")}
                 </p>
                 <div 
-                  className={`${totals.netWorth.length > 18 ? "text-lg" : totals.netWorth.length > 15 ? "text-xl" : totals.netWorth.length > 12 ? "text-2xl" : "text-3xl"} text-on-surface font-black font-headline tracking-tighter whitespace-nowrap`} 
+                  className={`${totals.netWorth.length > 20 ? "text-base" : totals.netWorth.length > 18 ? "text-lg" : totals.netWorth.length > 15 ? "text-xl" : totals.netWorth.length > 12 ? "text-2xl" : "text-3xl"} text-on-surface font-black font-headline tracking-tighter break-all sm:whitespace-nowrap`} 
                   title={totals.netWorth}
                 >
                   {totals.netWorth}
@@ -1666,7 +1665,7 @@ export default function DashboardPage() {
                   {selectedMonth === -1 ? t("annualIncome") : t("monthlyIncome")}
                 </p>
                 <div 
-                  className={`${totals.income.length > 18 ? "text-lg" : totals.income.length > 15 ? "text-xl" : totals.income.length > 12 ? "text-2xl" : "text-3xl"} text-secondary font-black font-headline tracking-tighter whitespace-nowrap`} 
+                  className={`${totals.income.length > 20 ? "text-base" : totals.income.length > 18 ? "text-lg" : totals.income.length > 15 ? "text-xl" : totals.income.length > 12 ? "text-2xl" : "text-3xl"} text-secondary font-black font-headline tracking-tighter break-all sm:whitespace-nowrap`} 
                   title={totals.income}
                 >
                   {totals.income}
@@ -1709,7 +1708,7 @@ export default function DashboardPage() {
                   {selectedMonth === -1 ? t("annualInvestment") : t("monthlyInvestment")}
                 </p>
                 <div 
-                  className={`${totals.investment.length > 18 ? "text-lg" : totals.investment.length > 15 ? "text-xl" : totals.investment.length > 12 ? "text-2xl" : "text-3xl"} text-indigo-500 font-black font-headline tracking-tighter whitespace-nowrap`} 
+                  className={`${totals.investment.length > 20 ? "text-base" : totals.investment.length > 18 ? "text-lg" : totals.investment.length > 15 ? "text-xl" : totals.investment.length > 12 ? "text-2xl" : "text-3xl"} text-indigo-500 font-black font-headline tracking-tighter break-all sm:whitespace-nowrap`} 
                   title={totals.investment}
                 >
                   {totals.investment}
@@ -1742,7 +1741,7 @@ export default function DashboardPage() {
                   {selectedMonth === -1 ? t("annualExpense") : t("monthlyExpense")}
                 </p>
                 <div 
-                  className={`${totals.expense.length > 18 ? "text-lg" : totals.expense.length > 15 ? "text-xl" : totals.expense.length > 12 ? "text-2xl" : "text-3xl"} text-error font-black font-headline tracking-tighter whitespace-nowrap`} 
+                  className={`${totals.expense.length > 20 ? "text-base" : totals.expense.length > 18 ? "text-lg" : totals.expense.length > 15 ? "text-xl" : totals.expense.length > 12 ? "text-2xl" : "text-3xl"} text-error font-black font-headline tracking-tighter break-all sm:whitespace-nowrap`} 
                   title={totals.expense}
                 >
                   {totals.expense}
@@ -2173,6 +2172,34 @@ export default function DashboardPage() {
           </p>
         </div>
       </footer>
+      {/* Mobile Bottom Navigation - v1.0.0 */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-[100] px-4 pb-4">
+        <div className="bg-surface/80 dark:bg-slate-900/80 backdrop-blur-xl border border-outline-variant/20 rounded-2xl shadow-[0_-10px_40px_rgba(0,0,0,0.1)] flex justify-around items-center py-3">
+          <button className="flex flex-col items-center gap-1 group">
+            <div className="w-12 h-1 bg-primary rounded-full mb-1 opacity-100"></div>
+            <span className="material-symbols-outlined text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>dashboard</span>
+            <span className="text-[10px] font-bold text-primary uppercase tracking-widest">{t("navDashboard")}</span>
+          </button>
+          
+          <button className="flex flex-col items-center gap-1 group opacity-60 hover:opacity-100 transition-opacity">
+            <div className="w-8 h-1 bg-transparent rounded-full mb-1"></div>
+            <span className="material-symbols-outlined text-on-surface-variant">account_balance_wallet</span>
+            <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">{t("navAsset")}</span>
+          </button>
+
+          <button className="flex flex-col items-center gap-1 group opacity-60 hover:opacity-100 transition-opacity">
+            <div className="w-8 h-1 bg-transparent rounded-full mb-1"></div>
+            <span className="material-symbols-outlined text-on-surface-variant">monitoring</span>
+            <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">{t("navAnalytics")}</span>
+          </button>
+          
+          <button className="flex flex-col items-center gap-1 group opacity-60 hover:opacity-100 transition-opacity" onClick={() => setShowUserDropdown(!showUserDropdown)}>
+            <div className="w-8 h-1 bg-transparent rounded-full mb-1"></div>
+            <span className="material-symbols-outlined text-on-surface-variant">person</span>
+            <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">{lang === "id" ? "PROFIL" : "PROFILE"}</span>
+          </button>
+        </div>
+      </div>
 
       {/* Hidden processing elements */}
       <canvas ref={canvasRef} className="hidden" />
