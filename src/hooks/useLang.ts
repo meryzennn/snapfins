@@ -20,11 +20,11 @@ export function useLang() {
     localStorage.setItem(STORAGE_KEY, newLang);
   }, []);
 
-  // Translator function — t('key') returns the translated string
-  const t = useCallback((key: TranslationKeys, arg?: number): string => {
+  // Translator function — t('key', ...args) returns the translated string
+  const t = useCallback((key: TranslationKeys, ...args: any[]): string => {
     const val = translations[lang][key];
     if (typeof val === 'function') {
-      return (val as (n: number) => string)(arg ?? 0);
+      return (val as (...args: any[]) => string)(...args);
     }
     return val as string;
   }, [lang]);
