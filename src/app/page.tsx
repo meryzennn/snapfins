@@ -32,40 +32,32 @@ export default function LandingPage() {
   }, []);
 
   useEffect(() => {
-    const observerOptions = {
-      root: null,
-      rootMargin: '-20% 0px -70% 0px', // More precise "sweet spot" in the viewport
-      threshold: 0
-    };
-
-    const handleIntersect = (entries: IntersectionObserverEntry[]) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          setActiveSection(entry.target.id);
-        }
-      });
-    };
-
-    const observer = new IntersectionObserver(handleIntersect, observerOptions);
     const sections = ['home', 'features', 'guide'];
-    
-    sections.forEach(id => {
-      const el = document.getElementById(id);
-      if (el) observer.observe(el);
-    });
 
-    // Fallback for the very top of the page
-    const handleScroll = () => {
-      if (window.scrollY < 100) {
+    const getActiveSection = () => {
+      const scrollY = window.scrollY;
+      // Quick check: very top of the page → always 'home'
+      if (scrollY < 80) {
         setActiveSection('home');
+        return;
       }
-    };
-    window.addEventListener('scroll', handleScroll);
 
-    return () => {
-      observer.disconnect();
-      window.removeEventListener('scroll', handleScroll);
+      // Walk the sections in reverse and pick the first whose top is above
+      // the current scroll position + a 120px navbar offset
+      let current = 'home';
+      for (const id of sections) {
+        const el = document.getElementById(id);
+        if (el && el.getBoundingClientRect().top + scrollY - 120 <= scrollY) {
+          current = id;
+        }
+      }
+      setActiveSection(current);
     };
+
+    // Run on mount and on every scroll
+    getActiveSection();
+    window.addEventListener('scroll', getActiveSection, { passive: true });
+    return () => window.removeEventListener('scroll', getActiveSection);
   }, []);
 
   // Apply scroll lock specifically when the Login Modal is open.
@@ -120,20 +112,23 @@ export default function LandingPage() {
           </Link>
           <nav className="hidden md:flex items-center gap-8">
             <a 
-              className={`${activeSection === 'home' ? 'text-primary dark:text-primary-container font-bold' : 'text-on-surface-variant dark:text-gray-400 font-semibold'} transition-all duration-300`} 
+              className={`${activeSection === 'home' ? 'text-primary dark:text-primary-container font-bold' : 'text-on-surface-variant dark:text-gray-400 font-semibold'} transition-all duration-300 cursor-pointer`} 
               href="#home"
+              onClick={() => setActiveSection('home')}
             >
               {t('home')}
             </a>
             <a 
-              className={`${activeSection === 'features' ? 'text-primary dark:text-primary-container font-bold' : 'text-on-surface-variant dark:text-gray-400 font-semibold'} transition-all duration-300`} 
+              className={`${activeSection === 'features' ? 'text-primary dark:text-primary-container font-bold' : 'text-on-surface-variant dark:text-gray-400 font-semibold'} transition-all duration-300 cursor-pointer`} 
               href="#features"
+              onClick={() => setActiveSection('features')}
             >
               {t('features')}
             </a>
             <a 
-              className={`${activeSection === 'guide' ? 'text-primary dark:text-primary-container font-bold' : 'text-on-surface-variant dark:text-gray-400 font-semibold'} transition-all duration-300`} 
+              className={`${activeSection === 'guide' ? 'text-primary dark:text-primary-container font-bold' : 'text-on-surface-variant dark:text-gray-400 font-semibold'} transition-all duration-300 cursor-pointer`} 
               href="#guide"
+              onClick={() => setActiveSection('guide')}
             >
               {t('navGuide')}
             </a>
