@@ -14,6 +14,7 @@ import {
 } from "@/lib/currency";
 import { useEffect, useState, useRef } from "react";
 import { createClient } from "@/utils/supabase/client";
+import { deleteUserAccountAction } from "@/app/actions/user";
 import Link from "next/link";
 
 const assignColor = (category: string) => {
@@ -127,6 +128,17 @@ export default function DashboardPage() {
     }, [mounted, trend]);
 
     if (!mounted || trend === "—") return null;
+    
+    if (trend === "NEW") {
+      return (
+        <div key={animationKey} className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-bold text-on-surface-variant bg-surface-container/40 shrink-0 w-fit transition-all duration-500 hover:scale-105 shadow-sm border border-outline-variant/20 tracking-wider uppercase">
+            <span>{lang === "id" ? "Baru periode ini" : "New this period"}</span>
+          </div>
+        </div>
+      );
+    }
+
     const val = parseFloat(trend.replace(/[^\d.-]/g, ""));
     const isUp = val > 0;
     const isDown = val < 0;
@@ -400,7 +412,7 @@ export default function DashboardPage() {
     const computeTrend = (curr: number, prev: number) => {
       if (prev === 0) {
         if (curr === 0) return null;
-        return curr > 0 ? 100.0 : -100.0;
+        return "NEW";
       }
       const diff = curr - prev;
       if (Math.abs(diff) < 0.01) return 0.0;
@@ -423,11 +435,11 @@ export default function DashboardPage() {
       income: formatValue(incomeCurrent, currency, lang),
       expense: formatValue(expenseCurrent, currency, lang),
       investment: formatValue(investmentCurrent, currency, lang),
-      netWorth: formatValue(periodBalance, currency, lang),
-      incomeTrend: iTrend !== null ? iTrend.toFixed(1) : "—",
-      expenseTrend: eTrend !== null ? eTrend.toFixed(1) : "—",
-      investmentTrend: invTrend !== null ? invTrend.toFixed(1) : "—",
-      netWorthTrend: nwTrend !== null ? nwTrend.toFixed(1) : "—",
+      netWorth: formatValue(netWorthNow, currency, lang),
+      incomeTrend: iTrend !== null ? (iTrend === "NEW" ? "NEW" : (iTrend as number).toFixed(1)) : "—",
+      expenseTrend: eTrend !== null ? (eTrend === "NEW" ? "NEW" : (eTrend as number).toFixed(1)) : "—",
+      investmentTrend: invTrend !== null ? (invTrend === "NEW" ? "NEW" : (invTrend as number).toFixed(1)) : "—",
+      netWorthTrend: nwTrend !== null ? (nwTrend === "NEW" ? "NEW" : (nwTrend as number).toFixed(1)) : "—",
       comparisonContext,
     };
   };
@@ -747,39 +759,20 @@ export default function DashboardPage() {
   const handleDeleteAccount = async () => {
     setIsDeleting(true);
     try {
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      // Execute true account deletion via our secure server action
+      await deleteUserAccountAction();
 
-      if (!user) throw new Error("User not found");
-
-      // 1. Purge all transactions for this user
-      const { count: txCount, error: txError } = await supabase
-        .from("transactions")
-        .delete({ count: "exact" })
-        .eq("user_id", user.id);
-
-      if (txError) throw txError;
-
-      // 2. Clear assets if any
-      const { count: assetCount, error: assetError } = await supabase
-        .from("assets")
-        .delete({ count: "exact" })
-        .eq("user_id", user.id);
-
-      if (assetError) console.warn("Asset deletion skip/fail:", assetError);
-
-      // 3. Clear local storage cache
+      // Clear local storage cache
       localStorage.removeItem("snapfins_exchange_rates");
       localStorage.removeItem("snapfins-currency");
       localStorage.removeItem("snapfins-lang");
 
-      // 4. Sign Out and redirect
+      // Sign Out and redirect to clean up client state hooks
+      const supabase = createClient();
       await supabase.auth.signOut();
       window.location.href = "/";
     } catch (err: any) {
-      console.error("Delete failed:", err);
+      console.error("Account deletion failed:", err);
       alert(t("deleteAccount") + " failed: " + err.message);
     } finally {
       setIsDeleting(false);
@@ -851,63 +844,7 @@ export default function DashboardPage() {
           setEditingTx(null);
           fetchTransactions(); 
         } else {
-          // --- MULTI-STAGE FIELD ISOLATION TEST ---
-          
-          // Test 1: Category Case Sensitivity (Try "General" instead of "GENERAL")
-          const { data: catData } = await supabase
-            .from("transactions")
-            .update({ category: "General" })
-            .eq("id", targetId)
-            .eq("user_id", userData.user.id)
-            .select();
-          
-          if (catData && catData.length > 0) {
-            throw new Error("ISOLATION SUCCESS: The database rejected 'GENERAL' (All Caps). Try using 'General' or other standard cases.");
-          }
-
-          // Test 2: Amount Limit (Try a small number, e.g., 10)
-          const { data: amtData } = await supabase
-            .from("transactions")
-            .update({ amount: 10 })
-            .eq("id", targetId)
-            .eq("user_id", userData.user.id)
-            .select();
-          
-          if (amtData && amtData.length > 0) {
-            throw new Error("ISOLATION SUCCESS: The database rejected your amount. You likely hit a maximum limit (e.g., 1,000,000) or a check constraint.");
-          }
-
-          // Test 3: Minimal Description (Is the whole row locked?)
-          const { data: descData } = await supabase
-            .from("transactions")
-            .update({ description: "[Diagnostic Update]" })
-            .eq("id", targetId)
-            .eq("user_id", userData.user.id)
-            .select();
-
-          if (descData && descData.length > 0) {
-            throw new Error("ISOLATION SUCCESS: The 'Description' updated but Date/Type/Source failed. Check those specific fields.");
-          }
-
-          // --- LAST RESORT DIAGNOSTIC ---
-          const { data: checkData, error: checkError } = await supabase
-            .from("transactions")
-            .select("id, user_id")
-            .eq("id", targetId)
-            .maybeSingle();
-          
-          if (checkData) {
-            const rowOwner = checkData.user_id;
-            const myId = userData.user.id;
-            
-            if (rowOwner !== myId) {
-              throw new Error(`ATTRIBUTION BUG: This transaction belongs to User ID [${rowOwner}], but you are logged in as [${myId}]. You can see it but not edit it.`);
-            } else {
-              throw new Error(`DATABASE PERMISSION BUG: You OWN this row (ID: ${myId}), but your database has NO 'UPDATE' policy for the transactions table. Please add one in Supabase!`);
-            }
-          } else {
-            throw new Error(`Row ID "${targetId}" not found during final scan.`);
-          }
+          throw new Error("Failed to update transaction. It may have been deleted or you do not have permission.");
         }
       } else {
         // INSERT New Transaction
@@ -1052,6 +989,7 @@ export default function DashboardPage() {
   const handleScan = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setShowScanModal(true); // Open the modal so the user sees the progress/error
     await processScanData(file);
     // Reset input
     if (fileInputRef.current) fileInputRef.current.value = "";
@@ -1068,7 +1006,7 @@ export default function DashboardPage() {
         category: tempScanData.category || "GENERAL",
         color: assignColor(tempScanData.category || "GENERAL"),
         description: tempScanData.description,
-        type: "Expense",
+        type: "Debit", // Normalize to DB schema type for Expenses
         amount: tempScanData.amount,
         currency: tempScanData.currency || "IDR",
         source: "Gemini Vision",
@@ -1546,30 +1484,7 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Scan Error Modal */}
-      {scanError && (
-        <div className="fixed inset-0 z-[101] flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="bg-surface p-8 rounded-3xl shadow-2xl flex flex-col items-center max-w-sm w-full border border-red-500/20 animate-in fade-in zoom-in duration-300">
-            <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center mb-6 relative">
-              <span className="material-symbols-outlined text-red-500 text-4xl">
-                error
-              </span>
-            </div>
-            <h3 className="font-headline font-bold text-xl text-on-surface mb-2">
-              {t("scanErrorTitle")}
-            </h3>
-            <p className="text-sm text-center text-on-surface-variant leading-relaxed mb-8">
-              {scanError}
-            </p>
-            <button
-              onClick={() => setScanError(null)}
-              className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-4 rounded-xl transition-colors shadow-sm active:scale-95"
-            >
-              {t("tryAgain")}
-            </button>
-          </div>
-        </div>
-      )}
+
 
       {/* Scan Success Modal (Jump to Date) */}
       {scanSuccess && (

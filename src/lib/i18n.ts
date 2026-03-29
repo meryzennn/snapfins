@@ -142,7 +142,7 @@ export const translations = {
     // ---- ACCOUNT SETTINGS & DELETION ----
     deleteAccount: "Delete My Account",
     deleteAccountWarning:
-      "Are you absolutely sure? This will permanently erase all your transaction history from SnapFins.",
+      "Are you absolutely sure? This will permanently erase all your transaction history and delete your user profile from SnapFins.",
     confirmDelete: "Yes, Delete Everything",
     cancel: "Cancel",
     profile: "Profile",
@@ -330,7 +330,7 @@ export const translations = {
     // ---- ACCOUNT SETTINGS & DELETION ----
     deleteAccount: "Hapus Akun Saya",
     deleteAccountWarning:
-      "Apakah Anda yakin? Ini akan menghapus seluruh riwayat transaksi Anda dari SnapFins secara permanen.",
+      "Apakah Anda yakin? Ini akan menghapus seluruh riwayat transaksi Anda dan menghapus profil pengguna Anda dari SnapFins secara permanen.",
     confirmDelete: "Ya, Hapus Semuanya",
     cancel: "Batal",
     profile: "Profil",
