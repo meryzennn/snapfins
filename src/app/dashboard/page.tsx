@@ -16,7 +16,7 @@ import { useEffect, useState, useRef } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { deleteUserAccountAction } from "@/app/actions/user";
 import Link from "next/link";
-
+import SelectionToggle from "@/components/SelectionToggle";
 const assignColor = (category: string) => {
   const map: Record<string, string> = {
     DINING: "purple",
@@ -48,36 +48,6 @@ const getCategoryStyle = (color: string) => {
   return styles[color] || styles.slate;
 };
 
-const SelectionToggle = ({
-  checked,
-  indeterminate,
-  onChange,
-}: {
-  checked: boolean;
-  indeterminate?: boolean;
-  onChange: () => void;
-}) => (
-  <button
-    onClick={(e) => {
-      e.stopPropagation();
-      onChange();
-    }}
-    className={`w-5 h-5 rounded-md border-2 transition-all duration-300 flex items-center justify-center cursor-pointer group/toggle relative overflow-hidden active:scale-90
-      ${checked || indeterminate ? "bg-primary border-primary shadow-lg shadow-primary/20" : "border-outline-variant/60 hover:border-primary bg-transparent"}
-    `}
-  >
-    {(checked || indeterminate) && (
-      <div className="absolute inset-0 bg-white/20 animate-ping [animation-duration:1.5s]"></div>
-    )}
-    <span
-      className={`material-symbols-outlined text-white text-[14px] font-black transition-all duration-300 transform relative z-10
-      ${checked || indeterminate ? "scale-100 opacity-100" : "scale-0 opacity-0"}
-    `}
-    >
-      {indeterminate ? "remove" : "check"}
-    </span>
-  </button>
-);
 
 export default function DashboardPage() {
   const { theme, setTheme } = useTheme();
@@ -105,6 +75,7 @@ export default function DashboardPage() {
   // Manual Entry States
   const [showManualEntry, setShowManualEntry] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [cashAssets, setCashAssets] = useState<any[]>([]);
   const [manualForm, setManualForm] = useState({
     date: new Date().toISOString().split("T")[0],
     category: "GENERAL",
@@ -113,6 +84,7 @@ export default function DashboardPage() {
     currency: currency, // Use user's preference
     amount: "",
     source: "",
+    linked_asset_id: "",
   });
 
   // --- Trend Indicator Component with 5s Loop ---
@@ -195,7 +167,9 @@ export default function DashboardPage() {
   };
 
   const [transactions, setTransactions] = useState<any[]>([]);
-  const [totalAssets, setTotalAssets] = useState<number>(0);
+  // Raw asset rows from DB — totalAssets is derived at render time (reactive to currency changes)
+  const [assetRows, setAssetRows] = useState<any[]>([]);
+  const [priorNetWorth, setPriorNetWorth] = useState<number | null>(null);
   const [isLoadingTx, setIsLoadingTx] = useState(true);
   const [userAvatar, setUserAvatar] = useState<string | null>(null);
   const [userName, setUserName] = useState<string | null>(null);
@@ -322,13 +296,20 @@ export default function DashboardPage() {
     setCurrentPage(1);
   }, [filterCategory, selectedMonth, selectedYear]);
 
+  // ── totalAssets derived at render time ──────────────────────────────────
+  // Placed ABOVE calculateTotals to avoid TDZ ReferenceError.
+  // Reactive to currency changes, assetRows updates, and exchange rate changes.
+  const totalAssets = assetRows.reduce((sum, item) => {
+    const val = Number(item.current_value) || 0;
+    const assetCur = (item.currency || "USD") as SupportedCurrency;
+    return sum + convert(val, assetCur, currency as SupportedCurrency);
+  }, 0);
+
   const calculateTotals = () => {
     let incomeCurrent = 0,
       incomePrev = 0;
     let expenseCurrent = 0,
       expensePrev = 0;
-    let totalIncome = 0,
-      totalExpense = 0;
 
     // Define the Period we are looking at
     // If selectedMonth is -1 (ALL), we look at the entire year
@@ -370,13 +351,8 @@ export default function DashboardPage() {
       const rawVal = parseFloat(cleanAmount) || 0;
       const val = convert(rawVal, txCurrency, currency);
 
-      // Update ALL TIME totals for Net Worth
-      if (tx.type === "Credit" || tx.type === "Income") totalIncome += val;
-      else if (tx.type === "Debit" || tx.type === "Expense") totalExpense += val;
-      // Legacy "Investment" is safely ignored here to prevent skewing cashflow.
-
+      // Only Income / Expense for period reporting — no Investment in cashflow
       if (isAllMonths) {
-        // Compare Current Year vs Previous Year
         if (txYear === selectedYear) {
           if (tx.type === "Credit" || tx.type === "Income") incomeCurrent += val;
           else if (tx.type === "Debit" || tx.type === "Expense") expenseCurrent += val;
@@ -385,10 +361,8 @@ export default function DashboardPage() {
           else if (tx.type === "Debit" || tx.type === "Expense") expensePrev += val;
         }
       } else {
-        // Compare Selected Month vs Month Prior
         const prevMonth = selectedMonth === 0 ? 11 : selectedMonth - 1;
-        const prevMonthYear =
-          selectedMonth === 0 ? selectedYear - 1 : selectedYear;
+        const prevMonthYear = selectedMonth === 0 ? selectedYear - 1 : selectedYear;
 
         if (txMonth === selectedMonth && txYear === selectedYear) {
           if (tx.type === "Credit" || tx.type === "Income") incomeCurrent += val;
@@ -400,9 +374,10 @@ export default function DashboardPage() {
       }
     });
 
-    const netWorthNow = totalIncome - totalExpense;
-    const periodBalance = incomeCurrent - expenseCurrent;
-    const netWorthAtStart = netWorthNow - periodBalance;
+    // ── NET WORTH: Asset-driven ──────────────────────────────────────────────
+    // Net Worth = total asset value (not income minus expense).
+    // priorNetWorth is a snapshot persisted in localStorage from the previous session.
+    const netWorthNow = totalAssets;
 
     const computeTrend = (curr: number, prev: number) => {
       if (prev === 0) {
@@ -416,9 +391,9 @@ export default function DashboardPage() {
 
     const iTrend = computeTrend(incomeCurrent, incomePrev);
     const eTrend = computeTrend(expenseCurrent, expensePrev);
-    
-    // Net Worth Trend: Current Total Net Worth vs Start of Period Net Worth
-    const nwTrend = computeTrend(netWorthNow, netWorthAtStart);
+
+    // NW trend vs prior snapshoted net worth (localStorage). Falls back gracefully to null.
+    const nwTrend = priorNetWorth !== null ? computeTrend(netWorthNow, priorNetWorth) : null;
 
     const hasHistory = incomePrev > 0 || expensePrev > 0;
     const comparisonContext = isAllMonths
@@ -637,7 +612,64 @@ export default function DashboardPage() {
     }
   };
 
+
+  const dashboardSmartRefresh = async (currentRows: any[], userId: string, prefCurrency: SupportedCurrency) => {
+    const now = Date.now();
+    const stale = currentRows.filter((a: any) => {
+      if (a.valuation_mode !== "market" || !a.symbol || !a.quantity) return false;
+      const lastValued = new Date(a.last_valued_at || a.updated_at).getTime();
+      const ageMs = now - lastValued;
+      if (a.category === "Crypto" && ageMs > 15 * 60 * 1000) return true;
+      if (a.category !== "Crypto" && ageMs > 60 * 60 * 1000) return true;
+      return false;
+    });
+
+    if (stale.length === 0) return;
+
+    try {
+      const items = stale.map((a: any) => ({
+        symbol: a.symbol,
+        type: a.category === "Crypto" ? "crypto" : "stock",
+      }));
+      const res = await fetch("/api/prices", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items }),
+      });
+      const json = await res.json();
+      if (!json.results) return;
+
+      const supabase = createClient();
+      const updatedMap: Record<string, number> = {};
+      for (let i = 0; i < stale.length; i++) {
+        const asset = stale[i];
+        const quote = json.results[i];
+        if (quote && quote.price && !quote.error) {
+          const newCurrentValue = Number(asset.quantity) * quote.price;
+          await supabase.from("assets").update({
+            last_price: quote.price,
+            current_value: newCurrentValue,
+            last_valued_at: new Date(quote.updatedAt).toISOString(),
+          }).eq("id", asset.id);
+          updatedMap[asset.id] = newCurrentValue;
+        }
+      }
+
+      // Patch the in-memory rows with refreshed current_values → triggers recompute of totalAssets
+      setAssetRows(prev =>
+        prev.map(item =>
+          updatedMap[item.id] !== undefined
+            ? { ...item, current_value: updatedMap[item.id] }
+            : item
+        )
+      );
+    } catch (err) {
+      console.warn("Dashboard smart refresh silently failed", err);
+    }
+  };
+
   const fetchTransactions = async () => {
+
     setIsLoadingTx(true);
     const supabase = createClient();
     const { data: userData } = await supabase.auth.getUser();
@@ -662,25 +694,44 @@ export default function DashboardPage() {
 
       const { data: assetData, error: assetError } = await supabase
         .from("assets")
-        .select("current_value, currency")
+        .select("id, name, current_value, currency, symbol, category, quantity, valuation_mode, last_valued_at, updated_at")
         .eq("user_id", userData.user.id);
 
       if (!error && data) {
-        // Map data from DB format to our UI format (is_ai -> isAi)
         const formattedData = data.map((tx) => ({ ...tx, isAi: tx.is_ai }));
         setTransactions(formattedData);
       }
-      
+
       if (!assetError && assetData) {
-        let total = 0;
-        assetData.forEach((item) => {
-            const val = Number(item.current_value) || 0;
-            const assetCur = item.currency || "USD";
-            // Rough conversion in dashboard just using raw totals for MVP
-            // Normally we'd use `convert` from lib/currency but since dashboard doesn't re-render assets dynamically this is fine
-            total += val; 
-        });
-        setTotalAssets(total);
+        // Store raw rows — totalAssets is computed reactively at render time
+        setAssetRows(assetData);
+        // Populate cash/bank/e-wallet assets for the Source Account dropdown
+        const cashTypes = ["Cash", "Bank", "E-wallet"];
+        setCashAssets(assetData.filter((a: any) => cashTypes.includes(a.category)));
+
+        // Compute initial total for localStorage NW snapshot (at fetch time, rates should be initialized)
+        const initialTotal = assetData.reduce((sum: number, item: any) => {
+          const val = Number(item.current_value) || 0;
+          const assetCur = (item.currency || "USD") as SupportedCurrency;
+          return sum + convert(val, assetCur, currency as SupportedCurrency);
+        }, 0);
+
+        // Persist prior NW snapshot for trend comparison (read first, then update)
+        const NW_KEY = `snapfins_prior_nw_${userData.user.id}`;
+        try {
+          const stored = localStorage.getItem(NW_KEY);
+          if (stored) {
+            const { value, savedAt } = JSON.parse(stored);
+            const ageMs = Date.now() - savedAt;
+            if (ageMs > 30 * 60 * 1000) {
+              setPriorNetWorth(value);
+            }
+          }
+          localStorage.setItem(NW_KEY, JSON.stringify({ value: initialTotal, savedAt: Date.now() }));
+        } catch { /* localStorage unavailable — trend will just be hidden */ }
+
+        // Lightweight smart refresh of stale market assets
+        dashboardSmartRefresh(assetData, userData.user.id, currency as SupportedCurrency);
       }
     } else {
       // Not authenticated, redirect to landing
@@ -722,6 +773,7 @@ export default function DashboardPage() {
       currency: editCurrency,
       amount: formattedAmount,
       source: tx.source || "",
+      linked_asset_id: tx.linked_asset_id || "",
     });
     setShowManualEntry(true);
   };
@@ -737,6 +789,29 @@ export default function DashboardPage() {
     const supabase = createClient();
     
     try {
+      // Reverse asset balances for any linked transactions before deleting
+      const linkedTxs = transactions.filter(
+        tx => deleteQueue.includes(tx.id) && tx.linked_asset_id
+      );
+
+      for (const tx of linkedTxs) {
+        const linkedAsset = assetRows.find((a: any) => a.id === tx.linked_asset_id);
+        if (linkedAsset) {
+          const txAmt = parseFloat(tx.amount.toString().replace(/[^0-9.-]/g, "")) || 0;
+          const txCur = (tx.currency || "USD") as SupportedCurrency;
+          const assetCur = (linkedAsset.currency || "USD") as SupportedCurrency;
+          const amtInAssetCur = convert(txAmt, txCur, assetCur);
+          // Reverse: Income had added, Expense had subtracted
+          const isIncome = tx.type === "Credit" || tx.type === "Income";
+          const reversalDelta = isIncome ? -amtInAssetCur : amtInAssetCur;
+          const newValue = Math.max(0, Number(linkedAsset.current_value) + reversalDelta);
+          await supabase.from("assets").update({ current_value: newValue }).eq("id", linkedAsset.id);
+          setAssetRows((prev: any[]) =>
+            prev.map((a: any) => a.id === linkedAsset.id ? { ...a, current_value: newValue } : a)
+          );
+        }
+      }
+
       const { error } = await supabase
         .from("transactions")
         .delete()
@@ -819,21 +894,59 @@ export default function DashboardPage() {
                    : manualForm.type === "Income" ? "Credit" 
                    : manualForm.type;
 
-      // 3. Build SURGICAL Payload (Explicitly include user_id for RLS policies)
+      // 3. Build Payload
+      // If a linked asset is selected, use its name as the source label for the Linked Assets column
+      const linkedAssetForPayload = manualForm.linked_asset_id
+        ? assetRows.find((a: any) => a.id === manualForm.linked_asset_id)
+        : null;
+      const sourceLabel = linkedAssetForPayload
+        ? linkedAssetForPayload.name
+        : manualForm.source || (editingTx ? editingTx.source : "Manual Entry");
+
       const txPayload: any = {
-        user_id: userData.user.id, // Re-confirming ownership to satisfy DB 'WITH CHECK'
+        user_id: userData.user.id,
         date: manualForm.date,
         category: manualForm.category.toUpperCase(),
         description: manualForm.description,
-        type: dbType, // 'Credit' or 'Debit'
-        amount: Number(finalAmount), 
+        type: dbType,
+        amount: Number(finalAmount),
         currency: manualForm.currency,
-        source: manualForm.source || (editingTx ? editingTx.source : "Manual Entry"),
+        source: sourceLabel,
+        linked_asset_id: manualForm.linked_asset_id || null,
+      };
+
+      // Helper: apply a balance delta to a linked cash asset.
+      // Guard: only fire when assetId is a real non-empty UUID string.
+      const applyAssetDelta = async (assetId: string, delta: number, txCurrency: string) => {
+        if (!assetId || assetId.trim() === "") return;
+        const linkedAsset = assetRows.find((a: any) => a.id === assetId);
+        if (!linkedAsset) {
+          console.warn("applyAssetDelta: asset not found for id", assetId);
+          return;
+        }
+        const amtInAssetCur = convert(delta, txCurrency as SupportedCurrency, linkedAsset.currency as SupportedCurrency);
+        const newValue = Math.max(0, Number(linkedAsset.current_value) + amtInAssetCur);
+        const { error: assetUpdateError } = await supabase.from("assets").update({ current_value: newValue }).eq("id", assetId);
+        if (assetUpdateError) {
+          console.error("applyAssetDelta DB error:", assetUpdateError.message);
+          return;
+        }
+        setAssetRows((prev: any[]) =>
+          prev.map((a: any) => a.id === assetId ? { ...a, current_value: newValue } : a)
+        );
       };
 
       if (editingTx) {
-        // --- FINAL SURGICAL UPDATE ---
         const targetId = editingTx.id;
+
+        // Reverse OLD asset balance effect before applying the update
+        if (editingTx.linked_asset_id) {
+          const oldAmt = parseFloat(editingTx.amount.toString().replace(/[^0-9.-]/g, "")) || 0;
+          const oldIsIncome = editingTx.type === "Credit" || editingTx.type === "Income";
+          const oldDelta = oldIsIncome ? -oldAmt : oldAmt; // reversal
+          await applyAssetDelta(editingTx.linked_asset_id, oldDelta, editingTx.currency || "USD");
+        }
+
         const { data: updatedData, error: updateError } = await supabase
           .from("transactions")
           .update(txPayload)
@@ -845,20 +958,25 @@ export default function DashboardPage() {
         }
 
         if (updatedData && updatedData.length > 0) {
-          // Success! Map internal status back to UI state
+          // Apply NEW asset balance effect
+          if (manualForm.linked_asset_id) {
+            const newIsIncome = dbType === "Credit";
+            const newDelta = newIsIncome ? finalAmount : -finalAmount;
+            await applyAssetDelta(manualForm.linked_asset_id, newDelta, manualForm.currency);
+          }
+
           const mappedTx = { ...updatedData[0], isAi: updatedData[0].is_ai };
-          setTransactions((prev) => 
+          setTransactions((prev) =>
             prev.map(tx => tx.id === targetId ? mappedTx : tx)
           );
           setShowManualEntry(false);
           setEditingTx(null);
-          fetchTransactions(); 
+          fetchTransactions();
         } else {
           throw new Error("Failed to update transaction. It may have been deleted or you do not have permission.");
         }
       } else {
         // INSERT New Transaction
-        txPayload.user_id = userData.user.id;
         txPayload.is_ai = false;
         txPayload.color = assignColor(manualForm.category.toUpperCase());
 
@@ -870,10 +988,17 @@ export default function DashboardPage() {
         if (insertError) throw insertError;
 
         if (insertedData && insertedData.length > 0) {
+          // Apply asset balance change for the linked account
+          if (manualForm.linked_asset_id) {
+            const isIncome = dbType === "Credit";
+            const delta = isIncome ? finalAmount : -finalAmount;
+            await applyAssetDelta(manualForm.linked_asset_id, delta, manualForm.currency);
+          }
+
           const mappedTx = { ...insertedData[0], isAi: insertedData[0].is_ai };
           setTransactions((prev) => [mappedTx, ...prev]);
           setShowManualEntry(false);
-          fetchTransactions(); // Sync totals
+          fetchTransactions();
         }
       }
 
@@ -886,6 +1011,7 @@ export default function DashboardPage() {
         currency,
         amount: "",
         source: "",
+        linked_asset_id: "",
       });
 
     } catch (err: any) {
@@ -1247,9 +1373,18 @@ export default function DashboardPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex justify-between items-center mb-6">
-              <h3 className="font-headline font-bold text-2xl text-on-surface">
-                {editingTx ? t("editTransaction") : t("manualEntryTitle")}
-              </h3>
+              <div>
+                <h3 className="font-headline font-bold text-2xl text-on-surface">
+                  {editingTx ? t("editTransaction") : t("manualEntryTitle")}
+                </h3>
+                {!editingTx && (
+                  <p className="text-xs text-on-surface-variant/60 font-medium mt-0.5">
+                    {lang === "id"
+                      ? "Catat peristiwa arus kas — pendapatan atau pengeluaran"
+                      : "Record a cashflow event — income or expense"}
+                  </p>
+                )}
+              </div>
               <button
                 onClick={() => setShowManualEntry(false)}
                 className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-surface-container-high transition-colors text-on-surface-variant cursor-pointer"
@@ -1405,24 +1540,61 @@ export default function DashboardPage() {
                     >
                       {t("typeIncome")}
                     </option>
-
                   </select>
+                  <p className="text-[10px] text-on-surface-variant/55 mt-1.5 leading-relaxed">
+                    {manualForm.type === "Income"
+                      ? (lang === "id"
+                          ? "Uang yang Anda terima sekarang — gaji, transfer masuk, atau refund."
+                          : "Money received now — such as salary, transfer in, or refund.")
+                      : (lang === "id"
+                          ? "Uang yang Anda keluarkan — tagihan, belanja, atau pembayaran."
+                          : "Money spent now — such as bills, food, or purchases.")}
+                  </p>
                 </div>
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">
-                  {t("labelSource")}
+                  {manualForm.type === "Income"
+                    ? (lang === "id" ? "Akun Tujuan" : "Destination Account")
+                    : (lang === "id" ? "Akun Sumber" : "Source Account")}
                 </label>
-                <input
-                  type="text"
-                  placeholder={t("placeholderSource")}
-                  value={manualForm.source}
-                  onChange={(e) =>
-                    setManualForm({ ...manualForm, source: e.target.value })
-                  }
-                  className="w-full bg-surface-container-low border border-outline-variant/30 rounded-xl px-4 py-3 text-on-surface text-sm focus:outline-none focus:border-primary transition-colors"
-                />
+                <select
+                  value={manualForm.linked_asset_id}
+                  onChange={(e) => setManualForm({ ...manualForm, linked_asset_id: e.target.value })}
+                  className="w-full bg-surface-container-low border border-outline-variant/30 rounded-xl px-4 py-3 text-on-surface text-sm focus:outline-none focus:border-primary transition-colors cursor-pointer"
+                >
+                  <option value="">{lang === "id" ? "— Tidak ditautkan ke aset —" : "— Not linked to an asset —"}</option>
+                  {cashAssets.map((a: any) => (
+                    <option key={a.id} value={a.id}>
+                      {a.name}{a.currency ? ` (${a.currency})` : ""}
+                    </option>
+                  ))}
+                </select>
+                {!manualForm.linked_asset_id ? (
+                  <p className="text-[10px] text-on-surface-variant/55 mt-1.5">
+                    {lang === "id"
+                      ? "Tidak terhubung — tidak akan mempengaruhi Net Worth atau saldo aset."
+                      : "Not linked — won\'t affect Net Worth or any asset balance."}
+                  </p>
+                ) : (
+                  <p className="text-[10px] text-on-surface-variant/55 mt-1.5">
+                    {manualForm.type === "Income"
+                      ? (lang === "id"
+                          ? "✓ Saldo akun ini akan bertambah · Net Worth akan naik"
+                          : "✓ This account balance will increase · Net Worth goes up")
+                      : (lang === "id"
+                          ? "✓ Saldo akun ini akan berkurang · Net Worth akan turun"
+                          : "✓ This account balance will decrease · Net Worth goes down")}
+                  </p>
+                )}
+                {cashAssets.length === 0 && (
+                  <p className="text-[10px] text-amber-500 mt-1">
+                    {lang === "id"
+                      ? "💡 Tambahkan aset Kas/Bank/E-wallet di halaman Assets terlebih dahulu."
+                      : "💡 Add a Cash/Bank/E-wallet asset on the Assets page first."}
+                  </p>
+                )}
               </div>
 
               <div className="pt-4">
@@ -1801,6 +1973,7 @@ export default function DashboardPage() {
                   currency,
                   amount: "",
                   source: "",
+                  linked_asset_id: "",
                 });
                 setShowManualEntry(true);
               }}
@@ -1820,6 +1993,7 @@ export default function DashboardPage() {
                   currency,
                   amount: "",
                   source: "",
+                  linked_asset_id: "",
                 });
                 setShowManualEntry(true);
               }}
@@ -1987,9 +2161,16 @@ export default function DashboardPage() {
         {/* Main Data Table Section */}
         <section className="space-y-4">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-            <h3 className="text-xl font-black text-on-surface font-headline tracking-tight">
-              {t("recentLedger")}
-            </h3>
+            <div>
+              <h3 className="text-xl font-black text-on-surface font-headline tracking-tight">
+                {t("recentLedger")}
+              </h3>
+              <p className="text-[10px] text-on-surface-variant/50 font-medium mt-0.5">
+                {lang === "id"
+                  ? "Transaksi menunjukkan uang masuk dan keluar bulan ini."
+                  : "Transactions show money moving in and out this period."}
+              </p>
+            </div>
             <div className="flex flex-wrap items-center gap-2 sm:gap-4 relative" ref={filterDropdownRef}>
               {mounted && (
                 <>
@@ -2363,8 +2544,19 @@ export default function DashboardPage() {
                           })()}
                           </div>
                         </td>
-                        <td className="px-3 py-2 text-slate-400">
-                          {tx.source}
+                        <td className="px-3 py-2 text-slate-400 text-xs">
+                          {(() => {
+                            if (tx.linked_asset_id) {
+                              const linkedA = assetRows.find((a: any) => a.id === tx.linked_asset_id);
+                              return linkedA ? (
+                                <span className="flex items-center gap-1">
+                                  <span className="material-symbols-outlined text-[12px] text-primary">account_balance_wallet</span>
+                                  {linkedA.name}
+                                </span>
+                              ) : tx.source;
+                            }
+                            return tx.source || "—";
+                          })()}
                         </td>
                         <td className="px-3 py-2 text-center opacity-60 group-hover:opacity-100 transition-all duration-300 whitespace-nowrap">
                           <div className="flex items-center justify-center gap-1">

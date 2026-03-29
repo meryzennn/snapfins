@@ -8,6 +8,8 @@ import { convert, formatValue, currencySymbols, type SupportedCurrency } from "@
 import { createClient } from "@/utils/supabase/client";
 import Link from "next/link";
 import AddAssetModal from "@/components/AddAssetModal";
+import EditAssetModal from "@/components/EditAssetModal";
+import SelectionToggle from "@/components/SelectionToggle";
 import {
   type Asset,
   getTotalAssetsValue,
@@ -25,6 +27,13 @@ export default function AssetsPage() {
   
   const [assets, setAssets] = useState<Asset[]>([]);
   const [showAddAssetModal, setShowAddAssetModal] = useState(false);
+  const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
+  const [deletingAsset, setDeletingAsset] = useState<Asset | null>(null);
+
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const pageSize = 10;
 
   // States for top nav
   const [showCurrencyDropdown, setShowCurrencyDropdown] = useState(false);
@@ -45,6 +54,9 @@ export default function AssetsPage() {
         }
         if (userDropdownRef.current && !userDropdownRef.current.contains(event.target as Node)) {
           setShowUserDropdown(false);
+        }
+        if (!(event.target as Element).closest('.kebab-menu-container')) {
+            setOpenMenuId(null);
         }
       };
       document.addEventListener("mousedown", handleClickOutside);
@@ -159,15 +171,61 @@ export default function AssetsPage() {
     const { data: userData } = await supabase.auth.getUser();
     if (!userData?.user) return;
 
-    const { error } = await supabase.from("assets").insert({
-        ...assetData,
-        user_id: userData.user.id
-    });
+    // Strip acquisition metadata before inserting into assets table
+    const { acquisition_mode, source_asset_id, purchase_amount, ...cleanAssetData } = assetData;
 
+    const { data: inserted, error } = await supabase.from("assets").insert({
+      ...cleanAssetData,
+      user_id: userData.user.id,
+    }).select().single();
+
+    if (error) throw new Error(error.message);
+
+    // via_transaction: deduct purchase amount from the source cash/bank asset
+    if (acquisition_mode === "via_transaction" && source_asset_id && purchase_amount) {
+      const sourceAsset = assets.find(a => a.id === source_asset_id);
+      if (sourceAsset) {
+        const newValue = Math.max(0, Number(sourceAsset.current_value) - Number(purchase_amount));
+        await supabase.from("assets").update({ current_value: newValue }).eq("id", source_asset_id);
+      }
+    }
+
+    await fetchAssets();
+  };
+
+  const handleEditAsset = async (assetData: any) => {
+    if (!editingAsset) return;
+    const supabase = createClient();
+    const { error } = await supabase.from("assets").update(assetData).eq("id", editingAsset.id);
     if (!error) {
+        setEditingAsset(null);
         await fetchAssets();
     } else {
         throw new Error(error.message);
+    }
+  };
+
+  const handleDeleteAsset = async () => {
+    if (!deletingAsset) return;
+    const supabase = createClient();
+    const { error } = await supabase.from("assets").delete().eq("id", deletingAsset.id);
+    if (!error) {
+        setDeletingAsset(null);
+        await fetchAssets();
+    } else {
+        alert(error.message);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    const supabase = createClient();
+    const { error } = await supabase.from("assets").delete().in("id", selectedIds);
+    if (!error) {
+        setSelectedIds([]);
+        await fetchAssets();
+    } else {
+        alert(error.message);
     }
   };
 
@@ -206,6 +264,25 @@ export default function AssetsPage() {
     const valInPrefCurrency = convert(rawVal, asset.currency as SupportedCurrency, currency as SupportedCurrency);
     return { ...asset, current_value: valInPrefCurrency };
   });
+
+  const totalPages = Math.ceil(normalizedAssets.length / pageSize) || 1;
+  const paginatedAssets = normalizedAssets.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  const handleSelectAll = (ids: string[]) => {
+    if (selectedIds.length === normalizedAssets.length && normalizedAssets.length > 0) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(normalizedAssets.map(a => a.id));
+    }
+  };
+
+  const handleSelectRow = (id: string) => {
+    if (selectedIds.includes(id)) {
+      setSelectedIds(selectedIds.filter((sel) => sel !== id));
+    } else {
+      setSelectedIds([...selectedIds, id]);
+    }
+  };
 
   const totalAssets = getTotalAssetsValue(normalizedAssets);
   const liquidAssets = getLiquidAssetsValue(normalizedAssets);
@@ -318,6 +395,11 @@ export default function AssetsPage() {
               <span className="inline-block w-2 h-2 bg-secondary rounded-full kinetic-spark"></span>
               {lang === "id" ? "PELACAKAN AKTIF" : "LIVE TRACKING"}
             </p>
+            <p className="text-[11px] text-on-surface-variant/50 font-medium pt-0.5">
+              {lang === "id"
+                ? "Aset menunjukkan apa yang Anda miliki saat ini. Net Worth = Total Aset − Kewajiban."
+                : "Assets show what you own right now. Net Worth = Total Assets − Liabilities."}
+            </p>
           </div>
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             <button
@@ -418,7 +500,7 @@ export default function AssetsPage() {
             </section>
         )}
 
-        <section className="glass-card rounded-3xl border border-white/40 dark:border-white/10 shadow-xl overflow-hidden flex flex-col relative min-h-[400px]">
+        <section className="glass-card rounded-3xl border border-white/40 dark:border-white/10 shadow-xl overflow-hidden flex flex-col relative min-h-[300px]">
              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-6 md:p-8 border-b border-outline-variant/20 bg-white/40 dark:bg-slate-900/40 backdrop-blur-md gap-4">
                 <div>
                   <h2 className="font-headline font-bold text-xl text-on-surface">
@@ -427,40 +509,107 @@ export default function AssetsPage() {
                 </div>
               </div>
 
-             <div className="flex-1 overflow-x-auto">
+             <div className="flex-1 overflow-x-auto flex flex-col">
+                {selectedIds.length > 0 && (
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-6 py-4 bg-primary/5 border-b border-primary/20 animate-in slide-in-from-top-2 duration-300">
+                    <div className="flex items-center gap-3">
+                      <span className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white text-xs font-black">
+                        {selectedIds.length}
+                      </span>
+                      <p className="text-sm font-bold text-on-surface">
+                        {typeof t("itemsSelected") === 'function' ? t("itemsSelected", selectedIds.length) : `${selectedIds.length} items Selected`}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 w-full sm:w-auto">
+                      <button
+                        onClick={() => setSelectedIds([])}
+                        className="flex-1 sm:flex-none px-4 py-2 rounded-xl text-on-surface-variant hover:text-on-surface font-bold text-xs transition-colors cursor-pointer"
+                      >
+                        {lang === "id" ? "Batal" : "Cancel"}
+                      </button>
+                      <button
+                        onClick={handleBulkDelete}
+                        className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2 rounded-xl bg-error text-white font-black text-xs shadow-lg shadow-error/20 hover:brightness-110 active:scale-95 transition-all cursor-pointer"
+                      >
+                        <span className="material-symbols-outlined text-sm">delete</span>
+                        {lang === "id" ? "Hapus Terpilih" : "Delete Selected"}
+                      </button>
+                    </div>
+                  </div>
+                )}
                 {isLoading ? (
                     <div className="w-full h-[300px] flex items-center justify-center">
                         <div className="w-10 h-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
                     </div>
                 ) : assets.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center p-12 text-center h-[300px]">
+                    <div className="flex flex-col items-center justify-center p-12 text-center h-[340px]">
                         <div className="w-16 h-16 bg-surface-container rounded-2xl flex items-center justify-center mb-4">
-                        <span className="material-symbols-outlined text-3xl text-primary opacity-80">
-                            inventory_2
-                        </span>
+                          <span className="material-symbols-outlined text-3xl text-primary opacity-80">
+                              inventory_2
+                          </span>
                         </div>
                         <h3 className="text-lg font-bold text-on-surface mb-2 font-headline">
-                        {lang === "id" ? "Belum ada aset" : "No Assets Found"}
+                          {lang === "id" ? "Portfolio Anda masih kosong" : "Your portfolio is empty"}
                         </h3>
-                        <p className="text-sm text-on-surface-variant max-w-sm font-medium">
-                        {lang === "id" ? "Lacak kekayaan Anda dengan menambahkan aset ke portofolio Anda." : "Track your wealth by adding your first asset to your portfolio."}
+                        <p className="text-sm text-on-surface-variant max-w-sm font-medium mb-6">
+                          {lang === "id"
+                            ? "Mulai dengan menambahkan akun bank, kas, atau aset investasi yang sudah Anda miliki."
+                            : "Start by adding the bank accounts, cash, or investments you already have."}
                         </p>
+                        <div className="flex flex-col gap-2 text-left max-w-xs w-full">
+                          <p className="text-[10px] font-black uppercase tracking-wider text-on-surface-variant/50 mb-1">
+                            {lang === "id" ? "Panduan memulai:" : "Getting started:"}
+                          </p>
+                          <div className="flex items-start gap-2.5 text-[11px] text-on-surface-variant">
+                            <span className="material-symbols-outlined text-primary text-[14px] mt-0.5 shrink-0">looks_one</span>
+                            <span>{lang === "id" ? <><b>Tambah Saldo yang Dimiliki</b> — untuk akun bank atau kas yang sudah ada.</> : <><b>Add Existing Balance</b> — for bank accounts or cash you already have.</>}</span>
+                          </div>
+                          <div className="flex items-start gap-2.5 text-[11px] text-on-surface-variant">
+                            <span className="material-symbols-outlined text-secondary text-[14px] mt-0.5 shrink-0">looks_two</span>
+                            <span>{lang === "id" ? <><b>Lalu catat pendapatan/pengeluaran</b> di Dashboard menggunakan Manual Entry.</> : <><b>Then record income/expense</b> on the Dashboard using Manual Entry.</>}</span>
+                          </div>
+                          <div className="flex items-start gap-2.5 text-[11px] text-on-surface-variant">
+                            <span className="material-symbols-outlined text-amber-400 text-[14px] mt-0.5 shrink-0">looks_3</span>
+                            <span>{lang === "id" ? <><b>Beli / Pindahkan ke Aset</b> untuk mencatat pembelian saham/kripto dari kas Anda.</> : <><b>Buy / Move Into Asset</b> to record buying stocks or crypto from your cash.</>}</span>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => setShowAddAssetModal(true)}
+                          className="mt-7 px-6 py-3 rounded-xl bg-gradient-to-r from-primary to-primary-container text-white font-bold text-sm shadow-[0_4px_15px_rgba(53,37,205,0.25)] transition-all active:scale-[0.98] flex items-center gap-2 cursor-pointer"
+                        >
+                          <span className="material-symbols-outlined text-lg">add</span>
+                          {lang === "id" ? "Tambah Aset Pertama" : "Add Your First Asset"}
+                        </button>
                     </div>
                 ) : (
                     <table className="w-full text-left excel-grid">
                         <thead>
                             <tr className="bg-surface-container-lowest/80 dark:bg-slate-900/80 text-on-surface-variant text-[10px] uppercase tracking-widest font-black sticky top-0 z-10 backdrop-blur-md">
-                                <th className="p-4 pl-6 whitespace-nowrap">{lang === "id" ? "Aset" : "Asset"}</th>
+                                <th className="p-4 pl-6 text-center w-12">
+                                  <SelectionToggle
+                                    checked={selectedIds.length > 0 && selectedIds.length === normalizedAssets.length}
+                                    indeterminate={selectedIds.length > 0 && selectedIds.length < normalizedAssets.length}
+                                    onChange={() => handleSelectAll([])}
+                                  />
+                                </th>
+                                <th className="p-4 whitespace-nowrap">{lang === "id" ? "Aset" : "Asset"}</th>
                                 <th className="p-4 whitespace-nowrap">{lang === "id" ? "Kategori" : "Category"}</th>
                                 <th className="p-4 text-right whitespace-nowrap">{lang === "id" ? "Kuantitas" : "Quantity"}</th>
                                 <th className="p-4 text-right whitespace-nowrap">{lang === "id" ? "Nilai" : "Value"}</th>
                                 <th className="p-4 text-center whitespace-nowrap hidden sm:table-cell">{lang === "id" ? "Diperbarui" : "Updated"}</th>
+                                <th className="p-4 text-center whitespace-nowrap w-24"></th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-outline-variant/10 text-sm font-semibold bg-white/20 dark:bg-slate-900/20 backdrop-blur-sm">
-                            {normalizedAssets.map((asset) => (
-                                <tr key={asset.id} className="hover:bg-grid-row-hover dark:hover:bg-slate-800/50 transition-colors group">
-                                    <td className="p-4 pl-6">
+                            {paginatedAssets.map((asset) => (
+                                <tr key={asset.id} className={`hover:bg-grid-row-hover dark:hover:bg-slate-800/50 transition-colors group ${selectedIds.includes(asset.id) ? "bg-primary/[0.08]" : ""}`}>
+                                    <td className="p-4 pl-6 text-center">
+                                      <SelectionToggle
+                                        checked={selectedIds.includes(asset.id)}
+                                        onChange={() => handleSelectRow(asset.id)}
+                                      />
+                                    </td>
+                                    <td className="p-4">
                                         <div className="flex flex-col">
                                             <span className="text-on-surface font-bold text-[14px] truncate max-w-[150px] sm:max-w-xs">{asset.name}</span>
                                             {asset.symbol && <span className="text-[10px] font-black tracking-widest text-primary uppercase mt-0.5">{asset.symbol}</span>}
@@ -485,10 +634,15 @@ export default function AssetsPage() {
                                               {asset.valuation_mode === "manual" ? (
                                                   <span className="text-[9px] uppercase tracking-widest text-on-surface-variant font-bold">MANUAL</span>
                                               ) : asset.valuation_mode === "market" ? (
-                                                  <>
-                                                    <span className="inline-block w-1.5 h-1.5 bg-secondary rounded-full animate-pulse shadow-[0_0_4px_rgba(16,185,129,0.8)]"></span>
-                                                    <span className="text-[9px] uppercase tracking-widest text-secondary font-black">MARKET</span>
-                                                  </>
+                                                  <div className="flex flex-col items-end">
+                                                    <div className="flex items-center gap-1">
+                                                        <span className="inline-block w-1.5 h-1.5 bg-secondary rounded-full animate-pulse shadow-[0_0_4px_rgba(16,185,129,0.8)]"></span>
+                                                        <span className="text-[9px] uppercase tracking-widest text-secondary font-black">MARKET</span>
+                                                    </div>
+                                                    <span className="text-[8px] uppercase tracking-widest text-on-surface-variant font-bold opacity-70 mt-0.5">
+                                                        VIA {asset.exchange === 'CRYPTO' ? 'BINANCE' : asset.exchange && asset.exchange !== 'US' ? asset.exchange : 'YAHOO FIN'}
+                                                    </span>
+                                                  </div>
                                               ) : null}
                                             </div>
                                         </div>
@@ -496,12 +650,77 @@ export default function AssetsPage() {
                                     <td className="p-4 text-center hidden sm:table-cell text-on-surface-variant font-bold text-[11px] uppercase tracking-widest">
                                         {new Date(asset.last_valued_at).toLocaleDateString(lang === "id" ? "id-ID" : "en-US", { month: "short", day: "numeric" })}
                                     </td>
+                                    <td className="p-4 text-center kebab-menu-container">
+                                        <div className="relative inline-block text-left">
+                                            <button 
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setOpenMenuId(openMenuId === asset.id ? null : asset.id);
+                                                }}
+                                                className="w-8 h-8 rounded-full flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors cursor-pointer"
+                                            >
+                                                <span className="material-symbols-outlined text-[20px]">more_vert</span>
+                                            </button>
+                                            
+                                            {openMenuId === asset.id && (
+                                                <div className="absolute right-0 mt-1 w-32 bg-surface dark:bg-slate-800 border border-outline-variant/20 rounded-xl shadow-lg z-50 py-1 origin-top-right animate-in fade-in zoom-in-95 duration-200">
+                                                    <button 
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setEditingAsset(asset);
+                                                            setOpenMenuId(null);
+                                                        }}
+                                                        className="w-full text-left px-4 py-2 text-sm text-on-surface hover:bg-surface-container-high dark:hover:bg-slate-700 transition-colors flex items-center gap-2 cursor-pointer"
+                                                    >
+                                                        <span className="material-symbols-outlined text-[16px]">edit</span>
+                                                        {lang === "id" ? "Edit" : "Edit"}
+                                                    </button>
+                                                    <button 
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setDeletingAsset(asset);
+                                                            setOpenMenuId(null);
+                                                        }}
+                                                        className="w-full text-left px-4 py-2 text-sm text-error hover:bg-error/10 transition-colors flex items-center gap-2 cursor-pointer"
+                                                    >
+                                                        <span className="material-symbols-outlined text-[16px]">delete</span>
+                                                        {lang === "id" ? "Hapus" : "Delete"}
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </td>
                                 </tr>
                             ))}
                         </tbody>
                     </table>
                 )}
              </div>
+
+             {/* Pagination */}
+             {totalPages > 1 && (
+                 <div className="flex items-center justify-between p-4 border-t border-outline-variant/20 bg-surface-container-lowest/50 dark:bg-slate-900/50">
+                    <div className="text-xs font-bold text-on-surface-variant">
+                        {lang === "id" ? `Halaman ${currentPage} dari ${totalPages}` : `Page ${currentPage} of ${totalPages}`}
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <button 
+                            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                            disabled={currentPage === 1}
+                            className="w-8 h-8 flex items-center justify-center rounded-lg border border-outline-variant/30 text-on-surface-variant hover:bg-surface-container hover:text-on-surface disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                        >
+                            <span className="material-symbols-outlined text-[18px]">chevron_left</span>
+                        </button>
+                        <button 
+                            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                            disabled={currentPage === totalPages}
+                            className="w-8 h-8 flex items-center justify-center rounded-lg border border-outline-variant/30 text-on-surface-variant hover:bg-surface-container hover:text-on-surface disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                        >
+                            <span className="material-symbols-outlined text-[18px]">chevron_right</span>
+                        </button>
+                    </div>
+                 </div>
+             )}
         </section>
       </main>
 
@@ -530,7 +749,43 @@ export default function AssetsPage() {
       
 
       {showAddAssetModal && (
-          <AddAssetModal onClose={() => setShowAddAssetModal(false)} onSubmit={handleAddAsset} />
+        <AddAssetModal
+          onClose={() => setShowAddAssetModal(false)}
+          onSubmit={handleAddAsset}
+          cashAssets={assets.filter(a => ["Cash", "Bank", "E-wallet"].includes(a.category))}
+        />
+      )}
+
+      {editingAsset && (
+        <EditAssetModal
+          initialData={editingAsset}
+          onClose={() => setEditingAsset(null)}
+          onSubmit={handleEditAsset}
+        />
+      )}
+
+      {deletingAsset && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-300">
+            <div className="bg-surface dark:bg-slate-900 p-6 sm:p-10 rounded-3xl shadow-2xl flex flex-col w-full max-w-md border border-white/10 relative overflow-hidden">
+                <div className="w-16 h-16 rounded-full bg-error/10 text-error flex items-center justify-center mb-6 mx-auto">
+                    <span className="material-symbols-outlined text-3xl">warning</span>
+                </div>
+                <h3 className="font-headline font-bold text-2xl text-on-surface text-center mb-2">
+                    {lang === "id" ? "Hapus " : "Delete "}<span className="text-primary truncate block">{deletingAsset.name}</span>?
+                </h3>
+                <p className="text-center text-sm font-medium text-on-surface-variant mb-8">
+                    {lang === "id" ? "Aset ini akan dihapus secara permanen. Mutasi historis terkait tidak akan terhapus." : "This asset will be permanently removed from your portfolio. Legacy transactions will remain intact."}
+                </p>
+                <div className="flex gap-4">
+                    <button onClick={() => setDeletingAsset(null)} className="flex-1 py-3 px-4 rounded-xl font-bold border-2 border-outline-variant/20 text-on-surface hover:bg-surface-container-high transition-colors cursor-pointer">
+                        {lang === "id" ? "Batal" : "Cancel"}
+                    </button>
+                    <button onClick={handleDeleteAsset} className="flex-1 py-3 px-4 rounded-xl font-bold bg-error text-white hover:bg-error/90 transition-colors shadow-lg shadow-error/20 cursor-pointer">
+                        {lang === "id" ? "Hapus Aset" : "Delete Asset"}
+                    </button>
+                </div>
+            </div>
+        </div>
       )}
     </>
   );
