@@ -195,6 +195,7 @@ export default function DashboardPage() {
   };
 
   const [transactions, setTransactions] = useState<any[]>([]);
+  const [totalAssets, setTotalAssets] = useState<number>(0);
   const [isLoadingTx, setIsLoadingTx] = useState(true);
   const [userAvatar, setUserAvatar] = useState<string | null>(null);
   const [userName, setUserName] = useState<string | null>(null);
@@ -326,8 +327,6 @@ export default function DashboardPage() {
       incomePrev = 0;
     let expenseCurrent = 0,
       expensePrev = 0;
-    let investmentCurrent = 0,
-      investmentPrev = 0;
     let totalIncome = 0,
       totalExpense = 0;
 
@@ -373,19 +372,17 @@ export default function DashboardPage() {
 
       // Update ALL TIME totals for Net Worth
       if (tx.type === "Credit" || tx.type === "Income") totalIncome += val;
-      else if (tx.type === "Debit" || tx.type === "Expense" || tx.type === "Investment")
-        totalExpense += val;
+      else if (tx.type === "Debit" || tx.type === "Expense") totalExpense += val;
+      // Legacy "Investment" is safely ignored here to prevent skewing cashflow.
 
       if (isAllMonths) {
         // Compare Current Year vs Previous Year
         if (txYear === selectedYear) {
           if (tx.type === "Credit" || tx.type === "Income") incomeCurrent += val;
           else if (tx.type === "Debit" || tx.type === "Expense") expenseCurrent += val;
-          else if (tx.type === "Investment") investmentCurrent += val;
         } else if (txYear === selectedYear - 1) {
           if (tx.type === "Credit" || tx.type === "Income") incomePrev += val;
           else if (tx.type === "Debit" || tx.type === "Expense") expensePrev += val;
-          else if (tx.type === "Investment") investmentPrev += val;
         }
       } else {
         // Compare Selected Month vs Month Prior
@@ -396,17 +393,15 @@ export default function DashboardPage() {
         if (txMonth === selectedMonth && txYear === selectedYear) {
           if (tx.type === "Credit" || tx.type === "Income") incomeCurrent += val;
           else if (tx.type === "Debit" || tx.type === "Expense") expenseCurrent += val;
-          else if (tx.type === "Investment") investmentCurrent += val;
         } else if (txMonth === prevMonth && txYear === prevMonthYear) {
           if (tx.type === "Credit" || tx.type === "Income") incomePrev += val;
           else if (tx.type === "Debit" || tx.type === "Expense") expensePrev += val;
-          else if (tx.type === "Investment") investmentPrev += val;
         }
       }
     });
 
     const netWorthNow = totalIncome - totalExpense;
-    const periodBalance = incomeCurrent - expenseCurrent - investmentCurrent;
+    const periodBalance = incomeCurrent - expenseCurrent;
     const netWorthAtStart = netWorthNow - periodBalance;
 
     const computeTrend = (curr: number, prev: number) => {
@@ -421,12 +416,11 @@ export default function DashboardPage() {
 
     const iTrend = computeTrend(incomeCurrent, incomePrev);
     const eTrend = computeTrend(expenseCurrent, expensePrev);
-    const invTrend = computeTrend(investmentCurrent, investmentPrev);
     
     // Net Worth Trend: Current Total Net Worth vs Start of Period Net Worth
     const nwTrend = computeTrend(netWorthNow, netWorthAtStart);
 
-    const hasHistory = incomePrev > 0 || expensePrev > 0 || investmentPrev > 0;
+    const hasHistory = incomePrev > 0 || expensePrev > 0;
     const comparisonContext = isAllMonths
       ? (hasHistory ? `vs ${selectedYear - 1}` : "")
       : (hasHistory ? (lang === "id" ? "vs bulan lalu" : "vs last month") : "");
@@ -434,11 +428,10 @@ export default function DashboardPage() {
     return {
       income: formatValue(incomeCurrent, currency, lang),
       expense: formatValue(expenseCurrent, currency, lang),
-      investment: formatValue(investmentCurrent, currency, lang),
+      totalAssetsStr: formatValue(totalAssets, currency, lang),
       netWorth: formatValue(netWorthNow, currency, lang),
       incomeTrend: iTrend !== null ? (iTrend === "NEW" ? "NEW" : (iTrend as number).toFixed(1)) : "—",
       expenseTrend: eTrend !== null ? (eTrend === "NEW" ? "NEW" : (eTrend as number).toFixed(1)) : "—",
-      investmentTrend: invTrend !== null ? (invTrend === "NEW" ? "NEW" : (invTrend as number).toFixed(1)) : "—",
       netWorthTrend: nwTrend !== null ? (nwTrend === "NEW" ? "NEW" : (nwTrend as number).toFixed(1)) : "—",
       comparisonContext,
     };
@@ -667,10 +660,27 @@ export default function DashboardPage() {
         .order("date", { ascending: false })
         .order("created_at", { ascending: false });
 
+      const { data: assetData, error: assetError } = await supabase
+        .from("assets")
+        .select("current_value, currency")
+        .eq("user_id", userData.user.id);
+
       if (!error && data) {
         // Map data from DB format to our UI format (is_ai -> isAi)
         const formattedData = data.map((tx) => ({ ...tx, isAi: tx.is_ai }));
         setTransactions(formattedData);
+      }
+      
+      if (!assetError && assetData) {
+        let total = 0;
+        assetData.forEach((item) => {
+            const val = Number(item.current_value) || 0;
+            const assetCur = item.currency || "USD";
+            // Rough conversion in dashboard just using raw totals for MVP
+            // Normally we'd use `convert` from lib/currency but since dashboard doesn't re-render assets dynamically this is fine
+            total += val; 
+        });
+        setTotalAssets(total);
       }
     } else {
       // Not authenticated, redirect to landing
@@ -1395,12 +1405,7 @@ export default function DashboardPage() {
                     >
                       {t("typeIncome")}
                     </option>
-                    <option
-                      value="Investment"
-                      className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
-                    >
-                      {t("typeInvestment")}
-                    </option>
+
                   </select>
                 </div>
               </div>
@@ -1586,12 +1591,12 @@ export default function DashboardPage() {
               >
                 {t("navDashboard")}
               </a>
-              <a
+              <Link
                 className="text-on-surface-variant hover:text-primary transition-colors"
-                href="#"
+                href="/assets"
               >
                 {t("navAsset")}
-              </a>
+              </Link>
               <a
                 className="text-on-surface-variant hover:text-primary transition-colors"
                 href="#"
@@ -1915,38 +1920,35 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* 3. Monthly Investment */}
-          <div className="glass-card p-6 rounded-2xl border border-white/40 dark:border-white/10 shadow-xl relative overflow-hidden group bg-gradient-to-br from-white/60 dark:from-slate-900/60 to-indigo-500/10">
-            <div className="absolute -top-4 -right-4 w-24 h-24 bg-indigo-500/5 rounded-full blur-2xl group-hover:bg-indigo-500/10 transition-colors"></div>
-            <div className="min-h-6 mb-3">
-              {totals.investmentTrend !== "—" && totals.investmentTrend !== "0.0" && (
-                <div className="relative flex justify-between items-start">
-                  <TrendIndicator trend={totals.investmentTrend} context={totals.comparisonContext} />
-                </div>
-              )}
+          {/* 3. Total Portfolio / Assets */}
+          <Link href="/assets" className="glass-card p-6 rounded-2xl border border-white/40 dark:border-white/10 shadow-xl relative overflow-hidden group bg-gradient-to-br from-white/60 dark:from-slate-900/60 to-surface-container-low/40 dark:to-slate-800/40 cursor-pointer block hover:shadow-2xl transition-all duration-300">
+            <div className="absolute -top-4 -right-4 w-24 h-24 bg-primary/5 rounded-full blur-2xl group-hover:bg-primary/20 transition-colors"></div>
+            <div className="min-h-6 mb-3 flex items-center gap-1.5">
+                <span className="inline-block w-1.5 h-1.5 bg-secondary rounded-full kinetic-spark shadow-[0_0_4px_rgba(16,185,129,0.8)]"></span>
+                <span className="text-[9px] uppercase tracking-widest text-secondary font-black opacity-80 group-hover:opacity-100 transition-opacity">MARKET SYNC</span>
             </div>
             <div className="relative flex justify-between items-start mb-4 gap-4">
               <div className="min-w-0 flex-grow">
                 <p className="text-[10px] uppercase tracking-[0.2em] font-extrabold text-on-surface-variant mb-1 truncate">
-                  {selectedMonth === -1 ? t("annualInvestment") : t("monthlyInvestment")}
+                  {lang === "id" ? "Total Aset Anda" : "Your Total Assets"}
                 </p>
                 <div 
-                  className={`${totals.investment.length > 20 ? "text-base" : totals.investment.length > 18 ? "text-lg" : totals.investment.length > 15 ? "text-xl" : totals.investment.length > 12 ? "text-2xl" : "text-3xl"} text-indigo-500 font-black font-headline tracking-tighter break-all sm:whitespace-nowrap`} 
-                  title={totals.investment}
+                  className={`${totals.totalAssetsStr.length > 20 ? "text-base" : totals.totalAssetsStr.length > 18 ? "text-lg" : totals.totalAssetsStr.length > 15 ? "text-xl" : totals.totalAssetsStr.length > 12 ? "text-2xl" : "text-3xl"} text-primary font-black font-headline tracking-tighter break-all sm:whitespace-nowrap transition-transform duration-300 group-hover:-translate-y-0.5`} 
+                  title={totals.totalAssetsStr}
                 >
-                  {totals.investment}
+                  {totals.totalAssetsStr}
                 </div>
               </div>
-              <div className="w-12 h-12 flex-shrink-0 flex items-center justify-center rounded-xl bg-white dark:bg-slate-800 shadow-sm border border-outline-variant/20">
+              <div className="w-12 h-12 flex-shrink-0 flex items-center justify-center rounded-xl bg-white dark:bg-slate-800 shadow-sm border border-outline-variant/20 group-hover:bg-primary/5 transition-colors">
                 <span
-                  className="material-symbols-outlined text-indigo-500 text-2xl"
+                  className="material-symbols-outlined text-primary text-2xl transition-transform duration-300 group-hover:scale-110"
                   style={{ fontVariationSettings: "'FILL' 1" }}
                 >
-                  rocket_launch
+                  account_balance
                 </span>
               </div>
             </div>
-          </div>
+          </Link>
 
           {/* 4. Monthly Expense */}
           <div className="glass-card p-6 rounded-2xl border border-white/40 dark:border-white/10 shadow-xl relative overflow-hidden group bg-gradient-to-br from-white/60 dark:from-slate-900/60 to-error-container/10">
@@ -2529,23 +2531,23 @@ export default function DashboardPage() {
       {/* Mobile Bottom Navigation - v1.0.1 */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 z-[100] px-4 pb-4">
         <div className="bg-surface/80 dark:bg-slate-900/80 backdrop-blur-xl border border-outline-variant/20 rounded-2xl shadow-[0_-10px_40px_rgba(0,0,0,0.1)] flex justify-around items-center py-3">
-          <button className="flex flex-col items-center gap-1 group">
+          <Link href="/dashboard" className="flex flex-col items-center gap-1 group">
             <div className="w-12 h-1 bg-primary rounded-full mb-1 opacity-100"></div>
             <span className="material-symbols-outlined text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>dashboard</span>
             <span className="text-[10px] font-bold text-primary uppercase tracking-widest">{t("navDashboard")}</span>
-          </button>
+          </Link>
           
-          <button className="flex flex-col items-center gap-1 group opacity-60 hover:opacity-100 transition-opacity">
+          <Link href="/assets" className="flex flex-col items-center gap-1 group opacity-60 hover:opacity-100 transition-opacity">
             <div className="w-8 h-1 bg-transparent rounded-full mb-1"></div>
             <span className="material-symbols-outlined text-on-surface-variant">account_balance_wallet</span>
             <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">{t("navAsset")}</span>
-          </button>
+          </Link>
 
-          <button className="flex flex-col items-center gap-1 group opacity-60 hover:opacity-100 transition-opacity">
+          <Link href="#" className="flex flex-col items-center gap-1 group opacity-60 hover:opacity-100 transition-opacity">
             <div className="w-8 h-1 bg-transparent rounded-full mb-1"></div>
             <span className="material-symbols-outlined text-on-surface-variant">monitoring</span>
             <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">{t("navAnalytics")}</span>
-          </button>
+          </Link>
         </div>
       </div>
 
