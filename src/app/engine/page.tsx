@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useLang } from "@/hooks/useLang";
 import { useTheme } from "@/hooks/useTheme";
 import { createClient } from "@/utils/supabase/client";
+import Footer from "@/components/layout/Footer";
 
 export default function EnginePage() {
   const { theme, setTheme } = useTheme();
@@ -275,20 +276,7 @@ export default function EnginePage() {
         </div>
       </main>
 
-      {/* Footer */}
-      <footer className="w-full border-t-0 bg-surface-container-low dark:bg-gray-950 font-sans">
-        <div className="flex flex-col md:flex-row justify-between items-center px-8 py-12 w-full max-w-5xl mx-auto">
-          <div className="mb-8 md:mb-0">
-            <span className="text-xl font-headline font-extrabold tracking-tighter text-indigo-700 dark:text-indigo-300 uppercase">SnapFins</span>
-            <p className="text-on-surface-variant dark:text-gray-500 text-sm mt-3 font-bold uppercase tracking-widest">{t('footerRights')}</p>
-          </div>
-          <div className="flex gap-8 font-bold tracking-widest uppercase items-center">
-            <Link className="text-on-surface-variant dark:text-gray-500 hover:text-primary dark:hover:text-white transition-colors text-xs font-black" href="/privacy">{t('privacyPolicy')}</Link>
-            <Link className="text-on-surface-variant dark:text-gray-500 hover:text-primary dark:hover:text-white transition-colors text-xs font-black" href="/terms">{t('termsOfService')}</Link>
-            <a className="text-on-surface-variant dark:text-gray-500 hover:text-primary dark:hover:text-white transition-colors text-xs font-black" href="mailto:zen@0x5zen.dev">{t('support')}</a>
-          </div>
-        </div>
-      </footer>
+      <Footer containerClassName="max-w-5xl" />
     </div>
   );
 }

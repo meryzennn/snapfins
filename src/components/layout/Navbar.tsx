@@ -114,7 +114,10 @@ export default function Navbar({ userName, userEmail, userAvatar, onDeleteAccoun
             ref={currencyDropdownRef}
           >
             <button
-              onClick={() => setShowCurrencyDropdown(!showCurrencyDropdown)}
+              onClick={() => {
+                setShowCurrencyDropdown(!showCurrencyDropdown);
+                setShowUserDropdown(false);
+              }}
               className="flex items-center gap-1 px-2 md:px-3 py-1.5 md:py-1.5 rounded-md text-[9px] md:text-[10px] font-black text-primary hover:bg-primary/5 transition-all cursor-pointer"
             >
               <span className="material-symbols-outlined text-xs md:text-sm">payments</span>
@@ -183,7 +186,10 @@ export default function Navbar({ userName, userEmail, userAvatar, onDeleteAccoun
             ref={userDropdownRef}
           >
             <button
-              onClick={() => setShowUserDropdown(!showUserDropdown)}
+              onClick={() => {
+                setShowUserDropdown(!showUserDropdown);
+                setShowCurrencyDropdown(false);
+              }}
               className="flex items-center gap-2 md:gap-3 hover:bg-surface-container-low p-1 rounded-xl transition-all active:scale-95 cursor-pointer"
             >
               <div className="text-right hidden sm:block text-slate-900 dark:text-white">

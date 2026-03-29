@@ -6,6 +6,7 @@ import { useLang } from "@/hooks/useLang";
 import { useTheme } from "@/hooks/useTheme";
 import { createClient } from "@/utils/supabase/client";
 import AuthModal from "@/components/AuthModal";
+import Footer from '@/components/layout/Footer';
 
 export default function TutorialPage() {
   const { theme, setTheme } = useTheme();
@@ -342,20 +343,7 @@ export default function TutorialPage() {
         </section>
       </main>
 
-      {/* Global Footer */}
-      <footer className="w-full border-t border-outline-variant/10 bg-surface-container-low dark:bg-slate-950">
-        <div className="flex flex-col md:flex-row justify-between items-center px-8 py-16 w-full max-w-7xl mx-auto">
-          <div className="mb-8 md:mb-0">
-            <span className="text-2xl font-headline font-extrabold tracking-tighter text-indigo-700 dark:text-indigo-300">SnapFins</span>
-            <p className="text-on-surface-variant dark:text-gray-500 text-sm mt-3 font-bold uppercase tracking-widest">{t('footerRights')}</p>
-          </div>
-          <div className="flex gap-10 font-bold tracking-widest uppercase text-sm font-sans items-center">
-            <Link className="text-on-surface-variant dark:text-gray-500 hover:text-primary dark:hover:text-white transition-colors" href="/privacy">{t('privacyPolicy')}</Link>
-            <Link className="text-on-surface-variant dark:text-gray-500 hover:text-primary dark:hover:text-white transition-colors" href="/terms">{t('termsOfService')}</Link>
-            <a className="text-on-surface-variant dark:text-gray-500 hover:text-primary dark:hover:text-white transition-colors" href="mailto:zen@0x5zen.dev">{t('support')}</a>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

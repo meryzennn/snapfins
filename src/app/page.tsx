@@ -7,6 +7,7 @@ import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/client";
 import SupportModal from "@/components/SupportModal";
+import Footer from '@/components/layout/Footer';
 import { useScrollLock } from "@/hooks/useScrollLock";
 import { LandingPageSkeleton } from "@/components/Skeleton";
 
@@ -111,10 +112,12 @@ export default function LandingPage() {
     });
   };
 
-  if (!mounted) return <LandingPageSkeleton />;
+  if (!mounted) {
+    return <LandingPageSkeleton />;
+  }
 
   return (
-    <div className="font-body bg-surface text-on-surface antialiased min-h-screen scroll-smooth">
+    <div className="min-h-screen bg-background selection:bg-primary/20 font-body text-on-surface antialiased scroll-smooth">
       {/* Login Modal */}
       <AuthModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} />
 
@@ -167,7 +170,7 @@ export default function LandingPage() {
               </div>
             </div>
             {user ? (
-              <Link href="/dashboard" className="hidden md:block px-6 py-2.5 rounded-lg bg-primary text-white font-semibold hover:bg-primary-container hover:text-on-primary-container active:scale-95 transition-all duration-200 ease-in-out shadow-sm">
+              <Link href="/dashboard" className="hidden md:block px-6 py-2.5 rounded-lg bg-primary text-white font-semibold hover:bg-primary-container hover:text-on-primary-container active:scale-95 transition-colors duration-200 shadow-sm">
                 {t('navDashboard')}
               </Link>
             ) : (
@@ -541,21 +544,7 @@ export default function LandingPage() {
         )}
       </main>
 
-      {/* Footer */}
-      <footer className="w-full border-t-0 bg-surface-container-low dark:bg-gray-950">
-        <div className="flex flex-col md:flex-row justify-between items-center px-8 py-12 w-full max-w-7xl mx-auto">
-          <div className="mb-8 md:mb-0">
-            <span className="text-xl font-headline font-extrabold tracking-tighter text-indigo-700 dark:text-indigo-300">SnapFins</span>
-            <p className="text-on-surface-variant dark:text-gray-500 text-sm mt-2 font-bold uppercase tracking-widest">{t('footerRights')}</p>
-          </div>
-          <div className="flex gap-8 font-bold tracking-widest uppercase">
-            <Link className="text-on-surface-variant dark:text-gray-500 hover:text-primary dark:hover:text-white transition-colors text-sm font-medium" href="/privacy">{t('privacyPolicy')}</Link>
-            <Link className="text-on-surface-variant dark:text-gray-500 hover:text-primary dark:hover:text-white transition-colors text-sm font-medium" href="/terms">{t('termsOfService')}</Link>
-            <a className="text-on-surface-variant dark:text-gray-500 hover:text-primary dark:hover:text-white transition-colors text-sm font-medium" href="mailto:zen@0x5zen.dev">{t('support')}</a>
-          </div>
-        </div>
-      </footer>
-      {showSupportModal && <SupportModal onClose={() => setShowSupportModal(false)} />}
+      <Footer />
     </div>
   );
 }
