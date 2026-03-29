@@ -548,7 +548,7 @@ export default function AssetsPage() {
                                     <td className="p-4 text-center hidden sm:table-cell text-on-surface-variant font-bold text-[11px] uppercase tracking-widest">
                                         {new Date(asset.last_valued_at).toLocaleDateString(lang === "id" ? "id-ID" : "en-US", { month: "short", day: "numeric" })}
                                     </td>
-                                    <td className="p-4 text-center kebab-menu-container sticky right-0 bg-white dark:bg-slate-950 z-20 border-l border-outline-variant/10">
+                                    <td className={`p-4 text-center kebab-menu-container sticky right-0 bg-white dark:bg-slate-950 border-l border-outline-variant/10 transition-all ${openMenuId === asset.id ? "z-40 shadow-[-10px_0_15px_-5px_rgba(0,0,0,0.1)] dark:shadow-[-10px_0_15px_-5px_rgba(0,0,0,0.3)]" : "z-20"}`}>
                                         <div className="relative inline-block text-left">
                                             <button 
                                                 onClick={(e) => {

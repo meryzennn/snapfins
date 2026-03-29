@@ -2170,49 +2170,49 @@ export default function DashboardPage() {
               </div>
             )}
           </div>
-          <div className="overflow-x-auto rounded-lg shadow-sm border border-outline-variant/20">
+          <div className="flex-1 overflow-x-auto flex flex-col min-h-[450px] custom-scrollbar rounded-lg shadow-sm border border-outline-variant/20">
             <table className="w-full excel-grid bg-surface-container-lowest dark:bg-slate-900/50 text-xs font-body tracking-tight">
               <thead className="bg-slate-50 dark:bg-slate-900 text-on-surface-variant uppercase font-bold text-[10px] tracking-widest border-b border-outline-variant/10">
                 {viewMode === "grid" ? (
                   <tr>
-                    <th className="px-3 py-2 text-center w-10">
+                    <th className="p-4 text-center w-10">
                       <SelectionToggle
                         checked={selectedIds.length > 0 && selectedIds.length === paginatedTransactions.length}
                         indeterminate={selectedIds.length > 0 && selectedIds.length < paginatedTransactions.length}
                         onChange={() => handleSelectAll(paginatedTransactions.map(tx => tx.id))}
                       />
                     </th>
-                    <th className="px-3 py-2 text-left w-24">{t("colDate")}</th>
-                    <th className="px-3 py-2 text-left w-32">
+                    <th className="p-4 text-left w-24">{t("colDate")}</th>
+                    <th className="p-4 text-left w-32">
                       {t("colCategory")}
                     </th>
-                    <th className="px-3 py-2 text-left">
+                    <th className="p-4 text-left">
                       {t("colDescription")}
                     </th>
-                    <th className="px-3 py-2 text-left w-24">{t("colType")}</th>
-                    <th className="px-3 py-2 text-right min-w-[150px]">
+                    <th className="p-4 text-left w-24">{t("colType")}</th>
+                    <th className="p-4 text-right min-w-[150px]">
                       {t("colAmount")}
                     </th>
-                    <th className="px-3 py-2 text-left w-40">
+                    <th className="p-4 text-left w-40">
                       {t("colLinkedAssets")}
                     </th>
-                    <th className="px-3 py-2 text-center w-24 sticky right-0 bg-slate-50 dark:bg-slate-900 z-30 border-l border-outline-variant/10">{t("colActions")}</th>
+                    <th className="p-4 text-center w-24 sticky right-0 bg-slate-50 dark:bg-slate-900 z-30 border-l border-outline-variant/10">{t("colActions")}</th>
                   </tr>
                 ) : (
                   <tr>
-                    <th className="px-3 py-2 text-left w-40">
+                    <th className="p-4 text-left w-40">
                       {t("colCategory")}
                     </th>
-                    <th className="px-3 py-2 text-right w-32">
+                    <th className="p-4 text-right w-32">
                       {t("colIncome")}
                     </th>
-                    <th className="px-3 py-2 text-right w-32">
+                    <th className="p-4 text-right w-32">
                       {t("colExpense")}
                     </th>
-                    <th className="px-3 py-2 text-right w-32">
+                    <th className="p-4 text-right w-32">
                       {t("colInvested")}
                     </th>
-                    <th className="px-3 py-2 text-right w-32">
+                    <th className="p-4 text-right w-32">
                       {t("colNetBalance")}
                     </th>
                   </tr>
@@ -2224,29 +2224,29 @@ export default function DashboardPage() {
                     paginatedTransactions.map((tx) => (
                       <tr
                         key={tx.id}
-                        className={`hover:bg-primary/5 transition-all duration-300 group ${selectedIds.includes(tx.id) ? "bg-primary/[0.08]" : ""}`}
+                        className={`hover:bg-grid-row-hover dark:hover:bg-slate-800/50 transition-colors group border-b border-outline-variant/5 text-sm font-semibold ${selectedIds.includes(tx.id) ? "bg-primary/[0.08]" : ""}`}
                       >
-                        <td className="px-3 py-2 text-center">
+                        <td className="p-4 text-center">
                           <SelectionToggle
                             checked={selectedIds.includes(tx.id)}
                             onChange={() => handleSelectRow(tx.id)}
                           />
                         </td>
-                        <td className="px-3 py-2 font-mono text-slate-500 whitespace-nowrap">
+                        <td className="p-4 font-mono text-slate-500 whitespace-nowrap">
                           {(() => {
                             if (!tx.date) return "—";
                             const [y, m, d] = tx.date.split("-");
                             return `${d}/${m}/${y}`;
                           })()}
                         </td>
-                        <td className="px-3 py-2">
+                        <td className="p-4">
                           <span
                             className={`px-1.5 py-0.5 rounded font-bold uppercase text-[9px] ${getCategoryStyle(tx.color)}`}
                           >
                             {tx.category}
                           </span>
                         </td>
-                        <td className="px-3 py-2 font-medium">
+                        <td className="p-4 font-medium">
                           <div className="flex items-center gap-2">
                             {tx.description}
                             {tx.isAi && (
@@ -2265,60 +2265,38 @@ export default function DashboardPage() {
                           {tx.type === "Credit" || tx.type === "Income" ? t("typeIncome") : tx.type === "Debit" || tx.type === "Expense" ? t("typeExpense") : t("typeInvestment")}
                         </td>
                         <td
-                          className={`px-3 py-2 text-right font-mono font-bold whitespace-nowrap ${tx.type === "Credit" || tx.type === "Income" ? "text-secondary" : tx.type === "Investment" ? "text-indigo-500" : ""}`}
+                          className={`p-4 text-right font-black tabular-nums text-[14px] ${tx.type === "Income" ? "text-on-surface dark:text-white" : "text-error"}`}
                         >
-                          <div className={tx.amount.length > 18 ? "text-[9px]" : tx.amount.length > 15 ? "text-[10px]" : ""}>
-                          {(() => {
-                            // Clean the string (remove symbols if any)
-                            let cleanNum = tx.amount.replace(/[^0-9.,-]/g, "");
-                            // Normalize based on currency
-                            const txCur = normalizeCurrency(
-                              tx.currency ||
-                                (tx.amount.includes("IDR") ||
-                                tx.amount.includes("Rp")
-                                  ? "IDR"
-                                  : "USD"),
-                            );
-                            if (txCur === "IDR") {
-                              cleanNum = cleanNum
-                                .replace(/\./g, "")
-                                .replace(/,/g, ".");
-                            } else {
-                              cleanNum = cleanNum.replace(/,/g, "");
-                            }
-                            const val = parseFloat(cleanNum) || 0;
-                            const sign =
-                              tx.type === "Credit" || tx.type === "Income"
-                                ? "+"
-                                : tx.type === "Debit" || tx.type === "Expense"
-                                  ? "-"
-                                  : "";
-                            return (
-                              sign +
-                              formatValue(
-                                Math.abs(val),
+                          <div className="flex flex-col items-end">
+                            <span className="tabular-nums">
+                              {tx.type === "Income" ? "+" : "-"}
+                              {formatValue(
+                                tx.amount || 0,
                                 tx.currency || currency,
                                 lang,
-                              )
-                            );
-                          })()}
+                              )}
+                            </span>
                           </div>
                         </td>
-                        <td className="px-3 py-2 text-slate-400 text-xs">
+                        <td className="p-4 text-on-surface-variant font-black text-[11px] uppercase tracking-widest whitespace-nowrap">
                           {(() => {
                             if (tx.linked_asset_id) {
-                              const linkedA = assetRows.find((a: any) => a.id === tx.linked_asset_id);
+                              const linkedA = cashAssets.find(
+                                (a) => a.id === tx.linked_asset_id,
+                              );
                               return linkedA ? (
-                                <span className="flex items-center gap-1">
-                                  <span className="material-symbols-outlined text-[12px] text-primary">account_balance_wallet</span>
+                                <div className="flex items-center gap-1.5 justify-end md:justify-start">
+                                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary/40 animate-pulse"></span>
                                   {linkedA.name}
-                                </span>
-                              ) : tx.source;
+                                </div>
+                              ) : (
+                                tx.source
+                              );
                             }
                             return tx.source || "—";
                           })()}
                         </td>
-                        <td className="px-3 py-2 text-center kebab-menu-container sticky right-0 bg-white dark:bg-slate-950 z-20 border-l border-outline-variant/10">
+                        <td className={`p-4 text-center kebab-menu-container sticky right-0 bg-white dark:bg-slate-950 border-l border-outline-variant/10 transition-all ${openMenuId === tx.id ? "z-40 shadow-[-10px_0_15px_-5px_rgba(0,0,0,0.1)] dark:shadow-[-10px_0_15px_-5px_rgba(0,0,0,0.3)]" : "z-20"}`}>
                           <div className="relative inline-block text-left">
                             <button
                               onClick={(e) => {
@@ -2376,32 +2354,32 @@ export default function DashboardPage() {
                     return (
                       <tr
                         key={row.category}
-                        className="hover:bg-primary/5 transition-colors group"
+                        className="hover:bg-grid-row-hover dark:hover:bg-slate-800/30 transition-colors border-b border-outline-variant/10 font-semibold text-sm"
                       >
-                        <td className="px-3 py-2">
+                        <td className="p-4">
                           <span
-                            className={`px-1.5 py-0.5 rounded font-bold uppercase text-[9px] ${getCategoryStyle(assignColor(row.category))}`}
+                            className={`px-1.5 py-0.5 rounded font-black uppercase text-[10px] tracking-widest ${getCategoryStyle(assignColor(row.category))}`}
                           >
                             {row.category}
                           </span>
                         </td>
-                        <td className="px-3 py-2 text-right font-mono text-secondary font-bold">
+                        <td className="p-4 text-right font-black tabular-nums text-[13px] text-secondary">
                           {row.received > 0
                             ? `+${formatValue(row.received, currency, lang)}`
                             : "-"}
                         </td>
-                        <td className="px-3 py-2 text-right font-mono text-error font-bold">
+                        <td className="p-4 text-right font-black tabular-nums text-[13px] text-error">
                           {row.spent > 0
                             ? `-${formatValue(row.spent, currency, lang)}`
                             : "-"}
                         </td>
-                        <td className="px-3 py-2 text-right font-mono text-indigo-500 font-bold">
+                        <td className="p-4 text-right font-black tabular-nums text-[13px] text-primary">
                           {row.invested > 0
                             ? formatValue(row.invested, currency, lang)
                             : "-"}
                         </td>
                         <td
-                          className={`px-3 py-2 text-right font-mono font-bold ${net > 0 ? "text-secondary" : net < 0 ? "text-error" : "text-slate-500"}`}
+                          className={`p-4 text-right font-black tabular-nums text-[13px] ${net > 0 ? "text-secondary" : net < 0 ? "text-error" : "text-slate-500"}`}
                         >
                           {net > 0
                             ? `+${formatValue(net, currency, lang)}`
@@ -2416,7 +2394,7 @@ export default function DashboardPage() {
                   <tr>
                     <td
                       colSpan={5}
-                      className="px-3 py-16 text-center text-on-surface-variant text-sm font-medium"
+                      className="p-4 text-center text-on-surface-variant text-sm font-medium"
                     >
                       {t("noTransactions")}
                     </td>
