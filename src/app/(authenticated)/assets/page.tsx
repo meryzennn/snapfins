@@ -657,7 +657,7 @@ export default function AssetsPage() {
                     <span className="material-symbols-outlined text-3xl">warning</span>
                 </div>
                 <h3 className="font-headline font-bold text-2xl text-on-surface text-center mb-2">
-                    {lang === "id" ? "Hapus " : "Delete "}<span className="text-primary truncate block">{deletingAsset.name}</span>?
+                    {lang === "id" ? "Hapus " : "Delete "}<span className="text-primary">{deletingAsset.name}</span>?
                 </h3>
                 <p className="text-center text-sm font-medium text-on-surface-variant mb-8">
                     {lang === "id" ? "Aset ini akan dihapus secara permanen. Mutasi historis terkait tidak akan terhapus." : "This asset will be permanently removed from your portfolio. Legacy transactions will remain intact."}
