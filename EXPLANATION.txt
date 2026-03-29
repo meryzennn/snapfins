@@ -1,0 +1,83 @@
+================================================================================
+                         SNAPFINS - CARA KERJA SISTEM
+================================================================================
+
+SnapFins adalah aplikasi manajemen keuangan premium yang dirancang untuk 
+memberikan pandangan menyeluruh dan transparan terhadap total kekayaan Anda. 
+Berikut adalah penjelasan teknis dan fungsional mengenai cara kerja sistem ini.
+
+--------------------------------------------------------------------------------
+1. DASHBOARD UTAMA (Pusat Kendali)
+--------------------------------------------------------------------------------
+Dashboard adalah tempat di mana data keuangan Anda dirangkum. Sistem ini 
+menggabungkan data dari seluruh profil Anda untuk menampilkan empat metrik utama:
+
+A. TOTAL KEKAYAAN BERSIH (NET WORTH):
+   - Dihitung sebagai: (Total Saldo Aset) - (Total Liabilitas/Hutang).
+   - "Tren Cerdas": Badge persentase mencerminkan performa Anda untuk bulan 
+     yang dipilih dengan membandingkan kekayaan bersih saat ini dengan saldo 
+     awal (dihitung dari arus kas masuk/keluar Anda).
+
+B. PENDAPATAN & PENGELUARAN BULANAN:
+   - Data ini diambil langsung dari Buku Besar Transaksi (Ledger).
+   - Aplikasi menyaring transaksi berdasarkan bulan/tahun yang dipilih.
+   - Perubahan di ledger akan langsung memperbarui kartu-kartu ini secara instan.
+
+C. TOTAL INVESTASI:
+   - Metrik khusus yang merangkum aset non-tunai (Kripto, Saham, Properti, dll.) 
+     untuk menunjukkan seberapa banyak kekayaan Anda yang sedang bekerja ("Invested").
+
+--------------------------------------------------------------------------------
+2. MANAJEMEN ASET & VALUASI CERDAS
+--------------------------------------------------------------------------------
+SnapFins mendukung beberapa "Mode Akuisisi" untuk menjaga akurasi data Anda:
+
+- SALDO AWAL (OPENING BALANCE): Digunakan untuk kekayaan yang sudah Anda miliki 
+  sebelum menggunakan aplikasi. Ini menambah Kekayaan Bersih tanpa mencatatnya 
+  sebagai "Gaji/Pendapatan" bulanan.
+- BELI / PINDAHKAN KE ASET: Logika ini "mentransfer" uang dari sumber (seperti Bank) 
+  ke aset baru (seperti Bitcoin). Ini menjaga Kekayaan Bersih tetap stabil karena 
+  Anda hanya memindahkan uang antar "dompet."
+
+MODE VALUASI:
+- MANUAL: Untuk aset dengan nilai tetap (Tunai, Saldo Bank).
+- HARGA PASAR OTOMATIS: Untuk Kripto dan Saham. Aplikasi terhubung ke penyedia 
+  data pasar langsung (Binance, Yahoo Finance) via API internal untuk mengambil 
+  harga terbaru setiap kali Anda memuat halaman.
+
+--------------------------------------------------------------------------------
+3. KONVERSI MATA UANG CERDAS (Auto-Kurs)
+--------------------------------------------------------------------------------
+Fitur paling kuat di SnapFins adalah Mesin Mata Uang:
+
+- DATA REAL-TIME: Aplikasi mengambil kurs pertukaran langsung untuk 150+ mata 
+  uang global dari `open.er-api.com`.
+- KONVERSI DINAMIS: Saat Anda mengubah mata uang global (misal: IDR ke USD):
+  1. Seluruh saldo aset dikonversi menggunakan kurs terbaru.
+  2. Setiap transaksi dalam riwayat Anda dikonversi secara otomatis dari mata 
+     uang asalnya ke mata uang tampilan saat ini.
+  3. Semua persentase di dashboard dihitung ulang secara instan.
+
+--------------------------------------------------------------------------------
+4. PEMINDAIAN STRUK BERBASIS AI (Didukung oleh Gemini)
+--------------------------------------------------------------------------------
+SnapFins menggunakan model AI Gemini Pro Vision untuk "membaca" data keuangan Anda:
+
+- UNGGAH: Saat Anda memindai struk atau screenshot, gambar dikirim ke endpoint 
+  `api/scan`.
+- EKSTRAKSI: AI mengidentifikasi Jumlah, Tanggal, Kategori, dan Deskripsi.
+- NORMALISASI: AI mendeteksi mata uang pada struk (Rp vs $) dan menormalkan 
+  angkanya agar pas ke dalam pembukuan Anda tanpa kesalahan input.
+
+--------------------------------------------------------------------------------
+5. TEKNOLOGI & PRIVASI DATA
+--------------------------------------------------------------------------------
+- FRONTEND: Next.js 16 dengan arsitektur React berperforma tinggi.
+- DESAIN: Vanilla CSS + Tailwind v4 untuk estetika "Glassmorphism" yang premium.
+- DATABASE: Supabase (Postgres) dengan kemampuan Realtime.
+- KEAMANAN: Autentikasi sisi-server memastikan data keuangan Anda bersifat 
+  pribadi dan hanya dapat diakses oleh Anda sendiri.
+
+================================================================================
+Dibuat untuk Pengguna SnapFins | 2026
+================================================================================

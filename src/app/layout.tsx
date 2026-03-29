@@ -3,6 +3,7 @@ import { Inter, Manrope } from 'next/font/google'
 import Script from 'next/script'
 import './globals.css'
 import CookieBanner from '@/components/CookieBanner'
+import { AppProviders } from '@/components/Providers'
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-body' })
 const manrope = Manrope({ subsets: ['latin'], variable: '--font-headline' })
@@ -62,7 +63,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning className="scroll-smooth" data-scroll-behavior="smooth">
       <head>
         <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
         {/* Inline script to prevent FOUC (Flash of Unstyled Content) before hydration */}
@@ -80,8 +81,10 @@ export default function RootLayout({
         </Script>
       </head>
       <body className={`${inter.variable} ${manrope.variable} antialiased bg-background text-foreground min-h-screen flex flex-col selection:bg-primary/20`}>
-        {children}
-        <CookieBanner />
+        <AppProviders>
+          {children}
+          <CookieBanner />
+        </AppProviders>
       </body>
     </html>
   )

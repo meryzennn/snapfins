@@ -83,6 +83,51 @@ export async function POST(req: Request) {
           transactionData.date = new Date().toISOString().split('T')[0];
         }
 
+        // --- CLEAN & NORMALIZE AMOUNT ---
+        // AI sometimes returns "1.211" (IDR thousand) or "1,211.50" (USD/EUR decimals).
+        // We need a robust way to convert this to a standard decimal number.
+        const cleanAmount = (amtStr: string): number => {
+          if (!amtStr) return 0;
+          // Strip currency symbols if any (e.g. Rp, $, €)
+          let s = amtStr.replace(/[^0-9.,]/g, "").trim();
+          
+          // Heuristic: If there's both . and ,
+          if (s.includes(",") && s.includes(".")) {
+            // Assume "1.211,50" (European/Indonesian) or "1,211.50" (US)
+            const lastDot = s.lastIndexOf(".");
+            const lastComma = s.lastIndexOf(",");
+            if (lastComma > lastDot) {
+              // (1.211,50) -> 1211.50
+              s = s.replace(/\./g, "").replace(",", ".");
+            } else {
+              // (1,211.50) -> 1211.50
+              s = s.replace(/,/g, "");
+            }
+          } else if (s.includes(",")) {
+            // "1,211" -> Could be one thousand or one point two.
+            // If the comma is followed by exactly 3 digits, we assume it's a thousand separator for standard output.
+            // But if it's near the end and 2 digits, it's a decimal.
+            const parts = s.split(",");
+            if (parts[parts.length - 1].length === 3) {
+              s = s.replace(/,/g, ""); // "1,211" -> "1211"
+            } else {
+              s = s.replace(",", "."); // "1,2" -> "1.2"
+            }
+          } else if (s.includes(".")) {
+             // Same heuristic for dots (common in IDR for thousand separators)
+             const parts = s.split(".");
+             if (parts[parts.length - 1].length === 3) {
+               s = s.replace(/\./g, ""); // "1.211" -> "1211"
+             }
+             // Otherwise keep it as is ("1.2" is standard float)
+          }
+          
+          const parsed = parseFloat(s);
+          return isNaN(parsed) ? 0 : parsed;
+        };
+
+        transactionData.amount = cleanAmount(String(transactionData.amount || "0"));
+
         return NextResponse.json({ transaction: transactionData });
       } catch (err: any) {
         lastError = err;

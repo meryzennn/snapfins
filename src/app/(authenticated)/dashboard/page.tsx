@@ -15,8 +15,9 @@ import {
 import { useEffect, useState, useRef } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { deleteUserAccountAction } from "@/app/actions/user";
+import { useScrollLock } from "@/hooks/useScrollLock";
 import Link from "next/link";
-
+import SelectionToggle from "@/components/SelectionToggle";
 const assignColor = (category: string) => {
   const map: Record<string, string> = {
     DINING: "purple",
@@ -48,36 +49,6 @@ const getCategoryStyle = (color: string) => {
   return styles[color] || styles.slate;
 };
 
-const SelectionToggle = ({
-  checked,
-  indeterminate,
-  onChange,
-}: {
-  checked: boolean;
-  indeterminate?: boolean;
-  onChange: () => void;
-}) => (
-  <button
-    onClick={(e) => {
-      e.stopPropagation();
-      onChange();
-    }}
-    className={`w-5 h-5 rounded-md border-2 transition-all duration-300 flex items-center justify-center cursor-pointer group/toggle relative overflow-hidden active:scale-90
-      ${checked || indeterminate ? "bg-primary border-primary shadow-lg shadow-primary/20" : "border-outline-variant/60 hover:border-primary bg-transparent"}
-    `}
-  >
-    {(checked || indeterminate) && (
-      <div className="absolute inset-0 bg-white/20 animate-ping [animation-duration:1.5s]"></div>
-    )}
-    <span
-      className={`material-symbols-outlined text-white text-[14px] font-black transition-all duration-300 transform relative z-10
-      ${checked || indeterminate ? "scale-100 opacity-100" : "scale-0 opacity-0"}
-    `}
-    >
-      {indeterminate ? "remove" : "check"}
-    </span>
-  </button>
-);
 
 export default function DashboardPage() {
   const { theme, setTheme } = useTheme();
@@ -105,6 +76,7 @@ export default function DashboardPage() {
   // Manual Entry States
   const [showManualEntry, setShowManualEntry] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [cashAssets, setCashAssets] = useState<any[]>([]);
   const [manualForm, setManualForm] = useState({
     date: new Date().toISOString().split("T")[0],
     category: "GENERAL",
@@ -113,6 +85,7 @@ export default function DashboardPage() {
     currency: currency, // Use user's preference
     amount: "",
     source: "",
+    linked_asset_id: "",
   });
 
   // --- Trend Indicator Component with 5s Loop ---
@@ -170,38 +143,11 @@ export default function DashboardPage() {
     );
   };
 
-  const toggleTheme = () => {
-    const isDark = theme === "dark";
-    const newTheme = isDark ? "light" : "dark";
-
-    if (!document.startViewTransition) {
-      setTheme(newTheme);
-      return;
-    }
-
-    document.documentElement.classList.add(
-      isDark ? "transition-to-light" : "transition-to-dark",
-    );
-    const transition = document.startViewTransition(() => {
-      setTheme(newTheme);
-    });
-
-    transition.finished.finally(() => {
-      document.documentElement.classList.remove(
-        "transition-to-light",
-        "transition-to-dark",
-      );
-    });
-  };
-
   const [transactions, setTransactions] = useState<any[]>([]);
+  // Raw asset rows from DB — totalAssets is derived at render time (reactive to currency changes)
+  const [assetRows, setAssetRows] = useState<any[]>([]);
+  const [priorNetWorth, setPriorNetWorth] = useState<number | null>(null);
   const [isLoadingTx, setIsLoadingTx] = useState(true);
-  const [userAvatar, setUserAvatar] = useState<string | null>(null);
-  const [userName, setUserName] = useState<string | null>(null);
-  const [userEmail, setUserEmail] = useState<string | null>(null);
-  const [showUserDropdown, setShowUserDropdown] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
   const [ratesInitialized, setRatesInitialized] = useState(false);
   
   // Selection & Action States
@@ -215,8 +161,6 @@ export default function DashboardPage() {
   const setRates = updateExchangeRates;
 
   // Refs for "Click Outside" behavior
-  const userDropdownRef = useRef<HTMLDivElement>(null);
-  const currencyDropdownRef = useRef<HTMLDivElement>(null);
   const filterDropdownRef = useRef<HTMLDivElement>(null);
   const yearDropdownRef = useRef<HTMLDivElement>(null);
   const monthDropdownRef = useRef<HTMLDivElement>(null);
@@ -227,9 +171,13 @@ export default function DashboardPage() {
   const [scanningLogs, setScanningLogs] = useState<string[]>([]);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [tempScanData, setTempScanData] = useState<any>(null);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Apply scroll lock if any modal is visible
+  useScrollLock(!!(showManualEntry || showDeleteTxModal || scanSuccess || showScanModal || isScanning || scanError));
 
   // Currency & Rate Initialization
   useEffect(() => {
@@ -275,20 +223,6 @@ export default function DashboardPage() {
   // Outside Click Listener
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      // User Profile Dropdown
-      if (
-        userDropdownRef.current &&
-        !userDropdownRef.current.contains(event.target as Node)
-      ) {
-        setShowUserDropdown(false);
-      }
-      // Currency Dropdown
-      if (
-        currencyDropdownRef.current &&
-        !currencyDropdownRef.current.contains(event.target as Node)
-      ) {
-        setShowCurrencyDropdown(false);
-      }
       // Category Filter Dropdown
       if (
         filterDropdownRef.current &&
@@ -310,10 +244,28 @@ export default function DashboardPage() {
       ) {
         setShowMonthDropdown(false);
       }
+      
+      // Kebab Menu Close on Outside Click
+      if (!(event.target as Element).closest(".kebab-menu-container")) {
+        setOpenMenuId(null);
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setShowFilterDropdown(false);
+        setShowYearDropdown(false);
+        setShowMonthDropdown(false);
+        setOpenMenuId(null);
+      }
     };
 
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
   }, []);
 
   // Reset page when filter changes
@@ -321,15 +273,30 @@ export default function DashboardPage() {
     setCurrentPage(1);
   }, [filterCategory, selectedMonth, selectedYear]);
 
+  // ── totalAssets derived at render time ──────────────────────────────────
+  // Placed ABOVE calculateTotals to avoid TDZ ReferenceError.
+  // Reactive to currency changes, assetRows updates, and exchange rate changes.
+  const totalAssets = assetRows.reduce((sum, item) => {
+    const val = Number(item.current_value) || 0;
+    const assetCur = (item.currency || "USD") as SupportedCurrency;
+    return sum + convert(val, assetCur, currency as SupportedCurrency);
+  }, 0);
+
+  // Filtered Investment Assets (non-cash equivalents)
+  const totalInvestment = assetRows.reduce((sum, item) => {
+    const cat = (item.category || "").toUpperCase();
+    const isInvest = ["STOCK / ETF", "CRYPTO", "GOLD", "PROPERTY", "VEHICLE", "OTHER"].includes(cat);
+    if (!isInvest) return sum;
+    const val = Number(item.current_value) || 0;
+    const assetCur = (item.currency || "USD") as SupportedCurrency;
+    return sum + convert(val, assetCur, currency as SupportedCurrency);
+  }, 0);
+
   const calculateTotals = () => {
     let incomeCurrent = 0,
       incomePrev = 0;
     let expenseCurrent = 0,
       expensePrev = 0;
-    let investmentCurrent = 0,
-      investmentPrev = 0;
-    let totalIncome = 0,
-      totalExpense = 0;
 
     // Define the Period we are looking at
     // If selectedMonth is -1 (ALL), we look at the entire year
@@ -371,43 +338,33 @@ export default function DashboardPage() {
       const rawVal = parseFloat(cleanAmount) || 0;
       const val = convert(rawVal, txCurrency, currency);
 
-      // Update ALL TIME totals for Net Worth
-      if (tx.type === "Credit" || tx.type === "Income") totalIncome += val;
-      else if (tx.type === "Debit" || tx.type === "Expense" || tx.type === "Investment")
-        totalExpense += val;
-
+      // Only Income / Expense for period reporting — no Investment in cashflow
       if (isAllMonths) {
-        // Compare Current Year vs Previous Year
         if (txYear === selectedYear) {
           if (tx.type === "Credit" || tx.type === "Income") incomeCurrent += val;
           else if (tx.type === "Debit" || tx.type === "Expense") expenseCurrent += val;
-          else if (tx.type === "Investment") investmentCurrent += val;
         } else if (txYear === selectedYear - 1) {
           if (tx.type === "Credit" || tx.type === "Income") incomePrev += val;
           else if (tx.type === "Debit" || tx.type === "Expense") expensePrev += val;
-          else if (tx.type === "Investment") investmentPrev += val;
         }
       } else {
-        // Compare Selected Month vs Month Prior
         const prevMonth = selectedMonth === 0 ? 11 : selectedMonth - 1;
-        const prevMonthYear =
-          selectedMonth === 0 ? selectedYear - 1 : selectedYear;
+        const prevMonthYear = selectedMonth === 0 ? selectedYear - 1 : selectedYear;
 
         if (txMonth === selectedMonth && txYear === selectedYear) {
           if (tx.type === "Credit" || tx.type === "Income") incomeCurrent += val;
           else if (tx.type === "Debit" || tx.type === "Expense") expenseCurrent += val;
-          else if (tx.type === "Investment") investmentCurrent += val;
         } else if (txMonth === prevMonth && txYear === prevMonthYear) {
           if (tx.type === "Credit" || tx.type === "Income") incomePrev += val;
           else if (tx.type === "Debit" || tx.type === "Expense") expensePrev += val;
-          else if (tx.type === "Investment") investmentPrev += val;
         }
       }
     });
 
-    const netWorthNow = totalIncome - totalExpense;
-    const periodBalance = incomeCurrent - expenseCurrent - investmentCurrent;
-    const netWorthAtStart = netWorthNow - periodBalance;
+    // ── NET WORTH: Asset-driven ──────────────────────────────────────────────
+    // Net Worth = total asset value (not income minus expense).
+    // priorNetWorth is a snapshot persisted in localStorage from the previous session.
+    const netWorthNow = totalAssets;
 
     const computeTrend = (curr: number, prev: number) => {
       if (prev === 0) {
@@ -419,14 +376,20 @@ export default function DashboardPage() {
       return (diff / Math.abs(prev)) * 100.0;
     };
 
-    const iTrend = computeTrend(incomeCurrent, incomePrev);
-    const eTrend = computeTrend(expenseCurrent, expensePrev);
-    const invTrend = computeTrend(investmentCurrent, investmentPrev);
-    
-    // Net Worth Trend: Current Total Net Worth vs Start of Period Net Worth
-    const nwTrend = computeTrend(netWorthNow, netWorthAtStart);
+    const iTrend = (incomeCurrent !== null && !isNaN(incomeCurrent)) ? computeTrend(incomeCurrent, incomePrev) : null;
+    const eTrend = (expenseCurrent !== null && !isNaN(expenseCurrent)) ? computeTrend(expenseCurrent, expensePrev) : null;
 
-    const hasHistory = incomePrev > 0 || expensePrev > 0 || investmentPrev > 0;
+    // NW trend vs prior snapshoted net worth (localStorage). 
+    // If no prior snapshot exists, we derive an "Implied Baseline" 
+    // based on this period's net savings (Income - Expense).
+    const currentPeriodDelta = (incomeCurrent || 0) - (expenseCurrent || 0);
+    const impliedBaseline = netWorthNow - currentPeriodDelta;
+    
+    // Choose between actual snapshot or implied delta-based trend
+    const baselineForTrend = priorNetWorth !== null ? priorNetWorth : impliedBaseline;
+    const nwTrend = computeTrend(netWorthNow, baselineForTrend) || (netWorthNow > 0 ? "NEW" : null);
+
+    const hasHistory = incomePrev > 0 || expensePrev > 0;
     const comparisonContext = isAllMonths
       ? (hasHistory ? `vs ${selectedYear - 1}` : "")
       : (hasHistory ? (lang === "id" ? "vs bulan lalu" : "vs last month") : "");
@@ -434,11 +397,11 @@ export default function DashboardPage() {
     return {
       income: formatValue(incomeCurrent, currency, lang),
       expense: formatValue(expenseCurrent, currency, lang),
-      investment: formatValue(investmentCurrent, currency, lang),
+      totalAssetsStr: formatValue(totalAssets, currency, lang),
+      totalInvestmentStr: formatValue(totalInvestment, currency, lang),
       netWorth: formatValue(netWorthNow, currency, lang),
       incomeTrend: iTrend !== null ? (iTrend === "NEW" ? "NEW" : (iTrend as number).toFixed(1)) : "—",
       expenseTrend: eTrend !== null ? (eTrend === "NEW" ? "NEW" : (eTrend as number).toFixed(1)) : "—",
-      investmentTrend: invTrend !== null ? (invTrend === "NEW" ? "NEW" : (invTrend as number).toFixed(1)) : "—",
       netWorthTrend: nwTrend !== null ? (nwTrend === "NEW" ? "NEW" : (nwTrend as number).toFixed(1)) : "—",
       comparisonContext,
     };
@@ -644,22 +607,69 @@ export default function DashboardPage() {
     }
   };
 
+
+  const dashboardSmartRefresh = async (currentRows: any[], userId: string, prefCurrency: SupportedCurrency) => {
+    const now = Date.now();
+    const stale = currentRows.filter((a: any) => {
+      if (a.valuation_mode !== "market" || !a.symbol || !a.quantity) return false;
+      const lastValued = new Date(a.last_valued_at || a.updated_at).getTime();
+      const ageMs = now - lastValued;
+      if (a.category === "Crypto" && ageMs > 15 * 60 * 1000) return true;
+      if (a.category !== "Crypto" && ageMs > 60 * 60 * 1000) return true;
+      return false;
+    });
+
+    if (stale.length === 0) return;
+
+    try {
+      const items = stale.map((a: any) => ({
+        symbol: a.symbol,
+        type: a.category === "Crypto" ? "crypto" : "stock",
+      }));
+      const res = await fetch("/api/prices", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items }),
+      });
+      const json = await res.json();
+      if (!json.results) return;
+
+      const supabase = createClient();
+      const updatedMap: Record<string, number> = {};
+      for (let i = 0; i < stale.length; i++) {
+        const asset = stale[i];
+        const quote = json.results[i];
+        if (quote && quote.price && !quote.error) {
+          const newCurrentValue = Number(asset.quantity) * quote.price;
+          await supabase.from("assets").update({
+            last_price: quote.price,
+            current_value: newCurrentValue,
+            last_valued_at: new Date(quote.updatedAt).toISOString(),
+          }).eq("id", asset.id);
+          updatedMap[asset.id] = newCurrentValue;
+        }
+      }
+
+      // Patch the in-memory rows with refreshed current_values → triggers recompute of totalAssets
+      setAssetRows(prev =>
+        prev.map(item =>
+          updatedMap[item.id] !== undefined
+            ? { ...item, current_value: updatedMap[item.id] }
+            : item
+        )
+      );
+    } catch (err) {
+      console.warn("Dashboard smart refresh silently failed", err);
+    }
+  };
+
   const fetchTransactions = async () => {
+
     setIsLoadingTx(true);
     const supabase = createClient();
     const { data: userData } = await supabase.auth.getUser();
 
     if (userData?.user) {
-      const meta = userData.user.user_metadata;
-      if (meta?.avatar_url) setUserAvatar(meta.avatar_url);
-      setUserName(
-        meta?.full_name ||
-          meta?.name ||
-          userData.user.email?.split("@")[0] ||
-          "User",
-      );
-      setUserEmail(userData.user.email || "");
-
       const { data, error } = await supabase
         .from("transactions")
         .select("*")
@@ -667,10 +677,46 @@ export default function DashboardPage() {
         .order("date", { ascending: false })
         .order("created_at", { ascending: false });
 
+      const { data: assetData, error: assetError } = await supabase
+        .from("assets")
+        .select("id, name, current_value, currency, symbol, category, quantity, valuation_mode, last_valued_at, updated_at")
+        .eq("user_id", userData.user.id);
+
       if (!error && data) {
-        // Map data from DB format to our UI format (is_ai -> isAi)
         const formattedData = data.map((tx) => ({ ...tx, isAi: tx.is_ai }));
         setTransactions(formattedData);
+      }
+
+      if (!assetError && assetData) {
+        // Store raw rows — totalAssets is computed reactively at render time
+        setAssetRows(assetData);
+        // Populate cash/bank/e-wallet assets for the Source Account dropdown
+        const cashTypes = ["Cash", "Bank", "E-wallet"];
+        setCashAssets(assetData.filter((a: any) => cashTypes.includes(a.category)));
+
+        // Compute initial total for localStorage NW snapshot (at fetch time, rates should be initialized)
+        const initialTotal = assetData.reduce((sum: number, item: any) => {
+          const val = Number(item.current_value) || 0;
+          const assetCur = (item.currency || "USD") as SupportedCurrency;
+          return sum + convert(val, assetCur, currency as SupportedCurrency);
+        }, 0);
+
+        // Persist prior NW snapshot for trend comparison (read first, then update)
+        const NW_KEY = `snapfins_prior_nw_${userData.user.id}`;
+        try {
+          const stored = localStorage.getItem(NW_KEY);
+          if (stored) {
+            const { value, savedAt } = JSON.parse(stored);
+            const ageMs = Date.now() - savedAt;
+            if (ageMs > 30 * 60 * 1000) {
+              setPriorNetWorth(value);
+            }
+          }
+          localStorage.setItem(NW_KEY, JSON.stringify({ value: initialTotal, savedAt: Date.now() }));
+        } catch { /* localStorage unavailable — trend will just be hidden */ }
+
+        // Lightweight smart refresh of stale market assets
+        dashboardSmartRefresh(assetData, userData.user.id, currency as SupportedCurrency);
       }
     } else {
       // Not authenticated, redirect to landing
@@ -712,6 +758,7 @@ export default function DashboardPage() {
       currency: editCurrency,
       amount: formattedAmount,
       source: tx.source || "",
+      linked_asset_id: tx.linked_asset_id || "",
     });
     setShowManualEntry(true);
   };
@@ -727,6 +774,29 @@ export default function DashboardPage() {
     const supabase = createClient();
     
     try {
+      // Reverse asset balances for any linked transactions before deleting
+      const linkedTxs = transactions.filter(
+        tx => deleteQueue.includes(tx.id) && tx.linked_asset_id
+      );
+
+      for (const tx of linkedTxs) {
+        const linkedAsset = assetRows.find((a: any) => a.id === tx.linked_asset_id);
+        if (linkedAsset) {
+          const txAmt = parseFloat(tx.amount.toString().replace(/[^0-9.-]/g, "")) || 0;
+          const txCur = (tx.currency || "USD") as SupportedCurrency;
+          const assetCur = (linkedAsset.currency || "USD") as SupportedCurrency;
+          const amtInAssetCur = convert(txAmt, txCur, assetCur);
+          // Reverse: Income had added, Expense had subtracted
+          const isIncome = tx.type === "Credit" || tx.type === "Income";
+          const reversalDelta = isIncome ? -amtInAssetCur : amtInAssetCur;
+          const newValue = Math.max(0, Number(linkedAsset.current_value) + reversalDelta);
+          await supabase.from("assets").update({ current_value: newValue }).eq("id", linkedAsset.id);
+          setAssetRows((prev: any[]) =>
+            prev.map((a: any) => a.id === linkedAsset.id ? { ...a, current_value: newValue } : a)
+          );
+        }
+      }
+
       const { error } = await supabase
         .from("transactions")
         .delete()
@@ -750,34 +820,6 @@ export default function DashboardPage() {
     fetchTransactions();
   }, []);
 
-  const handleLogout = async () => {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    window.location.href = "/";
-  };
-
-  const handleDeleteAccount = async () => {
-    setIsDeleting(true);
-    try {
-      // Execute true account deletion via our secure server action
-      await deleteUserAccountAction();
-
-      // Clear local storage cache
-      localStorage.removeItem("snapfins_exchange_rates");
-      localStorage.removeItem("snapfins-currency");
-      localStorage.removeItem("snapfins-lang");
-
-      // Sign Out and redirect to clean up client state hooks
-      const supabase = createClient();
-      await supabase.auth.signOut();
-      window.location.href = "/";
-    } catch (err: any) {
-      console.error("Account deletion failed:", err);
-      alert(t("deleteAccount") + " failed: " + err.message);
-    } finally {
-      setIsDeleting(false);
-    }
-  };
 
   const handleManualSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -809,21 +851,58 @@ export default function DashboardPage() {
                    : manualForm.type === "Income" ? "Credit" 
                    : manualForm.type;
 
-      // 3. Build SURGICAL Payload (Explicitly include user_id for RLS policies)
+      // 3. Build Payload
+      // If a linked asset is selected, use its name as the source label for the Linked Assets column
+      const linkedAssetForPayload = manualForm.linked_asset_id
+        ? assetRows.find((a: any) => a.id === manualForm.linked_asset_id)
+        : null;
+      const sourceLabel = linkedAssetForPayload
+        ? linkedAssetForPayload.name
+        : manualForm.source || (editingTx ? editingTx.source : "Manual Entry");
+
       const txPayload: any = {
-        user_id: userData.user.id, // Re-confirming ownership to satisfy DB 'WITH CHECK'
+        user_id: userData.user.id,
         date: manualForm.date,
         category: manualForm.category.toUpperCase(),
         description: manualForm.description,
-        type: dbType, // 'Credit' or 'Debit'
-        amount: Number(finalAmount), 
+        type: dbType,
+        amount: Number(finalAmount),
         currency: manualForm.currency,
-        source: manualForm.source || (editingTx ? editingTx.source : "Manual Entry"),
+        source: sourceLabel,
+        linked_asset_id: manualForm.linked_asset_id || null,
+      };
+
+      // Guard: only fire when assetId is a real non-empty UUID string.
+      const applyAssetDeltaInternal = async (assetId: string, delta: number, txCurrency: string) => {
+        if (!assetId || assetId.trim() === "") return;
+        const linkedAsset = assetRows.find((a: any) => a.id === assetId);
+        if (!linkedAsset) {
+          console.warn("applyAssetDelta: asset not found for id", assetId);
+          return;
+        }
+        const amtInAssetCur = convert(delta, txCurrency as SupportedCurrency, linkedAsset.currency as SupportedCurrency);
+        const newValue = Math.max(0, Number(linkedAsset.current_value) + amtInAssetCur);
+        const { error: assetUpdateError } = await supabase.from("assets").update({ current_value: newValue }).eq("id", assetId);
+        if (assetUpdateError) {
+          console.error("applyAssetDelta DB error:", assetUpdateError.message);
+          return;
+        }
+        setAssetRows((prev: any[]) =>
+          prev.map((a: any) => a.id === assetId ? { ...a, current_value: newValue } : a)
+        );
       };
 
       if (editingTx) {
-        // --- FINAL SURGICAL UPDATE ---
         const targetId = editingTx.id;
+
+        // Reverse OLD asset balance effect before applying the update
+        if (editingTx.linked_asset_id) {
+          const oldAmt = parseFloat(editingTx.amount.toString().replace(/[^0-9.-]/g, "")) || 0;
+          const oldIsIncome = editingTx.type === "Credit" || editingTx.type === "Income";
+          const oldDelta = oldIsIncome ? -oldAmt : oldAmt; // reversal
+          await applyAssetDeltaInternal(editingTx.linked_asset_id, oldDelta, editingTx.currency || "USD");
+        }
+
         const { data: updatedData, error: updateError } = await supabase
           .from("transactions")
           .update(txPayload)
@@ -835,20 +914,25 @@ export default function DashboardPage() {
         }
 
         if (updatedData && updatedData.length > 0) {
-          // Success! Map internal status back to UI state
+          // Apply NEW asset balance effect
+          if (manualForm.linked_asset_id) {
+            const newIsIncome = dbType === "Credit";
+            const newDelta = newIsIncome ? finalAmount : -finalAmount;
+            await applyAssetDeltaInternal(manualForm.linked_asset_id, newDelta, manualForm.currency);
+          }
+
           const mappedTx = { ...updatedData[0], isAi: updatedData[0].is_ai };
-          setTransactions((prev) => 
+          setTransactions((prev) =>
             prev.map(tx => tx.id === targetId ? mappedTx : tx)
           );
           setShowManualEntry(false);
           setEditingTx(null);
-          fetchTransactions(); 
+          fetchTransactions();
         } else {
           throw new Error("Failed to update transaction. It may have been deleted or you do not have permission.");
         }
       } else {
         // INSERT New Transaction
-        txPayload.user_id = userData.user.id;
         txPayload.is_ai = false;
         txPayload.color = assignColor(manualForm.category.toUpperCase());
 
@@ -860,10 +944,17 @@ export default function DashboardPage() {
         if (insertError) throw insertError;
 
         if (insertedData && insertedData.length > 0) {
+          // Apply asset balance change for the linked account
+          if (manualForm.linked_asset_id) {
+            const isIncome = dbType === "Credit";
+            const delta = isIncome ? finalAmount : -finalAmount;
+            await applyAssetDeltaInternal(manualForm.linked_asset_id, delta, manualForm.currency);
+          }
+
           const mappedTx = { ...insertedData[0], isAi: insertedData[0].is_ai };
           setTransactions((prev) => [mappedTx, ...prev]);
           setShowManualEntry(false);
-          fetchTransactions(); // Sync totals
+          fetchTransactions();
         }
       }
 
@@ -876,6 +967,7 @@ export default function DashboardPage() {
         currency,
         amount: "",
         source: "",
+        linked_asset_id: "",
       });
 
     } catch (err: any) {
@@ -995,11 +1087,52 @@ export default function DashboardPage() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
+  const applyAssetDelta = async (assetId: string, delta: number, txCurrency: string) => {
+    if (!assetId || assetId.trim() === "") return;
+    const supabase = createClient();
+    const linkedAsset = assetRows.find((a: any) => a.id === assetId);
+    if (!linkedAsset) {
+      console.warn("applyAssetDelta (shared): asset not found for id", assetId);
+      return;
+    }
+    const amtInAssetCur = convert(delta, txCurrency as SupportedCurrency, linkedAsset.currency as SupportedCurrency);
+    
+    // CRITICAL: Prevent NaN from reaching the database
+    if (isNaN(amtInAssetCur)) {
+      console.error("applyAssetDelta (shared): Calculated delta is NaN. Aborting DB update.");
+      return;
+    }
+
+    const newValue = Math.max(0, Number(linkedAsset.current_value) + amtInAssetCur);
+    
+    if (isNaN(newValue)) {
+      console.error("applyAssetDelta (shared): New value is NaN. Aborting DB update.");
+      return;
+    }
+
+    const { error: assetUpdateError } = await supabase.from("assets").update({ current_value: newValue }).eq("id", assetId);
+    if (assetUpdateError) {
+      console.error("applyAssetDelta (shared) DB error:", assetUpdateError.message);
+      return;
+    }
+    setAssetRows((prev: any[]) =>
+      prev.map((a: any) => a.id === assetId ? { ...a, current_value: newValue } : a)
+    );
+  };
+
   const finalizeScan = async () => {
     if (!tempScanData) return;
     setIsScanning(true);
     try {
       const supabase = createClient();
+      const linkedAsset = assetRows.find((a: any) => a.id === tempScanData.linkedAssetId);
+      const sourceName = linkedAsset ? linkedAsset.name : "Gemini Vision";
+      
+      const cleanAmount = Number(tempScanData.amount);
+      if (isNaN(cleanAmount)) {
+        throw new Error("Invalid transaction amount: NaN");
+      }
+
       const newTx = {
         user_id: tempScanData.userId,
         date: tempScanData.date,
@@ -1007,9 +1140,10 @@ export default function DashboardPage() {
         color: assignColor(tempScanData.category || "GENERAL"),
         description: tempScanData.description,
         type: "Debit", // Normalize to DB schema type for Expenses
-        amount: tempScanData.amount,
+        amount: String(cleanAmount), // Save as string but guaranteed numeric
         currency: tempScanData.currency || "IDR",
-        source: "Gemini Vision",
+        source: sourceName,
+        linked_asset_id: tempScanData.linkedAssetId || null,
         is_ai: true,
       };
 
@@ -1021,6 +1155,11 @@ export default function DashboardPage() {
       if (error) throw error;
       
       if (insertedData) {
+        // Apply balance update
+        if (tempScanData.linkedAssetId) {
+          await applyAssetDelta(tempScanData.linkedAssetId, -cleanAmount, tempScanData.currency || "IDR");
+        }
+        
         const mappedTx = { ...insertedData[0], isAi: insertedData[0].is_ai };
         setTransactions((prev) => [mappedTx, ...prev]);
         await fetchTransactions();
@@ -1201,6 +1340,34 @@ export default function DashboardPage() {
                   </div>
                 </div>
 
+                <div className="mb-6 space-y-3">
+                    <label className="block text-xs font-black uppercase tracking-widest text-on-surface-variant opacity-70">
+                      {lang === 'id' ? 'Bayar dari Akun' : 'Paid from Account'} <span className="text-error font-black">*</span>
+                    </label>
+                    <div className="relative">
+                        <select
+                          value={tempScanData.linkedAssetId || ""}
+                          onChange={(e) => setTempScanData({ ...tempScanData, linkedAssetId: e.target.value })}
+                          className="w-full bg-surface-container-low dark:bg-slate-800 border-2 border-outline-variant/20 focus:border-secondary rounded-xl px-4 py-3.5 text-on-surface font-bold text-sm transition-colors outline-none cursor-pointer appearance-none pr-10"
+                        >
+                          <option value="">{lang === 'id' ? "— Pilih Akun Pembayar —" : "— Select Paying Account —"}</option>
+                          {cashAssets.map((a: any) => (
+                            <option key={a.id} value={a.id}>
+                              {a.name} ({a.currency})
+                            </option>
+                          ))}
+                        </select>
+                        <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-on-surface-variant opacity-50">
+                          expand_more
+                        </span>
+                    </div>
+                    <p className="text-[10px] text-on-surface-variant font-medium leading-relaxed italic border-l-2 border-secondary/30 pl-3">
+                      {lang === 'id' 
+                        ? "Gemini membaca struk, tapi Anda yang menentukan akun mana yang terdebit." 
+                        : "Gemini reads the receipt, but you choose which account paid for it."}
+                    </p>
+                </div>
+
                 <div className="flex gap-4">
                   <button 
                     onClick={() => setScanStep('select')}
@@ -1208,13 +1375,23 @@ export default function DashboardPage() {
                   >
                     Try Again
                   </button>
-                  <button 
-                    onClick={finalizeScan}
-                    disabled={isScanning}
-                    className="flex-1 py-4 rounded-2xl bg-secondary text-white font-black hover:brightness-110 active:scale-95 transition-all shadow-lg shadow-secondary/20 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-                  >
-                    {isScanning ? <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin"></div> : "Confirm Entry"}
-                  </button>
+                  {cashAssets.length > 0 ? (
+                    <button 
+                      onClick={finalizeScan}
+                      disabled={isScanning || !tempScanData?.linkedAssetId}
+                      className="flex-1 py-4 rounded-2xl bg-secondary text-white font-black hover:brightness-110 active:scale-95 transition-all shadow-lg shadow-secondary/20 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                    >
+                      {isScanning ? <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin"></div> : "Confirm Entry"}
+                    </button>
+                  ) : (
+                    <a
+                      href="/assets"
+                      className="flex-1 py-4 rounded-2xl bg-primary text-white font-black hover:brightness-110 active:scale-95 transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <span className="material-symbols-outlined text-sm">add</span>
+                      {lang === "id" ? "Tambah Akun Dulu" : "Add Account First"}
+                    </a>
+                  )}
                 </div>
               </div>
             )}
@@ -1237,9 +1414,18 @@ export default function DashboardPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex justify-between items-center mb-6">
-              <h3 className="font-headline font-bold text-2xl text-on-surface">
-                {editingTx ? t("editTransaction") : t("manualEntryTitle")}
-              </h3>
+              <div>
+                <h3 className="font-headline font-bold text-2xl text-on-surface">
+                  {editingTx ? t("editTransaction") : t("manualEntryTitle")}
+                </h3>
+                {!editingTx && (
+                  <p className="text-xs text-on-surface-variant/60 font-medium mt-0.5">
+                    {lang === "id"
+                      ? "Catat peristiwa arus kas — pendapatan atau pengeluaran"
+                      : "Record a cashflow event — income or expense"}
+                  </p>
+                )}
+              </div>
               <button
                 onClick={() => setShowManualEntry(false)}
                 className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-surface-container-high transition-colors text-on-surface-variant cursor-pointer"
@@ -1395,48 +1581,84 @@ export default function DashboardPage() {
                     >
                       {t("typeIncome")}
                     </option>
-                    <option
-                      value="Investment"
-                      className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
-                    >
-                      {t("typeInvestment")}
-                    </option>
                   </select>
+                  <p className="text-[10px] text-on-surface-variant/55 mt-1.5 leading-relaxed">
+                    {manualForm.type === "Income"
+                      ? (lang === "id"
+                          ? "Uang yang Anda terima sekarang — gaji, transfer masuk, atau refund."
+                          : "Money received now — such as salary, transfer in, or refund.")
+                      : (lang === "id"
+                          ? "Uang yang Anda keluarkan — tagihan, belanja, atau pembayaran."
+                          : "Money spent now — such as bills, food, or purchases.")}
+                  </p>
                 </div>
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">
-                  {t("labelSource")}
+                  {manualForm.type === "Income"
+                    ? (lang === "id" ? "Akun Tujuan" : "Destination Account")
+                    : (lang === "id" ? "Akun Sumber" : "Source Account")}
                 </label>
-                <input
-                  type="text"
-                  placeholder={t("placeholderSource")}
-                  value={manualForm.source}
-                  onChange={(e) =>
-                    setManualForm({ ...manualForm, source: e.target.value })
-                  }
-                  className="w-full bg-surface-container-low border border-outline-variant/30 rounded-xl px-4 py-3 text-on-surface text-sm focus:outline-none focus:border-primary transition-colors"
-                />
+                <select
+                  value={manualForm.linked_asset_id}
+                  onChange={(e) => setManualForm({ ...manualForm, linked_asset_id: e.target.value })}
+                  className="w-full bg-surface-container-low border border-outline-variant/30 rounded-xl px-4 py-3 text-on-surface text-sm focus:outline-none focus:border-primary transition-colors cursor-pointer"
+                >
+                  <option value="">{lang === "id" ? "— Pilih Akun —" : "— Select Account —"}</option>
+                  {cashAssets.map((a: any) => (
+                    <option key={a.id} value={a.id}>
+                      {a.name}{a.currency ? ` (${a.currency})` : ""}
+                    </option>
+                  ))}
+                </select>
+                {!manualForm.linked_asset_id ? (
+                  <p className="text-[10px] text-amber-500 mt-1 flex items-center gap-1.5 font-bold">
+                    <span className="material-symbols-outlined text-sm">info</span>
+                    {lang === "id"
+                      ? "Butuh akun Kas/Bank/E-wallet sebelum mencatat transaksi."
+                      : "Need a Cash/Bank/E-wallet account before recording transactions."}
+                  </p>
+                ) : (
+                  <p className="text-[10px] text-on-surface-variant/55 mt-1.5">
+                    {manualForm.type === "Income"
+                      ? (lang === "id"
+                          ? "✓ Saldo akun ini akan bertambah · Net Worth akan naik"
+                          : "✓ This account balance will increase · Net Worth goes up")
+                      : (lang === "id"
+                          ? "✓ Saldo akun ini akan berkurang · Net Worth akan turun"
+                          : "✓ This account balance will decrease · Net Worth goes down")}
+                  </p>
+                )}
               </div>
 
               <div className="pt-4">
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="w-full bg-primary hover:bg-primary-container text-white px-6 py-4 rounded-xl font-bold transition-all hover:shadow-lg active:scale-95 cursor-pointer disabled:opacity-70 disabled:pointer-events-none disabled:scale-100 flex items-center justify-center gap-2"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <span className="material-symbols-outlined animate-spin text-sm">
-                        sync
-                      </span>{" "}
-                      {t("saving")}
-                    </>
-                  ) : (
-                    editingTx ? t("btnEdit") : t("saveTransaction")
-                  )}
-                </button>
+                {cashAssets.length === 0 ? (
+                  <a
+                    href="/assets"
+                    className="w-full py-4 rounded-2xl bg-primary text-white font-black hover:brightness-110 active:scale-95 transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-[20px]">add</span>
+                    {lang === "id" ? "Tambah Akun di Halaman Aset" : "Add Your First Account in Assets"}
+                  </a>
+                ) : (
+                  <button
+                    type="submit"
+                    disabled={isSubmitting || !manualForm.linked_asset_id}
+                    className="w-full bg-primary hover:bg-primary-container text-white px-6 py-4 rounded-xl font-bold transition-all hover:shadow-lg active:scale-95 cursor-pointer disabled:opacity-70 disabled:pointer-events-none disabled:scale-100 flex items-center justify-center gap-2"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <span className="material-symbols-outlined animate-spin text-sm">
+                          sync
+                        </span>{" "}
+                        {t("saving")}
+                      </>
+                    ) : (
+                      editingTx ? t("btnEdit") : t("saveTransaction")
+                    )}
+                  </button>
+                )}
               </div>
             </form>
           </div>
@@ -1528,252 +1750,7 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Delete Account Confirmation Modal */}
-      {showDeleteConfirm && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="bg-surface p-8 rounded-3xl shadow-2xl flex flex-col items-center max-w-sm w-full border border-error/20 animate-in fade-in zoom-in duration-300">
-            <div className="w-16 h-16 rounded-full bg-error/10 flex items-center justify-center mb-6 relative">
-              <span className="material-symbols-outlined text-error text-4xl">
-                warning
-              </span>
-            </div>
-            <h3 className="font-headline font-bold text-xl text-on-surface mb-2">
-              {t("deleteAccount")}?
-            </h3>
-            <p className="text-sm text-center text-on-surface-variant leading-relaxed mb-8">
-              {t("deleteAccountWarning")}
-            </p>
-
-            <div className="flex flex-col gap-3 w-full">
-              <button
-                onClick={handleDeleteAccount}
-                disabled={isDeleting}
-                className="w-full bg-error hover:bg-red-600 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-sm active:scale-95 flex items-center justify-center gap-2"
-              >
-                {isDeleting ? (
-                  <span className="material-symbols-outlined animate-spin">
-                    sync
-                  </span>
-                ) : null}
-                {isDeleting ? t("deleting") : t("confirmDelete")}
-              </button>
-              <button
-                onClick={() => setShowDeleteConfirm(false)}
-                disabled={isDeleting}
-                className="w-full bg-surface-container hover:bg-surface-container-high text-on-surface font-bold py-3 px-4 rounded-xl transition-all active:scale-95"
-              >
-                {t("cancel")}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-
-      {/* TopNavBar Shared Component - v2.2.0 (Mobile Ready) */}
-      <nav className="sticky top-0 w-full z-50 bg-slate-50/80 dark:bg-slate-950/80 backdrop-blur-md border-b border-outline-variant/30">
-        <div className="flex justify-between items-center w-full px-4 sm:px-6 py-2 md:py-3 max-w-7xl mx-auto">
-          <div className="flex items-center gap-4 md:gap-8">
-            <Link href="/" className="flex items-center gap-2 cursor-pointer group">
-              <span className="text-lg md:text-xl font-extrabold tracking-tighter text-indigo-700 dark:text-indigo-300 font-headline group-hover:text-primary transition-colors">
-                SnapFins
-              </span>
-            </Link>
-            <div className="hidden md:flex items-center gap-6 font-manrope font-semibold tracking-tight text-sm">
-              <a
-                className="text-primary font-bold border-b-2 border-primary pb-1"
-                href="#"
-              >
-                {t("navDashboard")}
-              </a>
-              <a
-                className="text-on-surface-variant hover:text-primary transition-colors"
-                href="#"
-              >
-                {t("navAsset")}
-              </a>
-              <a
-                className="text-on-surface-variant hover:text-primary transition-colors"
-                href="#"
-              >
-                {t("navAnalytics")}
-              </a>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 md:gap-4">
-            <div
-              className={`flex bg-surface-container-low border border-outline-variant/30 rounded-lg p-0.5 relative ${showCurrencyDropdown ? "z-[60]" : ""}`}
-              ref={currencyDropdownRef}
-            >
-              <button
-                onClick={() => setShowCurrencyDropdown(!showCurrencyDropdown)}
-                className="flex items-center gap-1 px-2 md:px-3 py-1.5 md:py-1.5 rounded-md text-[9px] md:text-[10px] font-black text-primary hover:bg-primary/5 transition-all cursor-pointer"
-              >
-                <span className="material-symbols-outlined text-xs md:text-sm">
-                  payments
-                </span>
-                <span className="xs:inline">{currency}</span>
-                <span className="material-symbols-outlined text-[10px]">
-                  {showCurrencyDropdown ? "expand_less" : "expand_more"}
-                </span>
-              </button>
-
-                <div 
-                  className={`absolute right-0 lg:left-0 top-10 mt-2 w-48 bg-white dark:bg-slate-900 border border-outline-variant/20 rounded-2xl shadow-2xl z-[100] overflow-hidden text-[11px] dropdown-transition origin-top-right lg:origin-top-left ${
-                    showCurrencyDropdown 
-                      ? "opacity-100 translate-y-0 scale-100 pointer-events-auto visible" 
-                      : "opacity-0 -translate-y-8 scale-90 pointer-events-none invisible"
-                  }`}
-                >
-                  <div className="px-3 py-2 border-b border-outline-variant/10 font-black text-[9px] uppercase tracking-widest text-on-surface-variant bg-slate-50 dark:bg-slate-800">
-                    {t("preferredCurrency")}
-                  </div>
-                  <div className="max-h-60 overflow-y-auto py-1 scrollbar-thin">
-                    {(Object.keys(currencySymbols) as SupportedCurrency[]).map(
-                      (c) => (
-                        <button
-                          key={c}
-                          onClick={() => {
-                            setCurrency(c);
-                            setShowCurrencyDropdown(false);
-                          }}
-                          className={`w-full text-left px-4 py-2.5 hover:bg-primary/5 transition-colors cursor-pointer flex items-center justify-between ${currency === c ? "text-primary font-black bg-primary/5" : "text-on-surface font-semibold"}`}
-                        >
-                          <span className="flex items-center gap-2">
-                            <span className="text-primary/60 font-mono w-4">
-                              {currencySymbols[c]}
-                            </span>
-                            {c}
-                          </span>
-                          {currency === c && (
-                            <span className="material-symbols-outlined text-sm">
-                              check
-                            </span>
-                          )}
-                        </button>
-                      ),
-                    )}
-                  </div>
-                </div>
-            </div>
-
-            <div className="flex bg-surface-container-low border border-outline-variant/30 rounded-lg p-0.5">
-              <button
-                onClick={() => setLang("en")}
-                className={`text-[9px] md:text-[10px] font-bold px-1.5 md:px-2 py-1.5 rounded-md transition-colors ${lang === "en" ? "bg-primary text-white shadow-sm" : "text-on-surface-variant hover:text-on-surface"}`}
-              >
-                EN
-              </button>
-              <button
-                onClick={() => setLang("id")}
-                className={`text-[9px] md:text-[10px] font-bold px-1.5 md:px-2 py-1.5 rounded-md transition-colors ${lang === "id" ? "bg-primary text-white shadow-sm" : "text-on-surface-variant hover:text-on-surface"}`}
-              >
-                ID
-              </button>
-            </div>
-
-            <div
-              className="relative border-l border-outline-variant/30 pl-2 md:pl-4 ml-1 md:ml-4"
-              ref={userDropdownRef}
-            >
-              <button
-                onClick={() => setShowUserDropdown(!showUserDropdown)}
-                className="flex items-center gap-2 md:gap-3 hover:bg-surface-container-low p-1 rounded-xl transition-all active:scale-95 cursor-pointer"
-              >
-                <div className="text-right hidden sm:block">
-                  <p className="text-[11px] font-extrabold text-on-surface leading-tight">
-                    {userName}
-                  </p>
-                  <p className="text-[9px] font-medium text-on-surface-variant leading-tight opacity-70">
-                    {userEmail}
-                  </p>
-                </div>
-                <img
-                  alt="User profile"
-                  className="w-8 h-8 md:w-10 md:h-10 rounded-full border-2 border-primary/20 object-cover shadow-sm"
-                  src={
-                    userAvatar ||
-                    "https://lh3.googleusercontent.com/aida-public/AB6AXuBE0e9w4xGMbdwDYXMaDw5uETVXAmCsb2dhI8hfIpOO3BPWgMaL0JjQzcpHBM7CT9NYI1ldia3F2nXUV5w3qb3mMDQz-OTK-jeHMEnz039x-WujlEaGvN3up-hQu3sr7A0G-nmdIg9113_eJSO-g9Mpnz1eq1fYd6INd1L0Flb-PXWLfhqXoh5e8wARW0avQOljBQFUftRfAqKCQ6Fw-PDIi6C3txyigy8dE7NZEcNbsgG6NlCq8YmU7KjLMJ2ODW7FZcU7PiQ025U"
-                  }
-                />
-              </button>
-
-                <div 
-                  className={`absolute right-0 top-12 mt-2 w-64 bg-white dark:bg-slate-900 border border-outline-variant/20 rounded-2xl shadow-2xl z-[100] overflow-hidden dropdown-transition origin-top-right ${
-                    showUserDropdown 
-                      ? "opacity-100 translate-y-0 scale-100 pointer-events-auto visible" 
-                      : "opacity-0 -translate-y-8 scale-90 pointer-events-none invisible"
-                  }`}
-                >
-                  <div className="px-5 py-4 border-b border-outline-variant/10 bg-slate-50 dark:bg-slate-800/50">
-                    <p className="text-xs font-black uppercase tracking-widest text-primary mb-1">
-                      {t("profile")}
-                    </p>
-                    <p className="text-sm font-bold text-on-surface truncate">
-                      {userName}
-                    </p>
-                    <p className="text-[10px] text-on-surface-variant truncate opacity-60">
-                      {userEmail}
-                    </p>
-                  </div>
-
-                  <div className="p-2 space-y-1">
-                    {/* Theme Toggle (Moved here) */}
-                    {mounted && (
-                      <button
-                        onClick={toggleTheme}
-                        className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-on-surface hover:bg-surface-container-low transition-colors text-sm font-bold group"
-                      >
-                        <div className="flex items-center gap-3">
-                          <span className="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors">
-                            {theme === "dark" ? "light_mode" : "dark_mode"}
-                          </span>
-                          <span>
-                            {theme === "dark" ? "Light Mode" : "Dark Mode"}
-                          </span>
-                        </div>
-                        <div className="w-8 h-4 bg-outline-variant/30 rounded-full relative">
-                          <div
-                            className={`absolute top-0.5 w-3 h-3 bg-primary rounded-full transition-all ${theme === "dark" ? "right-0.5" : "left-0.5"}`}
-                          ></div>
-                        </div>
-                      </button>
-                    )}
-
-                    <div className="h-px bg-outline-variant/10 my-1 mx-2" />
-
-                    <button
-                      onClick={handleLogout}
-                      className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-on-surface hover:bg-surface-container-low transition-colors text-sm font-bold group"
-                    >
-                      <span className="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors">
-                        logout
-                      </span>
-                      {t("logout")}
-                    </button>
-
-                    <div className="h-px bg-outline-variant/10 my-1 mx-2" />
-
-                    <button
-                      onClick={() => {
-                        setShowUserDropdown(false);
-                        setShowDeleteConfirm(true);
-                      }}
-                      className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-error hover:bg-error/10 transition-colors text-sm font-bold group"
-                    >
-                      <span className="material-symbols-outlined text-error/70 group-hover:text-error transition-colors">
-                        delete_forever
-                      </span>
-                      {t("deleteAccount")}
-                    </button>
-                  </div>
-                </div>
-            </div>
-          </div>
-        </div>
-      </nav>
-
-      <main className="flex-grow max-w-7xl mx-auto w-full px-4 sm:px-6 md:px-8 py-6 md:py-10 space-y-8 md:space-y-10 pb-32 md:pb-8">
+      <main className="max-w-7xl mx-auto w-full px-4 sm:px-6 md:px-8 py-6 md:py-10 space-y-8 md:space-y-10 pb-32 md:pb-8">
         {/* Header Section */}
         <header className="flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-6">
           <div className="space-y-1">
@@ -1796,6 +1773,7 @@ export default function DashboardPage() {
                   currency,
                   amount: "",
                   source: "",
+                  linked_asset_id: "",
                 });
                 setShowManualEntry(true);
               }}
@@ -1815,6 +1793,7 @@ export default function DashboardPage() {
                   currency,
                   amount: "",
                   source: "",
+                  linked_asset_id: "",
                 });
                 setShowManualEntry(true);
               }}
@@ -1840,20 +1819,22 @@ export default function DashboardPage() {
         {/* Summary Cards Grid */}
         <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {/* 1. Total Net Worth */}
-          <div className="glass-card p-6 rounded-2xl border border-white/40 dark:border-white/10 shadow-xl relative overflow-hidden group bg-gradient-to-br from-white/60 dark:from-slate-900/60 to-surface-container-low/40 dark:to-slate-800/40">
+          <div className="glass-card p-5 rounded-2xl border border-white/40 dark:border-white/10 shadow-xl relative overflow-hidden group bg-gradient-to-br from-white/60 dark:from-slate-900/60 to-surface-container-low/40 dark:to-slate-800/40">
             <div className="absolute -top-4 -right-4 w-24 h-24 bg-primary/5 rounded-full blur-2xl group-hover:bg-primary/10 transition-colors"></div>
-            <div className="min-h-6 mb-3">
-              {totals.netWorthTrend !== "—" && totals.netWorthTrend !== "0.0" && (
+            <div className="h-6 mb-2">
+              {totals.netWorthTrend !== "—" && (
                 <div className="relative flex justify-between items-start">
                   <TrendIndicator trend={totals.netWorthTrend} context={totals.comparisonContext} />
                 </div>
               )}
             </div>
-            <div className="relative flex justify-between items-start mb-4 gap-4">
+            <div className="relative flex justify-between items-start gap-4">
               <div className="min-w-0 flex-grow">
-                <p className="text-[10px] uppercase tracking-[0.2em] font-extrabold text-on-surface-variant mb-1 truncate">
-                  {t("totalNetWorth")}
-                </p>
+                <div className="h-8">
+                  <p className="text-[10px] uppercase tracking-[0.2em] font-extrabold text-on-surface-variant mb-1 leading-tight">
+                    {t("totalNetWorth")}
+                  </p>
+                </div>
                 <div 
                   className={`${totals.netWorth.length > 20 ? "text-base" : totals.netWorth.length > 18 ? "text-lg" : totals.netWorth.length > 15 ? "text-xl" : totals.netWorth.length > 12 ? "text-2xl" : "text-3xl"} text-on-surface font-black font-headline tracking-tighter break-all sm:whitespace-nowrap`} 
                   title={totals.netWorth}
@@ -1873,20 +1854,22 @@ export default function DashboardPage() {
           </div>
 
           {/* 2. Monthly Income */}
-          <div className="glass-card p-6 rounded-2xl border border-white/40 dark:border-white/10 shadow-xl relative overflow-hidden group bg-gradient-to-br from-white/60 dark:from-slate-900/60 to-secondary-container/10">
+          <div className="glass-card p-5 rounded-2xl border border-white/40 dark:border-white/10 shadow-xl relative overflow-hidden group bg-gradient-to-br from-white/60 dark:from-slate-900/60 to-secondary-container/10">
             <div className="absolute -top-4 -right-4 w-24 h-24 bg-secondary/5 rounded-full blur-2xl group-hover:bg-secondary/10 transition-colors"></div>
-            <div className="min-h-6 mb-3">
+            <div className="h-6 mb-2">
               {totals.incomeTrend !== "—" && totals.incomeTrend !== "0.0" && (
                 <div className="relative flex justify-between items-start">
                   <TrendIndicator trend={totals.incomeTrend} context={totals.comparisonContext} />
                 </div>
               )}
             </div>
-            <div className="relative flex justify-between items-start mb-4 gap-4">
+            <div className="relative flex justify-between items-start gap-4">
               <div className="min-w-0 flex-grow">
-                <p className="text-[10px] uppercase tracking-[0.2em] font-extrabold text-on-surface-variant mb-1 truncate">
-                  {selectedMonth === -1 ? t("annualIncome") : t("monthlyIncome")}
-                </p>
+                <div className="h-8">
+                  <p className="text-[10px] uppercase tracking-[0.2em] font-extrabold text-on-surface-variant mb-1 leading-tight">
+                    {selectedMonth === -1 ? t("annualIncome") : t("monthlyIncome")}
+                  </p>
+                </div>
                 <div 
                   className={`${totals.income.length > 20 ? "text-base" : totals.income.length > 18 ? "text-lg" : totals.income.length > 15 ? "text-xl" : totals.income.length > 12 ? "text-2xl" : "text-3xl"} text-secondary font-black font-headline tracking-tighter break-all sm:whitespace-nowrap`} 
                   title={totals.income}
@@ -1903,7 +1886,7 @@ export default function DashboardPage() {
                 </span>
               </div>
             </div>
-            <div className="mt-3 pt-3 border-t border-outline-variant/10 flex items-center gap-2 text-[10px] font-bold text-on-surface-variant">
+            <div className="mt-2 pt-2 border-t border-outline-variant/10 flex items-center gap-2 text-[10px] font-bold text-on-surface-variant">
               {daysLeftLabel && (
                 <>
                   <span className="material-symbols-outlined text-sm">
@@ -1915,54 +1898,54 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* 3. Monthly Investment */}
-          <div className="glass-card p-6 rounded-2xl border border-white/40 dark:border-white/10 shadow-xl relative overflow-hidden group bg-gradient-to-br from-white/60 dark:from-slate-900/60 to-indigo-500/10">
-            <div className="absolute -top-4 -right-4 w-24 h-24 bg-indigo-500/5 rounded-full blur-2xl group-hover:bg-indigo-500/10 transition-colors"></div>
-            <div className="min-h-6 mb-3">
-              {totals.investmentTrend !== "—" && totals.investmentTrend !== "0.0" && (
-                <div className="relative flex justify-between items-start">
-                  <TrendIndicator trend={totals.investmentTrend} context={totals.comparisonContext} />
-                </div>
-              )}
+          <Link href="/assets" className="glass-card p-5 rounded-2xl border border-white/40 dark:border-white/10 shadow-xl relative overflow-hidden group bg-gradient-to-br from-white/60 dark:from-slate-900/60 to-surface-container-low/40 dark:to-slate-800/40 cursor-pointer block hover:shadow-2xl transition-all duration-300">
+            <div className="absolute -top-4 -right-4 w-24 h-24 bg-primary/5 rounded-full blur-2xl group-hover:bg-primary/20 transition-colors"></div>
+            <div className="h-6 mb-2 flex items-center gap-1.5">
+                <span className="inline-block w-1.5 h-1.5 bg-secondary rounded-full kinetic-spark shadow-[0_0_4px_rgba(16,185,129,0.8)]"></span>
+                <span className="text-[9px] uppercase tracking-widest text-secondary font-black opacity-80 group-hover:opacity-100 transition-opacity">MARKET SYNC</span>
             </div>
-            <div className="relative flex justify-between items-start mb-4 gap-4">
+            <div className="relative flex justify-between items-start gap-4">
               <div className="min-w-0 flex-grow">
-                <p className="text-[10px] uppercase tracking-[0.2em] font-extrabold text-on-surface-variant mb-1 truncate">
-                  {selectedMonth === -1 ? t("annualInvestment") : t("monthlyInvestment")}
-                </p>
+                <div className="h-8">
+                  <p className="text-[10px] uppercase tracking-[0.2em] font-extrabold text-on-surface-variant mb-1 leading-tight">
+                    {lang === "id" ? "Total Investasi" : "Total Investment"}
+                  </p>
+                </div>
                 <div 
-                  className={`${totals.investment.length > 20 ? "text-base" : totals.investment.length > 18 ? "text-lg" : totals.investment.length > 15 ? "text-xl" : totals.investment.length > 12 ? "text-2xl" : "text-3xl"} text-indigo-500 font-black font-headline tracking-tighter break-all sm:whitespace-nowrap`} 
-                  title={totals.investment}
+                  className={`${totals.totalInvestmentStr.length > 20 ? "text-base" : totals.totalInvestmentStr.length > 18 ? "text-lg" : totals.totalInvestmentStr.length > 15 ? "text-xl" : totals.totalInvestmentStr.length > 12 ? "text-2xl" : "text-3xl"} text-primary font-black font-headline tracking-tighter break-all sm:whitespace-nowrap transition-transform duration-300 group-hover:-translate-y-0.5`} 
+                  title={totals.totalInvestmentStr}
                 >
-                  {totals.investment}
+                  {totals.totalInvestmentStr}
                 </div>
               </div>
-              <div className="w-12 h-12 flex-shrink-0 flex items-center justify-center rounded-xl bg-white dark:bg-slate-800 shadow-sm border border-outline-variant/20">
+              <div className="w-12 h-12 flex-shrink-0 flex items-center justify-center rounded-xl bg-white dark:bg-slate-800 shadow-sm border border-outline-variant/20 group-hover:bg-primary/5 transition-colors">
                 <span
-                  className="material-symbols-outlined text-indigo-500 text-2xl"
+                  className="material-symbols-outlined text-primary text-2xl transition-transform duration-300 group-hover:scale-110"
                   style={{ fontVariationSettings: "'FILL' 1" }}
                 >
-                  rocket_launch
+                  account_balance
                 </span>
               </div>
             </div>
-          </div>
+          </Link>
 
           {/* 4. Monthly Expense */}
-          <div className="glass-card p-6 rounded-2xl border border-white/40 dark:border-white/10 shadow-xl relative overflow-hidden group bg-gradient-to-br from-white/60 dark:from-slate-900/60 to-error-container/10">
+          <div className="glass-card p-5 rounded-2xl border border-white/40 dark:border-white/10 shadow-xl relative overflow-hidden group bg-gradient-to-br from-white/60 dark:from-slate-900/60 to-error-container/10">
             <div className="absolute -top-4 -right-4 w-24 h-24 bg-error/5 rounded-full blur-2xl group-hover:bg-error/10 transition-colors"></div>
-            <div className="min-h-6 mb-3">
+            <div className="h-6 mb-2">
               {totals.expenseTrend !== "—" && totals.expenseTrend !== "0.0" && (
                 <div className="relative flex justify-between items-start">
                   <TrendIndicator trend={totals.expenseTrend} isExpense context={totals.comparisonContext} />
                 </div>
               )}
             </div>
-            <div className="relative flex justify-between items-start mb-4 gap-4">
+            <div className="relative flex justify-between items-start gap-4">
               <div className="min-w-0 flex-grow">
-                <p className="text-[10px] uppercase tracking-[0.2em] font-extrabold text-on-surface-variant mb-1 truncate">
-                  {selectedMonth === -1 ? t("annualExpense") : t("monthlyExpense")}
-                </p>
+                <div className="h-8">
+                  <p className="text-[10px] uppercase tracking-[0.2em] font-extrabold text-on-surface-variant mb-1 leading-tight">
+                    {selectedMonth === -1 ? t("annualExpense") : t("monthlyExpense")}
+                  </p>
+                </div>
                 <div 
                   className={`${totals.expense.length > 20 ? "text-base" : totals.expense.length > 18 ? "text-lg" : totals.expense.length > 15 ? "text-xl" : totals.expense.length > 12 ? "text-2xl" : "text-3xl"} text-error font-black font-headline tracking-tighter break-all sm:whitespace-nowrap`} 
                   title={totals.expense}
@@ -1985,9 +1968,16 @@ export default function DashboardPage() {
         {/* Main Data Table Section */}
         <section className="space-y-4">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-            <h3 className="text-xl font-black text-on-surface font-headline tracking-tight">
-              {t("recentLedger")}
-            </h3>
+            <div>
+              <h3 className="text-xl font-black text-on-surface font-headline tracking-tight">
+                {t("recentLedger")}
+              </h3>
+              <p className="text-[10px] text-on-surface-variant/50 font-medium mt-0.5">
+                {lang === "id"
+                  ? "Transaksi menunjukkan uang masuk dan keluar bulan ini."
+                  : "Transactions show money moving in and out this period."}
+              </p>
+            </div>
             <div className="flex flex-wrap items-center gap-2 sm:gap-4 relative" ref={filterDropdownRef}>
               {mounted && (
                 <>
@@ -2227,49 +2217,49 @@ export default function DashboardPage() {
               </div>
             )}
           </div>
-          <div className="overflow-x-auto rounded-lg shadow-sm border border-outline-variant/20">
+          <div className="flex-1 overflow-x-auto flex flex-col min-h-[450px] custom-scrollbar rounded-lg shadow-sm border border-outline-variant/20">
             <table className="w-full excel-grid bg-surface-container-lowest dark:bg-slate-900/50 text-xs font-body tracking-tight">
-              <thead className="bg-slate-100/80 dark:bg-slate-800 text-on-surface-variant uppercase font-bold text-[10px] tracking-widest">
+              <thead className="bg-slate-50 dark:bg-slate-900 text-on-surface-variant uppercase font-bold text-[10px] tracking-widest border-b border-outline-variant/10">
                 {viewMode === "grid" ? (
                   <tr>
-                    <th className="px-3 py-2 text-center w-10">
+                    <th className="p-4 text-center w-10">
                       <SelectionToggle
                         checked={selectedIds.length > 0 && selectedIds.length === paginatedTransactions.length}
                         indeterminate={selectedIds.length > 0 && selectedIds.length < paginatedTransactions.length}
                         onChange={() => handleSelectAll(paginatedTransactions.map(tx => tx.id))}
                       />
                     </th>
-                    <th className="px-3 py-2 text-left w-24">{t("colDate")}</th>
-                    <th className="px-3 py-2 text-left w-32">
+                    <th className="p-4 text-left w-24">{t("colDate")}</th>
+                    <th className="p-4 text-left w-32">
                       {t("colCategory")}
                     </th>
-                    <th className="px-3 py-2 text-left">
+                    <th className="p-4 text-left">
                       {t("colDescription")}
                     </th>
-                    <th className="px-3 py-2 text-left w-24">{t("colType")}</th>
-                    <th className="px-3 py-2 text-right min-w-[150px]">
+                    <th className="p-4 text-left w-24">{t("colType")}</th>
+                    <th className="p-4 text-right min-w-[150px]">
                       {t("colAmount")}
                     </th>
-                    <th className="px-3 py-2 text-left w-40">
+                    <th className="p-4 text-left w-40">
                       {t("colLinkedAssets")}
                     </th>
-                    <th className="px-3 py-2 text-center w-24">{t("colActions")}</th>
+                    <th className="p-4 text-center w-24 sticky right-0 bg-slate-50 dark:bg-slate-900 z-30 border-l border-outline-variant/10">{t("colActions")}</th>
                   </tr>
                 ) : (
                   <tr>
-                    <th className="px-3 py-2 text-left w-40">
+                    <th className="p-4 text-left w-40">
                       {t("colCategory")}
                     </th>
-                    <th className="px-3 py-2 text-right w-32">
+                    <th className="p-4 text-right w-32">
                       {t("colIncome")}
                     </th>
-                    <th className="px-3 py-2 text-right w-32">
+                    <th className="p-4 text-right w-32">
                       {t("colExpense")}
                     </th>
-                    <th className="px-3 py-2 text-right w-32">
+                    <th className="p-4 text-right w-32">
                       {t("colInvested")}
                     </th>
-                    <th className="px-3 py-2 text-right w-32">
+                    <th className="p-4 text-right w-32">
                       {t("colNetBalance")}
                     </th>
                   </tr>
@@ -2281,29 +2271,29 @@ export default function DashboardPage() {
                     paginatedTransactions.map((tx) => (
                       <tr
                         key={tx.id}
-                        className={`hover:bg-primary/5 transition-all duration-300 group ${selectedIds.includes(tx.id) ? "bg-primary/[0.08]" : ""}`}
+                        className={`hover:bg-grid-row-hover dark:hover:bg-slate-800/50 transition-colors group border-b border-outline-variant/5 text-sm font-semibold ${selectedIds.includes(tx.id) ? "bg-primary/[0.08]" : ""}`}
                       >
-                        <td className="px-3 py-2 text-center">
+                        <td className="p-4 text-center">
                           <SelectionToggle
                             checked={selectedIds.includes(tx.id)}
                             onChange={() => handleSelectRow(tx.id)}
                           />
                         </td>
-                        <td className="px-3 py-2 font-mono text-slate-500 whitespace-nowrap">
+                        <td className="p-4 font-mono text-slate-500 whitespace-nowrap">
                           {(() => {
                             if (!tx.date) return "—";
                             const [y, m, d] = tx.date.split("-");
                             return `${d}/${m}/${y}`;
                           })()}
                         </td>
-                        <td className="px-3 py-2">
+                        <td className="p-4">
                           <span
                             className={`px-1.5 py-0.5 rounded font-bold uppercase text-[9px] ${getCategoryStyle(tx.color)}`}
                           >
                             {tx.category}
                           </span>
                         </td>
-                        <td className="px-3 py-2 font-medium">
+                        <td className="p-4 font-medium">
                           <div className="flex items-center gap-2">
                             {tx.description}
                             {tx.isAi && (
@@ -2322,64 +2312,79 @@ export default function DashboardPage() {
                           {tx.type === "Credit" || tx.type === "Income" ? t("typeIncome") : tx.type === "Debit" || tx.type === "Expense" ? t("typeExpense") : t("typeInvestment")}
                         </td>
                         <td
-                          className={`px-3 py-2 text-right font-mono font-bold whitespace-nowrap ${tx.type === "Credit" || tx.type === "Income" ? "text-secondary" : tx.type === "Investment" ? "text-indigo-500" : ""}`}
+                          className={`p-4 text-right font-black tabular-nums text-[14px] ${tx.type === "Income" || tx.type === "Credit" ? "text-secondary" : "text-error"}`}
                         >
-                          <div className={tx.amount.length > 18 ? "text-[9px]" : tx.amount.length > 15 ? "text-[10px]" : ""}>
-                          {(() => {
-                            // Clean the string (remove symbols if any)
-                            let cleanNum = tx.amount.replace(/[^0-9.,-]/g, "");
-                            // Normalize based on currency
-                            const txCur = normalizeCurrency(
-                              tx.currency ||
-                                (tx.amount.includes("IDR") ||
-                                tx.amount.includes("Rp")
-                                  ? "IDR"
-                                  : "USD"),
-                            );
-                            if (txCur === "IDR") {
-                              cleanNum = cleanNum
-                                .replace(/\./g, "")
-                                .replace(/,/g, ".");
-                            } else {
-                              cleanNum = cleanNum.replace(/,/g, "");
-                            }
-                            const val = parseFloat(cleanNum) || 0;
-                            const sign =
-                              tx.type === "Credit" || tx.type === "Income"
-                                ? "+"
-                                : tx.type === "Debit" || tx.type === "Expense"
-                                  ? "-"
-                                  : "";
-                            return (
-                              sign +
-                              formatValue(
-                                Math.abs(val),
-                                tx.currency || currency,
-                                lang,
-                              )
-                            );
-                          })()}
+                          <div className="flex flex-col items-end">
+                            <span className="tabular-nums">
+                              {tx.type === "Income" || tx.type === "Credit" ? "+" : "-"}
+                              {formatValue(
+                                Math.abs(convert(
+                                  parseFloat(String(tx.amount).replace(/[^0-9.,-]/g, "")) || 0,
+                                  (tx.currency || "IDR") as SupportedCurrency,
+                                  currency as SupportedCurrency
+                                )),
+                                currency as SupportedCurrency,
+                                lang
+                              )}
+                            </span>
                           </div>
                         </td>
-                        <td className="px-3 py-2 text-slate-400">
-                          {tx.source}
+                        <td className="p-4 text-on-surface-variant font-black text-[11px] uppercase tracking-widest whitespace-nowrap">
+                          {(() => {
+                            if (tx.linked_asset_id) {
+                              const linkedA = cashAssets.find(
+                                (a) => a.id === tx.linked_asset_id,
+                              );
+                              return linkedA ? (
+                                <div className="flex items-center gap-1.5 justify-end md:justify-start">
+                                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary/40 animate-pulse"></span>
+                                  {linkedA.name}
+                                </div>
+                              ) : (
+                                tx.source
+                              );
+                            }
+                            return tx.source || "—";
+                          })()}
                         </td>
-                        <td className="px-3 py-2 text-center opacity-60 group-hover:opacity-100 transition-all duration-300 whitespace-nowrap">
-                          <div className="flex items-center justify-center gap-1">
+                        <td className={`p-4 text-center kebab-menu-container sticky right-0 bg-white dark:bg-slate-950 border-l border-outline-variant/10 transition-all ${openMenuId === tx.id ? "z-40 shadow-[-10px_0_15px_-5px_rgba(0,0,0,0.1)] dark:shadow-[-10px_0_15px_-5px_rgba(0,0,0,0.3)]" : "z-20"}`}>
+                          <div className="relative inline-block text-left">
                             <button
-                              onClick={() => handleEdit(tx)}
-                              className="w-8 h-8 rounded-lg flex items-center justify-center text-primary-container bg-primary/5 hover:bg-primary/10 transition-colors cursor-pointer"
-                              title={t("btnEdit")}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setOpenMenuId(openMenuId === tx.id ? null : tx.id);
+                              }}
+                              className="w-8 h-8 rounded-full flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors cursor-pointer"
                             >
-                              <span className="material-symbols-outlined text-sm">edit</span>
+                              <span className="material-symbols-outlined text-[20px]">more_vert</span>
                             </button>
-                            <button
-                              onClick={() => handleDeleteClick([tx.id])}
-                              className="w-8 h-8 rounded-lg flex items-center justify-center text-error bg-error/5 hover:bg-error/10 transition-colors cursor-pointer"
-                              title={t("btnDelete")}
-                            >
-                              <span className="material-symbols-outlined text-sm">delete</span>
-                            </button>
+                            
+                            {openMenuId === tx.id && (
+                              <div className="absolute right-0 mt-1 w-32 bg-surface-container dark:bg-slate-800/95 backdrop-blur-md border border-outline-variant/30 rounded-xl shadow-[0_8px_25px_rgba(0,0,0,0.15)] z-50 py-1.5 origin-top-right animate-in fade-in zoom-in-95 duration-200 divide-y divide-outline-variant/10">
+                                <button 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleEdit(tx);
+                                    setOpenMenuId(null);
+                                  }}
+                                  className="w-full text-left px-4 py-2 hover:bg-primary/5 dark:hover:bg-primary/10 transition-colors flex items-center justify-between group/item cursor-pointer"
+                                >
+                                  <span className="text-[11px] font-bold text-on-surface group-hover/item:text-primary transition-colors">{t("btnEdit")}</span>
+                                  <span className="material-symbols-outlined text-[16px] text-on-surface-variant group-hover/item:text-primary transition-colors">edit</span>
+                                </button>
+                                <button 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteClick([tx.id]);
+                                    setOpenMenuId(null);
+                                  }}
+                                  className="w-full text-left px-4 py-2 hover:bg-error/5 dark:hover:bg-error/10 transition-colors flex items-center justify-between group/item cursor-pointer"
+                                >
+                                  <span className="text-[11px] font-bold text-error">{t("btnDelete")}</span>
+                                  <span className="material-symbols-outlined text-[16px] text-error">delete</span>
+                                </button>
+                              </div>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -2400,32 +2405,32 @@ export default function DashboardPage() {
                     return (
                       <tr
                         key={row.category}
-                        className="hover:bg-primary/5 transition-colors group"
+                        className="hover:bg-grid-row-hover dark:hover:bg-slate-800/30 transition-colors border-b border-outline-variant/10 font-semibold text-sm"
                       >
-                        <td className="px-3 py-2">
+                        <td className="p-4">
                           <span
-                            className={`px-1.5 py-0.5 rounded font-bold uppercase text-[9px] ${getCategoryStyle(assignColor(row.category))}`}
+                            className={`px-1.5 py-0.5 rounded font-black uppercase text-[10px] tracking-widest ${getCategoryStyle(assignColor(row.category))}`}
                           >
                             {row.category}
                           </span>
                         </td>
-                        <td className="px-3 py-2 text-right font-mono text-secondary font-bold">
+                        <td className="p-4 text-right font-black tabular-nums text-[13px] text-secondary">
                           {row.received > 0
                             ? `+${formatValue(row.received, currency, lang)}`
                             : "-"}
                         </td>
-                        <td className="px-3 py-2 text-right font-mono text-error font-bold">
+                        <td className="p-4 text-right font-black tabular-nums text-[13px] text-error">
                           {row.spent > 0
                             ? `-${formatValue(row.spent, currency, lang)}`
                             : "-"}
                         </td>
-                        <td className="px-3 py-2 text-right font-mono text-indigo-500 font-bold">
+                        <td className="p-4 text-right font-black tabular-nums text-[13px] text-primary">
                           {row.invested > 0
                             ? formatValue(row.invested, currency, lang)
                             : "-"}
                         </td>
                         <td
-                          className={`px-3 py-2 text-right font-mono font-bold ${net > 0 ? "text-secondary" : net < 0 ? "text-error" : "text-slate-500"}`}
+                          className={`p-4 text-right font-black tabular-nums text-[13px] ${net > 0 ? "text-secondary" : net < 0 ? "text-error" : "text-slate-500"}`}
                         >
                           {net > 0
                             ? `+${formatValue(net, currency, lang)}`
@@ -2440,7 +2445,7 @@ export default function DashboardPage() {
                   <tr>
                     <td
                       colSpan={5}
-                      className="px-3 py-16 text-center text-on-surface-variant text-sm font-medium"
+                      className="p-4 text-center text-on-surface-variant text-sm font-medium"
                     >
                       {t("noTransactions")}
                     </td>
@@ -2495,59 +2500,7 @@ export default function DashboardPage() {
         </section>
       </main>
 
-      {/* Footer Shared Component */}
-      <footer className="w-full border-t border-outline-variant/10 py-12 pb-36 md:pb-12 bg-surface-container-lowest dark:bg-slate-900/30">
-        <div className="max-w-7xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-8">
-          <p className="font-headline font-black text-2xl tracking-tighter opacity-20 dark:opacity-40">
-            SnapFins
-          </p>
-          <div className="flex gap-8 font-inter text-[11px] uppercase tracking-widest font-medium">
-            <a
-              className="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-opacity duration-300"
-              href="/privacy"
-            >
-              {t("privacyPolicy")}
-            </a>
-            <a
-              className="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-opacity duration-300"
-              href="/terms"
-            >
-              {t("termsOfService")}
-            </a>
-            <a
-              className="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-opacity duration-300"
-              href="mailto:zen@0x5zen.dev"
-            >
-              {t("support")}
-            </a>
-          </div>
-          <p className="font-inter text-[11px] uppercase tracking-widest font-medium text-slate-500 dark:text-slate-400">
-            {t("footerPrecision")}
-          </p>
-        </div>
-      </footer>
-      {/* Mobile Bottom Navigation - v1.0.1 */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-[100] px-4 pb-4">
-        <div className="bg-surface/80 dark:bg-slate-900/80 backdrop-blur-xl border border-outline-variant/20 rounded-2xl shadow-[0_-10px_40px_rgba(0,0,0,0.1)] flex justify-around items-center py-3">
-          <button className="flex flex-col items-center gap-1 group">
-            <div className="w-12 h-1 bg-primary rounded-full mb-1 opacity-100"></div>
-            <span className="material-symbols-outlined text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>dashboard</span>
-            <span className="text-[10px] font-bold text-primary uppercase tracking-widest">{t("navDashboard")}</span>
-          </button>
-          
-          <button className="flex flex-col items-center gap-1 group opacity-60 hover:opacity-100 transition-opacity">
-            <div className="w-8 h-1 bg-transparent rounded-full mb-1"></div>
-            <span className="material-symbols-outlined text-on-surface-variant">account_balance_wallet</span>
-            <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">{t("navAsset")}</span>
-          </button>
 
-          <button className="flex flex-col items-center gap-1 group opacity-60 hover:opacity-100 transition-opacity">
-            <div className="w-8 h-1 bg-transparent rounded-full mb-1"></div>
-            <span className="material-symbols-outlined text-on-surface-variant">monitoring</span>
-            <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">{t("navAnalytics")}</span>
-          </button>
-        </div>
-      </div>
 
       {/* Hidden processing elements */}
       <canvas ref={canvasRef} className="hidden" />

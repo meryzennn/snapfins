@@ -72,17 +72,18 @@ export function convert(amount: number, from: SupportedCurrency, to: SupportedCu
  */
 export function formatValue(amount: number, currency: SupportedCurrency, lang: 'en' | 'id'): string {
   const locale = lang === 'id' ? 'id-ID' : 'en-US';
+  const safeAmount = isNaN(amount) ? 0 : amount;
   
   // Custom Rupiah format for clarity
   if (currency === 'IDR') {
-    return 'Rp ' + new Intl.NumberFormat(locale).format(Math.round(amount));
+    return 'Rp ' + new Intl.NumberFormat(locale).format(Math.round(safeAmount));
   }
 
   return new Intl.NumberFormat(locale, {
     style: 'currency',
     currency: currency,
     maximumFractionDigits: 2,
-  }).format(amount);
+  }).format(safeAmount);
 }
 
 /**
