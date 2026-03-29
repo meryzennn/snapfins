@@ -278,6 +278,16 @@ export default function DashboardPage() {
     return sum + convert(val, assetCur, currency as SupportedCurrency);
   }, 0);
 
+  // Filtered Investment Assets (non-cash equivalents)
+  const totalInvestment = assetRows.reduce((sum, item) => {
+    const cat = (item.category || "").toUpperCase();
+    const isInvest = ["STOCK / ETF", "CRYPTO", "GOLD", "PROPERTY", "VEHICLE", "OTHER"].includes(cat);
+    if (!isInvest) return sum;
+    const val = Number(item.current_value) || 0;
+    const assetCur = (item.currency || "USD") as SupportedCurrency;
+    return sum + convert(val, assetCur, currency as SupportedCurrency);
+  }, 0);
+
   const calculateTotals = () => {
     let incomeCurrent = 0,
       incomePrev = 0;
@@ -362,11 +372,12 @@ export default function DashboardPage() {
       return (diff / Math.abs(prev)) * 100.0;
     };
 
-    const iTrend = computeTrend(incomeCurrent, incomePrev);
-    const eTrend = computeTrend(expenseCurrent, expensePrev);
+    const iTrend = (incomeCurrent !== null && !isNaN(incomeCurrent)) ? computeTrend(incomeCurrent, incomePrev) : null;
+    const eTrend = (expenseCurrent !== null && !isNaN(expenseCurrent)) ? computeTrend(expenseCurrent, expensePrev) : null;
 
-    // NW trend vs prior snapshoted net worth (localStorage). Falls back gracefully to null.
-    const nwTrend = priorNetWorth !== null ? computeTrend(netWorthNow, priorNetWorth) : null;
+    // NW trend vs prior snapshoted net worth (localStorage). 
+    // If no prior net worth exists, we show as "NEW" for the badge.
+    const nwTrend = priorNetWorth !== null ? computeTrend(netWorthNow, priorNetWorth) : (netWorthNow > 0 ? "NEW" : null);
 
     const hasHistory = incomePrev > 0 || expensePrev > 0;
     const comparisonContext = isAllMonths
@@ -377,6 +388,7 @@ export default function DashboardPage() {
       income: formatValue(incomeCurrent, currency, lang),
       expense: formatValue(expenseCurrent, currency, lang),
       totalAssetsStr: formatValue(totalAssets, currency, lang),
+      totalInvestmentStr: formatValue(totalInvestment, currency, lang),
       netWorth: formatValue(netWorthNow, currency, lang),
       incomeTrend: iTrend !== null ? (iTrend === "NEW" ? "NEW" : (iTrend as number).toFixed(1)) : "—",
       expenseTrend: eTrend !== null ? (eTrend === "NEW" ? "NEW" : (eTrend as number).toFixed(1)) : "—",
@@ -1074,7 +1086,20 @@ export default function DashboardPage() {
       return;
     }
     const amtInAssetCur = convert(delta, txCurrency as SupportedCurrency, linkedAsset.currency as SupportedCurrency);
+    
+    // CRITICAL: Prevent NaN from reaching the database
+    if (isNaN(amtInAssetCur)) {
+      console.error("applyAssetDelta (shared): Calculated delta is NaN. Aborting DB update.");
+      return;
+    }
+
     const newValue = Math.max(0, Number(linkedAsset.current_value) + amtInAssetCur);
+    
+    if (isNaN(newValue)) {
+      console.error("applyAssetDelta (shared): New value is NaN. Aborting DB update.");
+      return;
+    }
+
     const { error: assetUpdateError } = await supabase.from("assets").update({ current_value: newValue }).eq("id", assetId);
     if (assetUpdateError) {
       console.error("applyAssetDelta (shared) DB error:", assetUpdateError.message);
@@ -1093,6 +1118,11 @@ export default function DashboardPage() {
       const linkedAsset = assetRows.find((a: any) => a.id === tempScanData.linkedAssetId);
       const sourceName = linkedAsset ? linkedAsset.name : "Gemini Vision";
       
+      const cleanAmount = Number(tempScanData.amount);
+      if (isNaN(cleanAmount)) {
+        throw new Error("Invalid transaction amount: NaN");
+      }
+
       const newTx = {
         user_id: tempScanData.userId,
         date: tempScanData.date,
@@ -1100,7 +1130,7 @@ export default function DashboardPage() {
         color: assignColor(tempScanData.category || "GENERAL"),
         description: tempScanData.description,
         type: "Debit", // Normalize to DB schema type for Expenses
-        amount: tempScanData.amount,
+        amount: String(cleanAmount), // Save as string but guaranteed numeric
         currency: tempScanData.currency || "IDR",
         source: sourceName,
         linked_asset_id: tempScanData.linkedAssetId || null,
@@ -1117,7 +1147,7 @@ export default function DashboardPage() {
       if (insertedData) {
         // Apply balance update
         if (tempScanData.linkedAssetId) {
-          await applyAssetDelta(tempScanData.linkedAssetId, -tempScanData.amount, tempScanData.currency || "IDR");
+          await applyAssetDelta(tempScanData.linkedAssetId, -cleanAmount, tempScanData.currency || "IDR");
         }
         
         const mappedTx = { ...insertedData[0], isAi: insertedData[0].is_ai };
@@ -1779,20 +1809,22 @@ export default function DashboardPage() {
         {/* Summary Cards Grid */}
         <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {/* 1. Total Net Worth */}
-          <div className="glass-card p-6 rounded-2xl border border-white/40 dark:border-white/10 shadow-xl relative overflow-hidden group bg-gradient-to-br from-white/60 dark:from-slate-900/60 to-surface-container-low/40 dark:to-slate-800/40">
+          <div className="glass-card p-5 rounded-2xl border border-white/40 dark:border-white/10 shadow-xl relative overflow-hidden group bg-gradient-to-br from-white/60 dark:from-slate-900/60 to-surface-container-low/40 dark:to-slate-800/40">
             <div className="absolute -top-4 -right-4 w-24 h-24 bg-primary/5 rounded-full blur-2xl group-hover:bg-primary/10 transition-colors"></div>
-            <div className="min-h-6 mb-3">
-              {totals.netWorthTrend !== "—" && totals.netWorthTrend !== "0.0" && (
+            <div className="h-6 mb-2">
+              {totals.netWorthTrend !== "—" && (
                 <div className="relative flex justify-between items-start">
                   <TrendIndicator trend={totals.netWorthTrend} context={totals.comparisonContext} />
                 </div>
               )}
             </div>
-            <div className="relative flex justify-between items-start mb-4 gap-4">
+            <div className="relative flex justify-between items-start gap-4">
               <div className="min-w-0 flex-grow">
-                <p className="text-[10px] uppercase tracking-[0.2em] font-extrabold text-on-surface-variant mb-1 truncate">
-                  {t("totalNetWorth")}
-                </p>
+                <div className="h-8">
+                  <p className="text-[10px] uppercase tracking-[0.2em] font-extrabold text-on-surface-variant mb-1 leading-tight">
+                    {t("totalNetWorth")}
+                  </p>
+                </div>
                 <div 
                   className={`${totals.netWorth.length > 20 ? "text-base" : totals.netWorth.length > 18 ? "text-lg" : totals.netWorth.length > 15 ? "text-xl" : totals.netWorth.length > 12 ? "text-2xl" : "text-3xl"} text-on-surface font-black font-headline tracking-tighter break-all sm:whitespace-nowrap`} 
                   title={totals.netWorth}
@@ -1812,20 +1844,22 @@ export default function DashboardPage() {
           </div>
 
           {/* 2. Monthly Income */}
-          <div className="glass-card p-6 rounded-2xl border border-white/40 dark:border-white/10 shadow-xl relative overflow-hidden group bg-gradient-to-br from-white/60 dark:from-slate-900/60 to-secondary-container/10">
+          <div className="glass-card p-5 rounded-2xl border border-white/40 dark:border-white/10 shadow-xl relative overflow-hidden group bg-gradient-to-br from-white/60 dark:from-slate-900/60 to-secondary-container/10">
             <div className="absolute -top-4 -right-4 w-24 h-24 bg-secondary/5 rounded-full blur-2xl group-hover:bg-secondary/10 transition-colors"></div>
-            <div className="min-h-6 mb-3">
+            <div className="h-6 mb-2">
               {totals.incomeTrend !== "—" && totals.incomeTrend !== "0.0" && (
                 <div className="relative flex justify-between items-start">
                   <TrendIndicator trend={totals.incomeTrend} context={totals.comparisonContext} />
                 </div>
               )}
             </div>
-            <div className="relative flex justify-between items-start mb-4 gap-4">
+            <div className="relative flex justify-between items-start gap-4">
               <div className="min-w-0 flex-grow">
-                <p className="text-[10px] uppercase tracking-[0.2em] font-extrabold text-on-surface-variant mb-1 truncate">
-                  {selectedMonth === -1 ? t("annualIncome") : t("monthlyIncome")}
-                </p>
+                <div className="h-8">
+                  <p className="text-[10px] uppercase tracking-[0.2em] font-extrabold text-on-surface-variant mb-1 leading-tight">
+                    {selectedMonth === -1 ? t("annualIncome") : t("monthlyIncome")}
+                  </p>
+                </div>
                 <div 
                   className={`${totals.income.length > 20 ? "text-base" : totals.income.length > 18 ? "text-lg" : totals.income.length > 15 ? "text-xl" : totals.income.length > 12 ? "text-2xl" : "text-3xl"} text-secondary font-black font-headline tracking-tighter break-all sm:whitespace-nowrap`} 
                   title={totals.income}
@@ -1842,7 +1876,7 @@ export default function DashboardPage() {
                 </span>
               </div>
             </div>
-            <div className="mt-3 pt-3 border-t border-outline-variant/10 flex items-center gap-2 text-[10px] font-bold text-on-surface-variant">
+            <div className="mt-2 pt-2 border-t border-outline-variant/10 flex items-center gap-2 text-[10px] font-bold text-on-surface-variant">
               {daysLeftLabel && (
                 <>
                   <span className="material-symbols-outlined text-sm">
@@ -1854,23 +1888,24 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* 3. Total Portfolio / Assets */}
-          <Link href="/assets" className="glass-card p-6 rounded-2xl border border-white/40 dark:border-white/10 shadow-xl relative overflow-hidden group bg-gradient-to-br from-white/60 dark:from-slate-900/60 to-surface-container-low/40 dark:to-slate-800/40 cursor-pointer block hover:shadow-2xl transition-all duration-300">
+          <Link href="/assets" className="glass-card p-5 rounded-2xl border border-white/40 dark:border-white/10 shadow-xl relative overflow-hidden group bg-gradient-to-br from-white/60 dark:from-slate-900/60 to-surface-container-low/40 dark:to-slate-800/40 cursor-pointer block hover:shadow-2xl transition-all duration-300">
             <div className="absolute -top-4 -right-4 w-24 h-24 bg-primary/5 rounded-full blur-2xl group-hover:bg-primary/20 transition-colors"></div>
-            <div className="min-h-6 mb-3 flex items-center gap-1.5">
+            <div className="h-6 mb-2 flex items-center gap-1.5">
                 <span className="inline-block w-1.5 h-1.5 bg-secondary rounded-full kinetic-spark shadow-[0_0_4px_rgba(16,185,129,0.8)]"></span>
                 <span className="text-[9px] uppercase tracking-widest text-secondary font-black opacity-80 group-hover:opacity-100 transition-opacity">MARKET SYNC</span>
             </div>
-            <div className="relative flex justify-between items-start mb-4 gap-4">
+            <div className="relative flex justify-between items-start gap-4">
               <div className="min-w-0 flex-grow">
-                <p className="text-[10px] uppercase tracking-[0.2em] font-extrabold text-on-surface-variant mb-1 truncate">
-                  {lang === "id" ? "Total Aset Anda" : "Your Total Assets"}
-                </p>
+                <div className="h-8">
+                  <p className="text-[10px] uppercase tracking-[0.2em] font-extrabold text-on-surface-variant mb-1 leading-tight">
+                    {lang === "id" ? "Total Investasi" : "Total Investment"}
+                  </p>
+                </div>
                 <div 
-                  className={`${totals.totalAssetsStr.length > 20 ? "text-base" : totals.totalAssetsStr.length > 18 ? "text-lg" : totals.totalAssetsStr.length > 15 ? "text-xl" : totals.totalAssetsStr.length > 12 ? "text-2xl" : "text-3xl"} text-primary font-black font-headline tracking-tighter break-all sm:whitespace-nowrap transition-transform duration-300 group-hover:-translate-y-0.5`} 
-                  title={totals.totalAssetsStr}
+                  className={`${totals.totalInvestmentStr.length > 20 ? "text-base" : totals.totalInvestmentStr.length > 18 ? "text-lg" : totals.totalInvestmentStr.length > 15 ? "text-xl" : totals.totalInvestmentStr.length > 12 ? "text-2xl" : "text-3xl"} text-primary font-black font-headline tracking-tighter break-all sm:whitespace-nowrap transition-transform duration-300 group-hover:-translate-y-0.5`} 
+                  title={totals.totalInvestmentStr}
                 >
-                  {totals.totalAssetsStr}
+                  {totals.totalInvestmentStr}
                 </div>
               </div>
               <div className="w-12 h-12 flex-shrink-0 flex items-center justify-center rounded-xl bg-white dark:bg-slate-800 shadow-sm border border-outline-variant/20 group-hover:bg-primary/5 transition-colors">
@@ -1885,20 +1920,22 @@ export default function DashboardPage() {
           </Link>
 
           {/* 4. Monthly Expense */}
-          <div className="glass-card p-6 rounded-2xl border border-white/40 dark:border-white/10 shadow-xl relative overflow-hidden group bg-gradient-to-br from-white/60 dark:from-slate-900/60 to-error-container/10">
+          <div className="glass-card p-5 rounded-2xl border border-white/40 dark:border-white/10 shadow-xl relative overflow-hidden group bg-gradient-to-br from-white/60 dark:from-slate-900/60 to-error-container/10">
             <div className="absolute -top-4 -right-4 w-24 h-24 bg-error/5 rounded-full blur-2xl group-hover:bg-error/10 transition-colors"></div>
-            <div className="min-h-6 mb-3">
+            <div className="h-6 mb-2">
               {totals.expenseTrend !== "—" && totals.expenseTrend !== "0.0" && (
                 <div className="relative flex justify-between items-start">
                   <TrendIndicator trend={totals.expenseTrend} isExpense context={totals.comparisonContext} />
                 </div>
               )}
             </div>
-            <div className="relative flex justify-between items-start mb-4 gap-4">
+            <div className="relative flex justify-between items-start gap-4">
               <div className="min-w-0 flex-grow">
-                <p className="text-[10px] uppercase tracking-[0.2em] font-extrabold text-on-surface-variant mb-1 truncate">
-                  {selectedMonth === -1 ? t("annualExpense") : t("monthlyExpense")}
-                </p>
+                <div className="h-8">
+                  <p className="text-[10px] uppercase tracking-[0.2em] font-extrabold text-on-surface-variant mb-1 leading-tight">
+                    {selectedMonth === -1 ? t("annualExpense") : t("monthlyExpense")}
+                  </p>
+                </div>
                 <div 
                   className={`${totals.expense.length > 20 ? "text-base" : totals.expense.length > 18 ? "text-lg" : totals.expense.length > 15 ? "text-xl" : totals.expense.length > 12 ? "text-2xl" : "text-3xl"} text-error font-black font-headline tracking-tighter break-all sm:whitespace-nowrap`} 
                   title={totals.expense}
@@ -2265,15 +2302,19 @@ export default function DashboardPage() {
                           {tx.type === "Credit" || tx.type === "Income" ? t("typeIncome") : tx.type === "Debit" || tx.type === "Expense" ? t("typeExpense") : t("typeInvestment")}
                         </td>
                         <td
-                          className={`p-4 text-right font-black tabular-nums text-[14px] ${tx.type === "Income" ? "text-on-surface dark:text-white" : "text-error"}`}
+                          className={`p-4 text-right font-black tabular-nums text-[14px] ${tx.type === "Income" || tx.type === "Credit" ? "text-secondary" : "text-error"}`}
                         >
                           <div className="flex flex-col items-end">
                             <span className="tabular-nums">
-                              {tx.type === "Income" ? "+" : "-"}
+                              {tx.type === "Income" || tx.type === "Credit" ? "+" : "-"}
                               {formatValue(
-                                tx.amount || 0,
-                                tx.currency || currency,
-                                lang,
+                                Math.abs(convert(
+                                  parseFloat(String(tx.amount).replace(/[^0-9.,-]/g, "")) || 0,
+                                  (tx.currency || "IDR") as SupportedCurrency,
+                                  currency as SupportedCurrency
+                                )),
+                                currency as SupportedCurrency,
+                                lang
                               )}
                             </span>
                           </div>

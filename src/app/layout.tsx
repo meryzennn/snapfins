@@ -3,6 +3,7 @@ import { Inter, Manrope } from 'next/font/google'
 import Script from 'next/script'
 import './globals.css'
 import CookieBanner from '@/components/CookieBanner'
+import { AppProviders } from '@/components/Providers'
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-body' })
 const manrope = Manrope({ subsets: ['latin'], variable: '--font-headline' })
@@ -80,8 +81,10 @@ export default function RootLayout({
         </Script>
       </head>
       <body className={`${inter.variable} ${manrope.variable} antialiased bg-background text-foreground min-h-screen flex flex-col selection:bg-primary/20`}>
-        {children}
-        <CookieBanner />
+        <AppProviders>
+          {children}
+          <CookieBanner />
+        </AppProviders>
       </body>
     </html>
   )

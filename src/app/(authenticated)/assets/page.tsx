@@ -340,9 +340,11 @@ export default function AssetsPage() {
                     
                     <div className="relative flex justify-between items-start mb-4 gap-4 mt-6">
                         <div className="min-w-0 flex-grow">
-                            <p className="text-[10px] uppercase tracking-[0.2em] font-extrabold text-on-surface-variant mb-1 truncate">
-                                {card.label}
-                            </p>
+                            <div className="h-8">
+                                <p className="text-[10px] uppercase tracking-[0.2em] font-extrabold text-on-surface-variant mb-1 leading-tight">
+                                    {card.label}
+                                </p>
+                            </div>
                             <div className={`${card.val.length > 15 ? "text-xl" : "text-3xl"} ${card.textClass} font-headline tracking-tighter truncate`} title={card.val}>
                                 {card.val}
                             </div>
