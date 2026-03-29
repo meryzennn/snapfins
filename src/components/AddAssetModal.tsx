@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useLang } from "@/hooks/useLang";
 import { type AssetCategory, ASSET_CATEGORIES, type ValuationMode } from "@/lib/assets";
+import { currencySymbols, type SupportedCurrency } from "@/lib/currency";
 
 type AcquisitionMode = "opening_balance" | "via_transaction";
 
@@ -68,7 +69,8 @@ export default function AddAssetModal({ onClose, onSubmit, cashAssets = [] }: Ad
       let exchange = null;
 
       if (valuationMode === "manual") {
-        const m = parseFloat(manualValue || "0");
+        const raw = manualValue.replace(/[^0-9]/g, "");
+        const m = raw ? parseInt(raw, 10) : 0;
         if (isNaN(m)) throw new Error("Invalid value entered");
         finalManualValue = m;
         finalCurrentValue = m;
@@ -107,10 +109,10 @@ export default function AddAssetModal({ onClose, onSubmit, cashAssets = [] }: Ad
         exchange: exchange,
         quantity: finalQuantity,
         manual_value: finalManualValue,
-        current_value: finalCurrentValue,
+        current_value: valuationMode === "market" ? finalCurrentValue : finalManualValue,
         last_price: lastPrice,
         quote_currency: quoteCurrency,
-        currency: valuationMode === "market" ? (quoteCurrency || currency) : currency,
+        currency: valuationMode === "market" ? (quoteCurrency || "USD") : (currency as SupportedCurrency),
         notes,
         // Acquisition metadata — consumed by handleAddAsset in assets/page.tsx
         acquisition_mode: acquisitionMode,
@@ -415,17 +417,61 @@ export default function AddAssetModal({ onClose, onSubmit, cashAssets = [] }: Ad
               {valuationMode === "manual" && (
                 <div className="flex flex-col gap-2">
                   <label className="block text-xs font-black uppercase tracking-widest text-on-surface-variant">
-                    {lang === "id" ? "Nilai Saat Ini" : "Current Value"} ({currency}) <span className="text-error">*</span>
+                    {lang === "id" ? "Nilai Saat Ini" : "Current Value"} <span className="text-error">*</span>
                   </label>
-                  <input
-                    type="number"
-                    required
-                    step="any"
-                    value={manualValue}
-                    onChange={e => setManualValue(e.target.value)}
-                    className="w-full bg-surface-container-low dark:bg-slate-800 border-2 border-outline-variant/20 focus:border-primary rounded-xl px-4 py-3 text-on-surface font-black text-lg tabular-nums placeholder:text-outline/50 transition-colors outline-none"
-                    placeholder="0.00"
-                  />
+                  <div className="flex bg-surface-container-low dark:bg-slate-800 border-2 border-outline-variant/20 focus-within:border-primary rounded-xl overflow-hidden transition-colors">
+                    <div className="relative shrink-0 flex items-center bg-surface-container-low dark:bg-slate-800/50">
+                      <select
+                        value={currency}
+                        onChange={(e) => {
+                          const newCurrency = e.target.value as SupportedCurrency;
+                          const raw = manualValue.replace(/[^0-9]/g, "");
+                          if (raw) {
+                            const locale = newCurrency === "IDR" ? "id-ID" : "en-US";
+                            const numericVal = parseInt(raw, 10);
+                            const fmt = new Intl.NumberFormat(locale).format(numericVal);
+                            setCurrency(newCurrency);
+                            setManualValue(fmt);
+                          } else {
+                            setCurrency(newCurrency);
+                          }
+                        }}
+                        className="bg-transparent text-on-surface text-[11px] font-black pl-4 pr-8 py-3 focus:outline-none cursor-pointer w-24 shrink-0 appearance-none h-full"
+                      >
+                        {Object.keys(currencySymbols).map((c) => (
+                          <option key={c} value={c} className="bg-surface dark:bg-slate-900 text-on-surface">
+                            {c}
+                          </option>
+                        ))}
+                      </select>
+                      <span className="material-symbols-outlined absolute right-2 pointer-events-none text-xs text-on-surface-variant opacity-50">
+                        expand_more
+                      </span>
+                    </div>
+                    <input
+                      type="text"
+                      required
+                      value={manualValue}
+                      onChange={(e) => {
+                        const raw = e.target.value.replace(/[^0-9]/g, "");
+                        if (raw) {
+                          const locale = currency === "IDR" ? "id-ID" : "en-US";
+                          const numericVal = parseInt(raw, 10);
+                          const fmt = new Intl.NumberFormat(locale).format(numericVal);
+                          setManualValue(fmt);
+                        } else {
+                          setManualValue("");
+                        }
+                      }}
+                      className="w-full bg-transparent px-4 py-3 text-on-surface font-black text-lg tabular-nums placeholder:text-outline/40 transition-colors outline-none border-l border-outline-variant/20"
+                      placeholder={currency === "IDR" ? "50.000" : "50,000"}
+                    />
+                  </div>
+                  <p className="text-[10px] text-on-surface-variant/60 font-medium italic">
+                    {lang === "id"
+                      ? `Saldo aset dalam format ${currencySymbols[currency as SupportedCurrency] || currency}.`
+                      : `Asset balance in ${currencySymbols[currency as SupportedCurrency] || currency} format.`}
+                  </p>
                 </div>
               )}
 

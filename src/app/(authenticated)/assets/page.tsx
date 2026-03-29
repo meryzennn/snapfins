@@ -35,32 +35,29 @@ export default function AssetsPage() {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const pageSize = 10;
 
-  // States for top nav
-  const [showCurrencyDropdown, setShowCurrencyDropdown] = useState(false);
-  const [showUserDropdown, setShowUserDropdown] = useState(false);
-  const [userAvatar, setUserAvatar] = useState<string | null>(null);
-  const [userName, setUserName] = useState<string | null>(null);
-  const [userEmail, setUserEmail] = useState<string | null>(null);
-  const currencyDropdownRef = useRef<HTMLDivElement>(null);
-  const userDropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setMounted(true);
     fetchAssets();
 
     const handleClickOutside = (event: MouseEvent) => {
-        if (currencyDropdownRef.current && !currencyDropdownRef.current.contains(event.target as Node)) {
-          setShowCurrencyDropdown(false);
-        }
-        if (userDropdownRef.current && !userDropdownRef.current.contains(event.target as Node)) {
-          setShowUserDropdown(false);
-        }
-        if (!(event.target as Element).closest('.kebab-menu-container')) {
-            setOpenMenuId(null);
-        }
-      };
-      document.addEventListener("mousedown", handleClickOutside);
-      return () => document.removeEventListener("mousedown", handleClickOutside);
+      if (!(event.target as Element).closest('.kebab-menu-container')) {
+          setOpenMenuId(null);
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setOpenMenuId(null);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
   }, []);
 
   const fetchAssets = async () => {
@@ -69,10 +66,6 @@ export default function AssetsPage() {
     const { data: userData } = await supabase.auth.getUser();
 
     if (userData?.user) {
-      const meta = userData.user.user_metadata;
-      if (meta?.avatar_url) setUserAvatar(meta.avatar_url);
-      setUserName(meta?.full_name || meta?.name || userData.user.email?.split("@")[0] || "User");
-      setUserEmail(userData.user.email || "");
 
       const { data, error } = await supabase
         .from("assets")
@@ -229,35 +222,6 @@ export default function AssetsPage() {
     }
   };
 
-  const toggleTheme = () => {
-    const isDark = theme === "dark";
-    const newTheme = isDark ? "light" : "dark";
-
-    if (!document.startViewTransition) {
-      setTheme(newTheme);
-      return;
-    }
-
-    document.documentElement.classList.add(
-      isDark ? "transition-to-light" : "transition-to-dark",
-    );
-    const transition = document.startViewTransition(() => {
-      setTheme(newTheme);
-    });
-
-    transition.finished.finally(() => {
-      document.documentElement.classList.remove(
-        "transition-to-light",
-        "transition-to-dark",
-      );
-    });
-  };
-
-  const handleLogout = async () => {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    window.location.href = "/";
-  };
 
   const normalizedAssets = assets.map(asset => {
     const rawVal = Number(asset.current_value) || 0;
@@ -316,74 +280,6 @@ export default function AssetsPage() {
 
   return (
     <>
-       <nav className="sticky top-0 w-full z-50 bg-slate-50/80 dark:bg-slate-950/80 backdrop-blur-md border-b border-outline-variant/30">
-        <div className="flex justify-between items-center w-full px-4 sm:px-6 py-2 md:py-3 max-w-7xl mx-auto">
-          <div className="flex items-center gap-4 md:gap-8">
-            <Link href="/" className="flex items-center gap-2 cursor-pointer group">
-              <span className="text-lg md:text-xl font-extrabold tracking-tighter text-indigo-700 dark:text-indigo-300 font-headline group-hover:text-primary transition-colors">
-                SnapFins
-              </span>
-            </Link>
-            <div className="hidden md:flex items-center gap-6 font-manrope font-semibold tracking-tight text-sm">
-              <Link className="text-on-surface-variant hover:text-primary transition-colors" href="/dashboard">
-                {t("navDashboard")}
-              </Link>
-              <Link className="text-primary font-bold border-b-2 border-primary pb-1" href="/assets">
-                {t("navAsset")}
-              </Link>
-              <Link href="#" className="text-on-surface-variant hover:text-primary transition-colors">
-                {t("navAnalytics")}
-              </Link>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 md:gap-4">
-            <div className={`flex bg-surface-container-low border border-outline-variant/30 rounded-lg p-0.5 relative ${showCurrencyDropdown ? "z-[60]" : ""}`} ref={currencyDropdownRef}>
-              <button onClick={() => setShowCurrencyDropdown(!showCurrencyDropdown)} className="flex items-center gap-1 px-2 md:px-3 py-1.5 rounded-md text-[9px] md:text-[10px] font-black text-primary hover:bg-primary/5 transition-all cursor-pointer">
-                <span className="material-symbols-outlined text-xs md:text-sm">payments</span>
-                <span className="xs:inline">{currency}</span>
-                <span className="material-symbols-outlined text-[10px]">{showCurrencyDropdown ? "expand_less" : "expand_more"}</span>
-              </button>
-
-                <div className={`absolute right-0 lg:left-0 top-10 mt-2 w-48 bg-white dark:bg-slate-900 border border-outline-variant/20 rounded-2xl shadow-2xl z-[100] overflow-hidden text-[11px] dropdown-transition origin-top-right lg:origin-top-left ${showCurrencyDropdown ? "opacity-100 translate-y-0 scale-100 pointer-events-auto visible" : "opacity-0 -translate-y-8 scale-90 pointer-events-none invisible"}`}>
-                  <div className="px-3 py-2 border-b border-outline-variant/10 font-black text-[9px] uppercase tracking-widest text-on-surface-variant bg-slate-50 dark:bg-slate-800">{t("preferredCurrency")}</div>
-                  <div className="max-h-60 overflow-y-auto py-1 scrollbar-thin">
-                    {(Object.keys(currencySymbols) as SupportedCurrency[]).map((c) => (
-                        <button key={c} onClick={() => { setCurrency(c); setShowCurrencyDropdown(false); }} className={`w-full text-left px-4 py-2.5 hover:bg-primary/5 transition-colors cursor-pointer flex items-center justify-between ${currency === c ? "text-primary font-black bg-primary/5" : "text-on-surface font-semibold"}`}>
-                          <span className="flex items-center gap-2"><span className="text-primary/60 font-mono w-4">{currencySymbols[c]}</span>{c}</span>
-                          {currency === c && <span className="material-symbols-outlined text-sm">check</span>}
-                        </button>
-                    ))}
-                  </div>
-                </div>
-            </div>
-
-            <div className="relative" ref={userDropdownRef}>
-              <button onClick={() => setShowUserDropdown(!showUserDropdown)} className="w-8 h-8 rounded-full overflow-hidden border-2 border-outline-variant/30 flex items-center justify-center bg-primary text-white font-bold text-xs hover:border-primary transition-colors">
-                  {userAvatar ? <img src={userAvatar} alt="User Avatar" className="w-full h-full object-cover" /> : userName?.charAt(0).toUpperCase() || "U"}
-              </button>
-              <div className={`absolute right-0 top-12 mt-2 w-64 bg-white dark:bg-slate-900 border border-outline-variant/20 rounded-2xl shadow-2xl z-[100] overflow-hidden dropdown-transition origin-top-right ${showUserDropdown ? "opacity-100 translate-y-0 scale-100 pointer-events-auto visible" : "opacity-0 -translate-y-8 scale-90 pointer-events-none invisible"}`}>
-                  <div className="px-5 py-4 border-b border-outline-variant/10 bg-slate-50 dark:bg-slate-800/50">
-                    <p className="text-xs font-black uppercase tracking-widest text-primary mb-1">{t("profile")}</p>
-                    <p className="text-sm font-bold text-on-surface truncate">{userName}</p>
-                    <p className="text-[10px] text-on-surface-variant truncate opacity-60">{userEmail}</p>
-                  </div>
-                  <div className="p-2 space-y-1">
-                    {mounted && (
-                      <button onClick={toggleTheme} className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-on-surface hover:bg-surface-container-low transition-colors text-sm font-bold group">
-                        <div className="flex items-center gap-3"><span className="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors">{theme === "dark" ? "light_mode" : "dark_mode"}</span><span>{theme === "dark" ? "Light Mode" : "Dark Mode"}</span></div>
-                        <div className="w-8 h-4 bg-outline-variant/30 rounded-full relative"><div className={`absolute top-0.5 w-3 h-3 bg-primary rounded-full transition-all ${theme === "dark" ? "right-0.5" : "left-0.5"}`}></div></div>
-                      </button>
-                    )}
-                    <div className="h-px bg-outline-variant/10 my-1 mx-2" />
-                    <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-on-surface hover:bg-surface-container-low transition-colors text-sm font-bold group">
-                      <span className="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors">logout</span>{t("logout")}
-                    </button>
-                  </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </nav>
 
       <main className="flex-grow max-w-7xl mx-auto w-full px-4 sm:px-6 md:px-8 py-6 md:py-10 space-y-8 md:space-y-10 pb-32 md:pb-8">
         <header className="flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-6">
@@ -509,7 +405,7 @@ export default function AssetsPage() {
                 </div>
               </div>
 
-             <div className="flex-1 overflow-x-auto flex flex-col">
+             <div className="flex-1 overflow-x-auto flex flex-col min-h-[450px] custom-scrollbar">
                 {selectedIds.length > 0 && (
                   <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-6 py-4 bg-primary/5 border-b border-primary/20 animate-in slide-in-from-top-2 duration-300">
                     <div className="flex items-center gap-3">
@@ -543,8 +439,8 @@ export default function AssetsPage() {
                     </div>
                 ) : assets.length === 0 ? (
                     <div className="flex flex-col items-center justify-center p-12 text-center h-[340px]">
-                        <div className="w-16 h-16 bg-surface-container rounded-2xl flex items-center justify-center mb-4">
-                          <span className="material-symbols-outlined text-3xl text-primary opacity-80">
+                        <div className="w-16 h-16 bg-surface-container rounded-2xl flex items-center justify-center mb-6 shadow-sm border border-outline-variant/10">
+                          <span className="material-symbols-outlined text-4xl text-primary opacity-90 leading-none">
                               inventory_2
                           </span>
                         </div>
@@ -584,7 +480,7 @@ export default function AssetsPage() {
                 ) : (
                     <table className="w-full text-left excel-grid">
                         <thead>
-                            <tr className="bg-surface-container-lowest/80 dark:bg-slate-900/80 text-on-surface-variant text-[10px] uppercase tracking-widest font-black sticky top-0 z-10 backdrop-blur-md">
+                            <tr className="bg-slate-50 dark:bg-slate-900 text-on-surface-variant text-[10px] uppercase tracking-widest font-black sticky top-0 z-10 border-b border-outline-variant/10">
                                 <th className="p-4 pl-6 text-center w-12">
                                   <SelectionToggle
                                     checked={selectedIds.length > 0 && selectedIds.length === normalizedAssets.length}
@@ -597,7 +493,9 @@ export default function AssetsPage() {
                                 <th className="p-4 text-right whitespace-nowrap">{lang === "id" ? "Kuantitas" : "Quantity"}</th>
                                 <th className="p-4 text-right whitespace-nowrap">{lang === "id" ? "Nilai" : "Value"}</th>
                                 <th className="p-4 text-center whitespace-nowrap hidden sm:table-cell">{lang === "id" ? "Diperbarui" : "Updated"}</th>
-                                <th className="p-4 text-center whitespace-nowrap w-24"></th>
+                                <th className="p-4 text-center whitespace-nowrap w-24 sticky right-0 bg-slate-50 dark:bg-slate-900 z-30 border-l border-outline-variant/10">
+                                    {lang === "id" ? "Aksi" : "Actions"}
+                                </th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-outline-variant/10 text-sm font-semibold bg-white/20 dark:bg-slate-900/20 backdrop-blur-sm">
@@ -650,7 +548,7 @@ export default function AssetsPage() {
                                     <td className="p-4 text-center hidden sm:table-cell text-on-surface-variant font-bold text-[11px] uppercase tracking-widest">
                                         {new Date(asset.last_valued_at).toLocaleDateString(lang === "id" ? "id-ID" : "en-US", { month: "short", day: "numeric" })}
                                     </td>
-                                    <td className="p-4 text-center kebab-menu-container">
+                                    <td className="p-4 text-center kebab-menu-container sticky right-0 bg-white dark:bg-slate-950 z-20 border-l border-outline-variant/10">
                                         <div className="relative inline-block text-left">
                                             <button 
                                                 onClick={(e) => {
@@ -663,17 +561,17 @@ export default function AssetsPage() {
                                             </button>
                                             
                                             {openMenuId === asset.id && (
-                                                <div className="absolute right-0 mt-1 w-32 bg-surface dark:bg-slate-800 border border-outline-variant/20 rounded-xl shadow-lg z-50 py-1 origin-top-right animate-in fade-in zoom-in-95 duration-200">
+                                                <div className="absolute right-0 mt-1 w-32 bg-surface-container dark:bg-slate-800/95 backdrop-blur-md border border-outline-variant/30 rounded-xl shadow-[0_8px_25px_rgba(0,0,0,0.15)] z-50 py-1.5 origin-top-right animate-in fade-in zoom-in-95 duration-200 divide-y divide-outline-variant/10">
                                                     <button 
                                                         onClick={(e) => {
                                                             e.stopPropagation();
                                                             setEditingAsset(asset);
                                                             setOpenMenuId(null);
                                                         }}
-                                                        className="w-full text-left px-4 py-2 text-sm text-on-surface hover:bg-surface-container-high dark:hover:bg-slate-700 transition-colors flex items-center gap-2 cursor-pointer"
+                                                        className="w-full text-left px-4 py-2 hover:bg-primary/5 dark:hover:bg-primary/10 transition-colors flex items-center justify-between group/item cursor-pointer"
                                                     >
-                                                        <span className="material-symbols-outlined text-[16px]">edit</span>
-                                                        {lang === "id" ? "Edit" : "Edit"}
+                                                        <span className="text-[11px] font-bold text-on-surface group-hover/item:text-primary transition-colors">{t("btnEdit") || "Edit"}</span>
+                                                        <span className="material-symbols-outlined text-[16px] text-on-surface-variant group-hover/item:text-primary transition-colors">edit</span>
                                                     </button>
                                                     <button 
                                                         onClick={(e) => {
@@ -681,10 +579,10 @@ export default function AssetsPage() {
                                                             setDeletingAsset(asset);
                                                             setOpenMenuId(null);
                                                         }}
-                                                        className="w-full text-left px-4 py-2 text-sm text-error hover:bg-error/10 transition-colors flex items-center gap-2 cursor-pointer"
+                                                        className="w-full text-left px-4 py-2 hover:bg-error/5 dark:hover:bg-error/10 transition-colors flex items-center justify-between group/item cursor-pointer"
                                                     >
-                                                        <span className="material-symbols-outlined text-[16px]">delete</span>
-                                                        {lang === "id" ? "Hapus" : "Delete"}
+                                                        <span className="text-[11px] font-bold text-error">{t("btnDelete") || "Delete"}</span>
+                                                        <span className="material-symbols-outlined text-[16px] text-error">delete</span>
                                                     </button>
                                                 </div>
                                             )}
@@ -724,28 +622,6 @@ export default function AssetsPage() {
         </section>
       </main>
 
-      {/* Mobile Bottom Navigation - v1.0.1 */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-[100] px-4 pb-4">
-        <div className="bg-surface/80 dark:bg-slate-900/80 backdrop-blur-xl border border-outline-variant/20 rounded-2xl shadow-[0_-10px_40px_rgba(0,0,0,0.1)] flex justify-around items-center py-3">
-          <Link href="/dashboard" className="flex flex-col items-center gap-1 group opacity-60 hover:opacity-100 transition-opacity">
-            <div className="w-8 h-1 bg-transparent rounded-full mb-1"></div>
-            <span className="material-symbols-outlined text-on-surface-variant">dashboard</span>
-            <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">{t("navDashboard")}</span>
-          </Link>
-          
-          <Link href="/assets" className="flex flex-col items-center gap-1 group">
-            <div className="w-12 h-1 bg-primary rounded-full mb-1 opacity-100"></div>
-            <span className="material-symbols-outlined text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>account_balance_wallet</span>
-            <span className="text-[10px] font-bold text-primary uppercase tracking-widest">{t("navAsset")}</span>
-          </Link>
-
-          <Link href="#" className="flex flex-col items-center gap-1 group opacity-60 hover:opacity-100 transition-opacity">
-            <div className="w-8 h-1 bg-transparent rounded-full mb-1"></div>
-            <span className="material-symbols-outlined text-on-surface-variant">monitoring</span>
-            <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">{t("navAnalytics")}</span>
-          </Link>
-        </div>
-      </div>
       
 
       {showAddAssetModal && (

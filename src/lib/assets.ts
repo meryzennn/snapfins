@@ -93,16 +93,32 @@ export const getTotalAssetsValue = (assets: Asset[]): number => {
 };
 
 export const getLiquidAssetsValue = (assets: Asset[]): number => {
+  const liquidCategories: AssetCategory[] = ["Cash", "Bank", "E-wallet"];
+  
   return assets
-    .filter((a) => a.liquidity_level === "Liquid")
+    .filter((a) => {
+      // 1. Respect explicit 'Liquid' level
+      if (a.liquidity_level === "Liquid") return true;
+      // 2. Respect explicit 'Illiquid' level override
+      if (a.liquidity_level === "Illiquid") return false;
+      // 3. Fallback to category for missing/null liquidity_level
+      return liquidCategories.includes(a.category);
+    })
     .reduce((total, asset) => total + (Number(asset.current_value) || 0), 0);
 };
 
 export const getInvestedAssetsValue = (assets: Asset[]): number => {
+  const investmentCategories: AssetCategory[] = ["Crypto", "Stock / ETF", "Gold", "Property", "Vehicle", "Other"];
+  
   return assets
-    .filter((a) =>
-      ["Crypto", "Stock / ETF", "Gold", "Property"].includes(a.category),
-    )
+    .filter((a) => {
+      // 1. If explicit 'Liquid', it's not considered part of "Investments" summary for most users
+      if (a.liquidity_level === "Liquid") return false;
+      // 2. If explicit 'Illiquid', count it as investment/holding
+      if (a.liquidity_level === "Illiquid") return true;
+      // 3. Fallback to categories that are typically long-term holdings
+      return investmentCategories.includes(a.category);
+    })
     .reduce((total, asset) => total + (Number(asset.current_value) || 0), 0);
 };
 

@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useLang } from "@/hooks/useLang";
 import { type AssetCategory, ASSET_CATEGORIES, type ValuationMode } from "@/lib/assets";
+import { currencySymbols, type SupportedCurrency } from "@/lib/currency";
 
 interface EditAssetModalProps {
   initialData: any;
@@ -17,13 +18,23 @@ export default function EditAssetModal({ initialData, onClose, onSubmit }: EditA
   const [error, setError] = useState<string | null>(null);
 
   // Form State
+  const initialCurrency = (initialData.currency || "USD") as SupportedCurrency;
+  
+  // Format initial manual value for the text input
+  const formattedInitialValue = useMemo(() => {
+    const val = initialData.manual_value ?? (initialData.valuation_mode === "manual" ? initialData.current_value : null);
+    if (val === null || val === undefined) return "";
+    const locale = initialCurrency === "IDR" ? "id-ID" : "en-US";
+    return new Intl.NumberFormat(locale).format(Number(val));
+  }, [initialData.manual_value, initialData.current_value, initialData.valuation_mode, initialCurrency]);
+
   const [category, setCategory] = useState<AssetCategory>(initialData.category as AssetCategory || "Cash");
   const [valuationMode, setValuationMode] = useState<ValuationMode>(initialData.valuation_mode as ValuationMode || "manual");
   const [name, setName] = useState(initialData.name || "");
   const [symbol, setSymbol] = useState(initialData.symbol || "");
   const [quantity, setQuantity] = useState(initialData.quantity ? String(initialData.quantity) : "");
-  const [manualValue, setManualValue] = useState(initialData.manual_value ? String(initialData.manual_value) : initialData.valuation_mode === "manual" && initialData.current_value ? String(initialData.current_value) : "");
-  const [currency, setCurrency] = useState(initialData.currency || "USD");
+  const [manualValue, setManualValue] = useState(formattedInitialValue);
+  const [currency, setCurrency] = useState<SupportedCurrency>(initialCurrency);
   const [notes, setNotes] = useState(initialData.notes || "");
 
   const handleNext = () => {
@@ -52,7 +63,8 @@ export default function EditAssetModal({ initialData, onClose, onSubmit }: EditA
       let exchange = null;
 
       if (valuationMode === "manual") {
-          const m = parseFloat(manualValue || "0");
+          const raw = manualValue.replace(/[^0-9]/g, "");
+          const m = raw ? parseInt(raw, 10) : 0;
           if (isNaN(m)) throw new Error("Invalid manual value");
           finalManualValue = m;
           finalCurrentValue = m;
@@ -294,17 +306,56 @@ export default function EditAssetModal({ initialData, onClose, onSubmit }: EditA
                     {valuationMode === "manual" && (
                          <div className="flex flex-col gap-2">
                             <label className="block text-xs font-black uppercase tracking-widest text-on-surface-variant">
-                                {lang === "id" ? "Nilai Saat Ini" : "Current Value"} ({currency}) <span className="text-error">*</span>
+                                {lang === "id" ? "Nilai Saat Ini" : "Current Value"} <span className="text-error">*</span>
                             </label>
-                            <input
-                                type="number"
-                                required
-                                step="any"
-                                value={manualValue}
-                                onChange={e => setManualValue(e.target.value)}
-                                className="w-full bg-surface-container-low dark:bg-slate-800 border-2 border-outline-variant/20 focus:border-primary rounded-xl px-4 py-3 text-on-surface font-black text-lg tabular-nums placeholder:text-outline/50 transition-colors outline-none"
-                                placeholder="0.00"
-                            />
+                            <div className="flex bg-surface-container-low dark:bg-slate-800 border-2 border-outline-variant/20 focus-within:border-primary rounded-xl overflow-hidden transition-colors">
+                                <div className="relative shrink-0 flex items-center bg-surface-container-low dark:bg-slate-800/50">
+                                    <select
+                                        value={currency}
+                                        onChange={(e) => {
+                                            const newCurrency = e.target.value as SupportedCurrency;
+                                            const raw = manualValue.replace(/[^0-9]/g, "");
+                                            if (raw) {
+                                                const locale = newCurrency === "IDR" ? "id-ID" : "en-US";
+                                                const numericVal = parseInt(raw, 10);
+                                                const fmt = new Intl.NumberFormat(locale).format(numericVal);
+                                                setCurrency(newCurrency);
+                                                setManualValue(fmt);
+                                            } else {
+                                                setCurrency(newCurrency);
+                                            }
+                                        }}
+                                        className="bg-transparent text-on-surface text-[11px] font-black pl-4 pr-8 py-3 focus:outline-none cursor-pointer w-24 shrink-0 appearance-none h-full"
+                                    >
+                                        {Object.keys(currencySymbols).map((c) => (
+                                            <option key={c} value={c} className="bg-surface dark:bg-slate-900 text-on-surface">
+                                                {c}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <span className="material-symbols-outlined absolute right-2 pointer-events-none text-xs text-on-surface-variant opacity-50">
+                                        expand_more
+                                    </span>
+                                </div>
+                                <input
+                                    type="text"
+                                    required
+                                    value={manualValue}
+                                    onChange={(e) => {
+                                        const raw = e.target.value.replace(/[^0-9]/g, "");
+                                        if (raw) {
+                                            const locale = currency === "IDR" ? "id-ID" : "en-US";
+                                            const numericVal = parseInt(raw, 10);
+                                            const fmt = new Intl.NumberFormat(locale).format(numericVal);
+                                            setManualValue(fmt);
+                                        } else {
+                                            setManualValue("");
+                                        }
+                                    }}
+                                    className="w-full bg-transparent px-4 py-3 text-on-surface font-black text-lg tabular-nums placeholder:text-outline/40 transition-colors outline-none border-l border-outline-variant/20"
+                                    placeholder={currency === "IDR" ? "50.000" : "50,000"}
+                                />
+                            </div>
                         </div>
                     )}
                 </div>
