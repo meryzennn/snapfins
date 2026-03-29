@@ -18,6 +18,7 @@ import { deleteUserAccountAction } from "@/app/actions/user";
 import { useScrollLock } from "@/hooks/useScrollLock";
 import Link from "next/link";
 import SelectionToggle from "@/components/SelectionToggle";
+import { DashboardSkeleton } from "@/components/Skeleton";
 const assignColor = (category: string) => {
   const map: Record<string, string> = {
     DINING: "purple",
@@ -1174,12 +1175,8 @@ export default function DashboardPage() {
     }
   };
 
-  if (!mounted) {
-    return (
-      <div className="min-h-screen bg-surface flex items-center justify-center">
-        <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
-      </div>
-    );
+  if (!mounted || isLoadingTx) {
+    return <DashboardSkeleton />;
   }
 
   return (

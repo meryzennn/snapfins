@@ -19,6 +19,7 @@ import {
   getInvestedAssetsValue,
   getAssetsByCategory,
 } from "@/lib/assets";
+import { AnalyticsSkeleton } from "@/components/Skeleton";
 import {
   ResponsiveContainer,
   LineChart,
@@ -421,14 +422,7 @@ export default function AnalyticsPage() {
 
   // ── Loading / skeleton ────────────────────────────────────────────────────
   if (!mounted || isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <span className="material-symbols-outlined text-4xl text-primary animate-spin">monitoring</span>
-          <p className="text-on-surface-variant font-bold text-sm">Loading analytics…</p>
-        </div>
-      </div>
-    );
+    return <AnalyticsSkeleton />;
   }
 
   const hasTransactions = transactions.length > 0;

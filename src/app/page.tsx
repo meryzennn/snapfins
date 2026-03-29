@@ -8,6 +8,7 @@ import Link from "next/link";
 import { createClient } from "@/utils/supabase/client";
 import SupportModal from "@/components/SupportModal";
 import { useScrollLock } from "@/hooks/useScrollLock";
+import { LandingPageSkeleton } from "@/components/Skeleton";
 
 export default function LandingPage() {
   const { theme, setTheme } = useTheme();
@@ -103,6 +104,8 @@ export default function LandingPage() {
       },
     });
   };
+
+  if (!mounted) return <LandingPageSkeleton />;
 
   return (
     <div className="font-body bg-surface text-on-surface antialiased min-h-screen scroll-smooth">

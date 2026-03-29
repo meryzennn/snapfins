@@ -17,6 +17,7 @@ import {
   getInvestedAssetsValue,
   getAssetsByCategory,
 } from "@/lib/assets";
+import { AssetsSkeleton } from "@/components/Skeleton";
 
 export default function AssetsPage() {
   const { theme, setTheme } = useTheme();
@@ -270,12 +271,8 @@ export default function AssetsPage() {
       return colors[cat] || "bg-gray-500";
   };
 
-  if (!mounted) {
-    return (
-      <div className="min-h-screen bg-surface flex items-center justify-center">
-        <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
-      </div>
-    );
+  if (!mounted || isLoading) {
+    return <AssetsSkeleton />;
   }
 
   return (
