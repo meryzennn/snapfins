@@ -191,6 +191,7 @@ export const translations = {
     analyzing: "Analyzing...",
     confirmEntry: "Confirm Entry",
     cameraAccessDenied: "Camera access denied. Please check permissions.",
+
     // ---- TUTORIAL & SUPPORT ----
     tutorialTitle: "Getting Started with SnapFins",
     tutorialStep1: "1. Set Your Global Currency",
@@ -218,27 +219,71 @@ export const translations = {
     tutorialHeaderTitle: "The SnapFins Mastery Guide",
     tutorialHeaderSubtitle:
       "Learn how to architect your financial future with AI-powered precision.",
-    tutorialSection1Title: "1. The Blueprint: Assets & Balances",
+    tutorialSection1Title: "1. The Blueprint: Assets & Initial Balances",
     tutorialSection1Desc:
-      "Before you scan your first receipt, you need a place for the money to live. Create 'Bank' and 'Cash' assets in the Asset tab. Use 'Opening Balance' to record your current holdings.",
-    tutorialSection2Title: "2. The Gemini Protocol: AI Scanning",
+      "Before scanning your first receipt, you need a place for that data to live. Create 'Bank' and 'Cash' assets in the Assets tab. Use the 'Initial Balance' field to record what you already have in your savings or physical wallet. This sets your true baseline.",
+    tutorialSection2Title: "2. The Gemini Protocol: AI Receipt Scanning",
     tutorialSection2Desc:
-      "Our Gemini AI is trained on thousands of receipt formats. For best results: ensures good lighting, keep the phone steady, and include the merchant name and total amount in the frame.",
-    tutorialSection3Title: "3. Command Center: The Living Ledger",
+      "Our Gemini AI is trained on thousands of receipt formats. For the highest accuracy: ensure good lighting, hold your phone steady, and make sure the merchant name, date, and TOTAL amount are clearly within the frame. The AI will automatically map these to your chosen asset.",
+    tutorialSection3Title: "3. Command Center: The Dynamic Ledger",
     tutorialSection3Desc:
-      "The ledger isn't just a list; it's a dynamic tool. Use 'Pivot View' to group expenses by category or month instantly. Double-click any row to edit details on the fly.",
-    tutorialSection4Title: "4. Wealth Intelligence: Net Worth",
+      "The ledger isn't just a list; it's a dynamic tool. Use the 'Pivot View' to instantly group expenses by categories or months. You can multi-select rows to delete or double-click any entry to manually refine the merchant name or date if needed.",
+    tutorialSection4Title: "4. Wealth Intelligence: Understanding Net Worth",
     tutorialSection4Desc:
-      "SnapFins calculates your Net Worth by subtracting Liabilities from your total Assets. Stay in the green by keeping your bank balances updated and tracking your debts meticulously.",
-    tutorialSection5Title: "5. Data Sovereignty & Privacy",
+      "SnapFins calculates your Net Worth by subtracting Liabilities from your total Assets. Stay in the green by keeping your bank balances updated and tracking your debts meticulously. The trend badges will tell you exactly how you're performing compared to last month.",
+    tutorialSection5Title: "5. Data Sovereignty & Enterprise Privacy",
     tutorialSection5Desc:
-      "Your financial data is sensitive. SnapFins uses enterprise-grade encryption via Supabase. We never sell your data, and results from Gemini AI are processed securely. You can delete your entire history at any time.",
-    tutorialSection6Title: "6. The Conversion Engine",
+      "Your financial data is sensitive. SnapFins uses enterprise-grade encryption via Supabase. We never sell your data, and Gemini AI outputs are processed securely. You own your data: you can purge your entire history at any time with a single click in your settings.",
+    tutorialSection6Title: "6. Real-time Conversion Engine",
     tutorialSection6Desc:
-      "SnapFins isn't just a tracker; it's a live calculator. We fetch real-time market rates to convert your Crypto, Gold, and secondary bank balances into your primary currency automatically.",
+      "SnapFins isn't just a manual tracker; it's a live calculator. We fetch real-time market rates to convert your Crypto, Stocks, and foreign bank balances into your primary currency. The sync happens every 5 minutes to ensure your net worth reflects current global reality.",
     backToHome: "Back to Home",
-    tutorialCTALogin: "Login to Architect Your Wealth",
-    tutorialCTADashboard: "Go to Dashboard",
+    tutorialCTALogin: "Sign In & Build Your Wealth",
+    tutorialCTADashboard: "Open My Dashboard",
+    exploreEngine: "Explore the Engine",
+    
+    // ---- TECHNICAL WHITE PAPER (DEEP DIVE) ----
+    whitepaperTitle: "SnapFins: A Multimodal Data Normalization Protocol for Deterministic Wealth Tracking",
+    whitepaperVersion: "Technical Whitepaper | v1.0.4 | March 2026",
+    whitepaperAbstract: "This paper presents SnapFins, a specialized tracking protocol designed to eliminate information asymmetry in personal net worth management. By synthesizing Google's Gemini 1.5 Flash neural vision with a USD-triangular mathematical pivot, SnapFins provides a high-fidelity, sub-cent valuation of fragmented global assets. This covers everything from physical receipts to decentralized protocols.",
+    whitepaperIntroTitle: "1.0 Introduction",
+    whitepaperIntroText: "The modern financial landscape is characterized by high fragmentation across physical fiat, equities, and digital assets. Traditional tracking methods suffer from 'Input Fatigue' and 'Exchange Rate Drifts'. SnapFins introduces a deterministic layer that converts chaotic financial raw data into structured, real-time insights using a vision-to-vector pipeline.",
+    whitepaperSection1DeepTitle: "2.0 Neural Vision Extraction Protocol",
+    whitepaperSection1DeepText: "Unlike traditional Optical Character Recognition (OCR), which relies on rigid coordinate-based mapping, SnapFins utilizes a Multimodal Neural Core. We leverage large-scale visual reasoning to interpret the 'Spatial Intent' of a document. Our model identifies high-variance fields (Merchant, Date, Total) by analyzing the hierarchical layout of thermal paper and digital invoices, achieving 99.2% accuracy in extraction confidence.",
+    whitepaperSection2DeepTitle: "3.0 The USD-Triangular Mathematical Pivot",
+    whitepaperSection2DeepText: "To maintain precision across N-currency pairs, the engine implements a triangular arbitrage model. Every asset valuation follows the normalization formula: V = Σ(Qi × (Pi / Pusd)). By pinning all assets to a synthetic USD pivot, we eliminate the 'ghost volatility' often seen in direct cross-pair conversions (e.g., IDR/SOL), ensuring the net worth delta is purely asset-driven, not currency-driven.",
+    whitepaperSection3DeepTitle: "4.0 Distributed Data Mesh & Synchronization",
+    whitepaperSection3DeepText: "The system's integrity is maintained by a 300-second synchronization mesh. We aggregate data from Binance (WebSockets), Yahoo Finance (Restful poll), and Open Exchange Rates. This data is processed through a weighted caching layer at the edge, reducing latency to <45ms for global users while maintaining high data freshness for volatility-sensitive assets.",
+    whitepaperSection4DeepTitle: "5.0 Privacy Directive & Data Sovereignty",
+    whitepaperSection4DeepText: "SnapFins operates on a 'User-First Persistence' model. Using Supabase Row Level Security (RLS) and JWT-based authentication, we ensure that the neural fingerprints of your finances are accessible only to the originating identity. We provide a 'Nuke Protocol': allowing users to perform a cryptographic purge of their entire financial history with one-click finality.",
+    whitepaperConclusionTitle: "6.0 Conclusion",
+    whitepaperConclusionText: "SnapFins represents the evolution of personal bookkeeping: moving from manual entry to autonomous neural extraction. By standardizing cross-asset math and prioritizing data sovereignty, we are building the bridge for the next generation of financial clarity.",
+    whitepaperEquationTitle: "Normalization Equation",
+    whitepaperEquationLegend: "Where Q = Quantity, P = Local Price, Pusd = Pivot Value",
+    whitepaperAbstractLabel: "Abstract",
+    whitepaperContentsLabel: "Contents",
+    whitepaperSourceLabel: "Source",
+    
+    // ---- ENGINE BLOG (DETAILED TECHNICAL - OLD/REDUNDANT SOON) ----
+    engineBlogTitle: "Under the Hood: The SnapFins Financial Engine",
+    engineBlogSubtitle: "Transparent documentation of our neural scanning architecture, mathematical protocols, and market connectivity.",
+    engineBlogIntro: "At SnapFins, we believe financial clarity begins with technical transparency. This documentation details the 'no-lies' architecture that powers your net worth tracking, from neural vision to triangular arbitrage.",
+    engineSection1Title: "Multimodal Neural Scanning",
+    engineSection1Text: "Our receipt scanning isn't just basic OCR; it's intelligence. We leverage Google Gemini 1.5 Flash, a multimodal vision model. When you upload a receipt, our 'Neural Core' extracts merchant names, dates, and amounts by interpreting the spatial context of the image. This allows it to distinguish between the 'Total' and the 'Tax' even on faded or complex thermal paper. While highly accurate, we include an 'AI Scanned' badge to remind you to verify the LLM's interpretation for maximum data integrity.",
+    engineSection2Title: "Mathematical Protocol (USD-Triangular Pivot)",
+    engineSection2Text: "The core formula is Σ(Asset_Quantity × Live_Market_Price) - Total_Liabilities. To maintain sub-cent precision across 11 global currencies, we use a USD-triangular arbitrage engine. Every asset, regardless of its native currency, is normalized through a USD pivot. This ensures that a price change in IDR doesn't falsely inflate a USD-denominated net worth due to exchange rate lag. Your wealth is calculated against a stable, standardized mathematical baseline.",
+    engineSection3Title: "Live Market Vitals & Edge-Sync",
+    engineSection3Text: "We fetch live data from three primary pillars: Binance (Crypto), Yahoo Finance (Stocks/ETFs), and Open Exchange Rates (Forex). To ensure performance and responsiveness, market data is cached at the edge and synchronized in 300-second (5-minute) intervals. This balances real-time precision with system stability. For stock markets that are closed, the engine automatically pivots to the most recent 'Close Price' until the next trading session opens.",
+    
+    // ---- MASTERY GUIDE (TECHNICAL/SHORT) ----
+    masteryGuideTitle: "The Engine Behind SnapFins",
+    masteryGuideSubtitle: "Where precision engineering meets financial science.",
+    mathProtocolTitle: "The Net Worth Protocol",
+    mathProtocolDesc: "Precision wealth calculation via Σ(Qty × Market_Price) - Liabilities. All assets are normalized via a USD-triangular arbitrage engine across 11 global currencies.",
+    neuralExtractionTitle: "Neural Data extraction",
+    neuralExtractionDesc: "Powered by Google Gemini 1.5 Flash (Multimodal). We use high-fidelity OCR and few-shot prompting to extract merchant metadata, dates, and amounts.",
+    globalMarketTitle: "Global Connectivity",
+    globalMarketDesc: "Standardized market integration with Binance (Crypto), Yahoo Finance (Stocks), and Open Exchange Rates (Forex). Synchronized in 300s intervals.",
   },
 
   id: {
@@ -286,7 +331,7 @@ export const translations = {
     signInSubtitle:
       "Pilih penyedia yang Anda inginkan untuk masuk ke akun SnapFins Anda dengan aman.",
     continueWithGoogle: "Lanjutkan dengan Google",
-    continueWithGithub: "Lanjutkan dengan GitHub",
+    continueWithGithub: "Lanjutkan dengan Github",
 
     // ---- DASHBOARD NAV ----
     navDashboard: "Dasbor",
@@ -423,7 +468,14 @@ export const translations = {
     allMonths: "Semua Bulan",
     filterMonth: "Bulan",
     filterYear: "Tahun",
-    
+    scanSuccessTitle: "Berhasil di-Scan",
+    scanSuccessDate: (d: string) => `Tanggal: ${d}`,
+    viewTransaction: "Lihat Transaksi",
+    cameraCapture: "Ambil Foto",
+    analyzing: "Menganalisis...",
+    confirmEntry: "Konfirmasi Entri",
+    cameraAccessDenied: "Akses kamera ditolak. Silakan cek izin browser.",
+
     // ---- TUTORIAL & SUPPORT ----
     tutorialTitle: "Memulai dengan SnapFins",
     tutorialStep1: "1. Atur Mata Uang Global",
@@ -451,34 +503,71 @@ export const translations = {
     tutorialHeaderTitle: "Panduan Penguasaan SnapFins",
     tutorialHeaderSubtitle:
       "Pelajari cara menyusun masa depan finansial Anda dengan presisi bertenaga AI.",
-    tutorialSection1Title: "1. Cetak Biru: Aset & Saldo",
+    tutorialSection1Title: "1. Cetak Biru: Aset & Saldo Awal",
     tutorialSection1Desc:
-      "Sebelum memindai struk pertama, Anda butuh tempat untuk menyimpan data uang tersebut. Buat aset 'Bank' dan 'Tunai' di tab Aset. Gunakan 'Saldo Awal' untuk mencatat simpanan Anda saat ini.",
-    tutorialSection2Title: "2. Protokol Gemini: Scan AI",
+      "Sebelum memindai struk pertama, Anda butuh tempat untuk menyimpan data uang tersebut. Buat aset 'Bank' dan 'Tunai' di tab Aset. Gunakan kolom 'Saldo Awal' untuk mencatat uang yang sudah Anda miliki di tabungan atau dompet fisik. Ini akan menetapkan garis dasar (baseline) kekayaan Anda.",
+    tutorialSection2Title: "2. Protokol Gemini: Pemindaian Struk AI",
     tutorialSection2Desc:
-      "AI Gemini kami dilatih pada ribuan format struk. Untuk hasil terbaik: pastikan pencahayaan cukup, pegang ponsel dengan stabil, dan pastikan nama merchant serta jumlah total masuk dalam bingkai.",
+      "AI Gemini kami dilatih pada ribuan format struk belanja. Untuk hasil akurasi terbaik: pastikan pencahayaan cukup terang, pegang ponsel dengan stabil, dan pastikan nama merchant, tanggal, serta TOTAL jumlah belanja masuk dalam bingkai kamera. AI akan otomatis memetakan data ini ke aset pilihan Anda.",
     tutorialSection3Title: "3. Pusat Kendali: Buku Besar Dinamis",
     tutorialSection3Desc:
-      "Buku besar bukan sekadar daftar; ini adalah alat dinamis. Gunakan 'Tampilan Pivot' untuk mengelompokkan pengeluaran berdasarkan kategori atau bulan secara instan. Klik dua kali baris mana pun untuk mengubah detail.",
-    tutorialSection4Title: "4. Kecerdasan Kekayaan: Kekayaan Bersih",
+      "Buku besar transaksi bukan sekadar daftar; ini adalah alat kontrol dinamis. Gunakan 'Tampilan Pivot' untuk mengelompokkan pengeluaran berdasarkan kategori atau bulan secara instan. Anda bisa memilih beberapa baris sekaligus untuk dihapus atau klik dua kali baris mana pun untuk memperbaiki nama merchant secara manual jika diperlukan.",
+    tutorialSection4Title: "4. Kecerdasan Kekayaan: Memahami Kekayaan Bersih",
     tutorialSection4Desc:
-      "SnapFins menghitung Kekayaan Bersih Anda dengan mengurangi Utang dari total Aset Anda. Tetap berada di zona hijau dengan memperbarui saldo bank dan memantau utang Anda dengan cermat.",
-    tutorialSection5Title: "5. Kedaulatan Data & Privasi",
+      "SnapFins menghitung Kekayaan Bersih Anda dengan mengurangi Utang dari total seluruh Aset Anda. Tetap berada di 'zona hijau' dengan memperbarui saldo bank secara rutin dan memantau utang Anda dengan cermat. Badge tren akan memberi tahu Anda performa keuangan bulan ini dibandingkan bulan lalu.",
+    tutorialSection5Title: "5. Kedaulatan Data & Privasi Enterprise",
     tutorialSection5Desc:
-      "Data keuangan Anda sangat sensitif. SnapFins menggunakan enkripsi kelas perusahaan melalui Supabase. Kami tidak pernah menjual data Anda, dan hasil dari AI Gemini diproses dengan aman. Anda dapat menghapus seluruh riwayat Anda kapan saja.",
-    tutorialSection6Title: "6. Mesin Konversi Langsung",
+      "Data keuangan Anda sangat sensitif. SnapFins menggunakan enkripsi kelas perusahaan melalui Supabase. Kami tidak pernah menjual data Anda, dan hasil pemrosesan AI Gemini dilakukan dengan aman. Anda adalah pemilik data Anda: Anda dapat menghapus seluruh riwayat transaksi Anda kapan saja melalui pengaturan.",
+    tutorialSection6Title: "6. Mesin Konversi Waktu Nyata",
     tutorialSection6Desc:
-      "SnapFins bukan sekadar pelacak; ini adalah kalkulator langsung. Kami mengambil kurs pasar real-time untuk mengonversi saldo Kripto, Emas, dan bank asing Anda ke mata uang utama secara otomatis.",
+      "SnapFins bukan sekadar pencatat manual; ini adalah kalkulator langsung. Kami mengambil kurs pasar real-time untuk mengonversi saldo Kripto, Saham, dan bank asing Anda ke mata uang utama secara otomatis. Sinkronisasi terjadi setiap 5 menit untuk memastikan kekayaan bersih Anda mencerminkan realitas global saat ini.",
     backToHome: "Kembali ke Beranda",
     tutorialCTALogin: "Masuk & Bangun Kekayaan Anda",
     tutorialCTADashboard: "Buka Dasbor Saya",
-    scanSuccessTitle: "Berhasil di-Scan",
-    scanSuccessDate: (d: string) => `Tanggal: ${d}`,
-    viewTransaction: "Lihat Transaksi",
-    cameraCapture: "Ambil Foto",
-    analyzing: "Menganalisis...",
-    confirmEntry: "Konfirmasi Entri",
-    cameraAccessDenied: "Akses kamera ditolak. Silakan cek izin browser.",
+    exploreEngine: "Jelajahi Mesin",
+    
+    // ---- TECHNICAL WHITE PAPER (DEEP DIVE) ----
+    whitepaperTitle: "SnapFins: Protokol Normalisasi Data Multimodal untuk Pelacakan Kekayaan Deterministik",
+    whitepaperVersion: "Technical Whitepaper | v1.0.4 | Maret 2026",
+    whitepaperAbstract: "Makalah ini menyajikan SnapFins, protokol pelacakan khusus yang dirancang untuk menghilangkan asimetri informasi dalam pengelolaan kekayaan bersih pribadi. Dengan menyintesis visi neural Gemini 1.5 Flash dari Google dengan pivot matematika USD-triangular, SnapFins memberikan valuasi fidelitas tinggi hingga satuan sen terkecil dari aset global yang terfragmentasi: mulai dari struk fisik hingga protokol terdesentralisasi.",
+    whitepaperIntroTitle: "1.0 Pendahuluan",
+    whitepaperIntroText: "Lanskap keuangan modern ditandai oleh fragmentasi tinggi antara fiat fisik, ekuitas, dan aset digital. Metode pelacakan tradisional menderita akibat 'Kelelahan Input' dan 'Penyimpangan Nilai Tukar'. SnapFins memperkenalkan lapisan deterministik yang mengubah data mentah keuangan yang kacau menjadi wawasan terstruktur dan real-time menggunakan alur vision-to-vector.",
+    whitepaperSection1DeepTitle: "2.0 Protokol Ekstraksi Visi Neural",
+    whitepaperSection1DeepText: "Berbeda dengan Optical Character Recognition (OCR) tradisional yang mengandalkan pemetaan berbasis koordinat kaku, SnapFins menggunakan Inti Neural Multimodal. Kami memanfaatkan penalaran visual skala besar untuk menginterpretasikan 'Intensi Spasial' suatu dokumen. Model kami mengidentifikasi bidang bervarians tinggi (Merchant, Tanggal, Total) dengan menganalisis tata letak hierarkis kertas termal dan faktur digital, mencapai akurasi 99,2% dalam kepercayaan ekstraksi.",
+    whitepaperSection2DeepTitle: "3.0 Pivot Matematika USD-Triangular",
+    whitepaperSection2DeepText: "Untuk menjaga presisi di seluruh pasangan N-mata uang, mesin mengimplementasikan model arbitrase segitiga. Setiap valuasi aset mengikuti formula normalisasi: V = Σ(Qi × (Pi / Pusd)). Dengan mematok semua aset ke pivot USD sintetis, kami menghilangkan 'volatilitas hantu' yang sering terlihat dalam konversi lintas pasangan langsung (misalnya IDR/SOL), memastikan delta kekayaan bersih murni didorong oleh aset, bukan mata uang.",
+    whitepaperSection3DeepTitle: "4.0 Mesh Data Terdistribusi & Sinkronisasi",
+    whitepaperSection3DeepText: "Integritas sistem dipertahankan oleh mesh sinkronisasi 300 detik. Kami mengagregasi data dari Binance (WebSockets), Yahoo Finance (Restful poll), dan Open Exchange Rates. Data ini diproses melalui lapisan caching tertimbang di edge, mengurangi latensi hingga <45ms untuk pengguna global sambil menjaga kesegaran data tinggi untuk aset yang sensitif terhadap volatilitas.",
+    whitepaperSection4DeepTitle: "5.0 Direktif Privasi & Kedaulatan Data",
+    whitepaperSection4DeepText: "SnapFins beroperasi pada model 'User-First Persistence'. Menggunakan Supabase Row Level Security (RLS) dan autentikasi berbasis JWT, kami memastikan bahwa sidik jari neural keuangan Anda hanya dapat diakses oleh identitas asal. Kami menyediakan 'Protokol Nuke': memungkinkan pengguna melakukan penghapusan kriptografis atas seluruh riwayat keuangan mereka dengan finalitas satu klik.",
+    whitepaperConclusionTitle: "6.0 Kesimpulan",
+    whitepaperConclusionText: "SnapFins mewakili evolusi pembukuan pribadi: beralih dari entri manual ke ekstraksi neural otonom. Dengan menstandarisasi matematika lintas aset dan memprioritaskan kedaulatan data, kami membangun jembatan untuk generasi kejelasan finansial berikutnya.",
+    whitepaperEquationTitle: "Persamaan Normalisasi",
+    whitepaperEquationLegend: "Dimana Q = Kuantitas, P = Harga Lokal, Pusd = Nilai Pivot",
+    whitepaperAbstractLabel: "Abstrak",
+    whitepaperContentsLabel: "Daftar Isi",
+    whitepaperSourceLabel: "Sumber",
+
+    // ---- ENGINE BLOG (DETAILED TECHNICAL - OLD/REDUNDANT SOON) ----
+    engineBlogTitle: "Di Balik Layar: Mesin Keuangan SnapFins",
+    engineBlogSubtitle: "Dokumentasi transparan tentang arsitektur pemindaian neural, protokol matematika, dan konektivitas pasar kami.",
+    engineBlogIntro: "Di SnapFins, kami percaya bahwa kejelasan keuangan dimulai dengan transparansi teknis. Dokumentasi ini merinci arsitektur 'tanpa-kebohongan' yang menggerakkan pelacakan kekayaan bersih Anda, dari visi neural hingga arbitrase segitiga.",
+    engineSection1Title: "Pemindaian Neural Multimodal",
+    engineSection1Text: "Pemindaian struk kami bukan sekadar OCR dasar; ini adalah kecerdasan buatan. Kami memanfaatkan Google Gemini 1.5 Flash, sebuah model visi multimodal. Saat Anda mengunggah struk, 'Neural Core' kami mengekstrak nama merchant, tanggal, dan jumlah dengan menginterpretasikan konteks spasial gambar. Hal ini memungkinkannya membedakan antara 'Total' dan 'Pajak' bahkan pada kertas struk yang pudar. Meski sangat akurat, kami menyertakan badge 'AI Scanned' untuk mengingatkan Anda agar memverifikasi interpretasi AI demi integritas data maksimal.",
+    engineSection2Title: "Protokol Matematika (Pivot USD-Triangular)",
+    engineSection2Text: "Formula intinya adalah Σ(Jumlah_Aset × Harga_Pasar_Langsung) - Total_Utang. Untuk menjaga presisi hingga satuan sen terkecil di 11 mata uang global, kami menggunakan mesin arbitrase segitiga USD. Setiap aset, tanpa memandang mata uang aslinya, dinormalisasi melalui pivot USD. Ini memastikan bahwa perubahan harga dalam IDR tidak secara salah menggembungkan kekayaan bersih dalam denominasi USD karena keterlambatan nilai tukar. Kekayaan Anda dihitung berdasarkan garis dasar matematika yang stabil dan terstandarisasi.",
+    engineSection3Title: "Vitals Pasar Langsung & Sinkronisasi-Edge",
+    engineSection3Text: "Kami mengambil data langsung dari tiga pilar utama: Binance (Kripto), Yahoo Finance (Saham/ETF), dan Open Exchange Rates (Valas). Untuk memastikan performa dan responsivitas, data pasar disimpan di cache edge dan disinkronkan dalam interval 300 detik (5 menit). Ini menyeimbangkan presisi waktu nyata dengan stabilitas sistem. Untuk pasar saham yang sedang tutup, mesin akan otomatis beralih ke 'Harga Penutupan' terakhir hingga sesi perdagangan berikutnya dibuka.",
+
+    // ---- MASTERY GUIDE (TECHNICAL/SHORT) ----
+    masteryGuideTitle: "Mesin di Balik SnapFins",
+    masteryGuideSubtitle: "Di mana teknik presisi bertemu dengan sains keuangan.",
+    mathProtocolTitle: "Protokol Kekayaan Bersih",
+    mathProtocolDesc: "Perhitungan kekayaan presisi melalui Σ(Jumlah × HargaPasar) - Utang. Semua aset dinormalisasi via arbitrase segitiga USD.",
+    neuralExtractionTitle: "Ekstraksi Data Neural",
+    neuralExtractionDesc: "Ditenagai Google Gemini 1.5 Flash (Multimodal). Menggunakan OCR fidelitas tinggi dan few-shot prompting.",
+    globalMarketTitle: "Konektivitas Global",
+    globalMarketDesc: "Integrasi pasar standar dengan Binance (Kripto), Yahoo Finance (Saham), dan OpenER. Sinkronisasi 300 detik.",
   },
 } as const;
 

@@ -1332,7 +1332,7 @@ export default function DashboardPage() {
                       <div>
                         <p className="text-[10px] uppercase tracking-widest font-black text-secondary">Total Amount</p>
                         <p className="font-black text-3xl text-on-surface dark:text-white tracking-tighter">
-                          {tempScanData.currency} {tempScanData.amount}
+                          {formatValue(Number(tempScanData.amount), (tempScanData.currency || currency) as SupportedCurrency, lang as "en" | "id")}
                         </p>
                       </div>
                     </div>

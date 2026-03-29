@@ -214,9 +214,9 @@ export default function LandingPage() {
             )}
             <button 
               onClick={() => setShowSupportModal(true)} 
-              className="bg-surface-container-high dark:bg-slate-800 px-10 py-5 rounded-lg text-on-surface dark:text-white font-bold text-lg border border-outline-variant/30 hover:bg-surface-container-highest dark:hover:bg-slate-700 transition-all active:scale-95 w-full sm:w-auto text-center flex items-center justify-center gap-2 group shadow-sm"
+              className="bg-surface-container-high dark:bg-slate-800 px-8 py-5 rounded-lg text-on-surface dark:text-white font-bold text-lg border border-outline-variant/30 hover:bg-surface-container-highest dark:hover:bg-slate-700 transition-all active:scale-95 w-full sm:w-auto text-center flex items-center justify-center gap-2 group shadow-sm"
             >
-              <span className="material-symbols-outlined text-primary group-hover:scale-125 transition-transform">favorite</span>
+              <span className="material-symbols-outlined text-rose-500 group-hover:scale-125 transition-transform">favorite</span>
               {t('supportCreator')}
             </button>
           </div>
@@ -377,7 +377,7 @@ export default function LandingPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {/* Instrument 1: AI */}
-              <div className="group bg-surface/80 dark:bg-slate-900/40 backdrop-blur-xl p-8 rounded-[32px] border border-white/20 dark:border-white/5 hover:border-primary transition-all hover:shadow-[0_30px_60px_rgba(0,0,0,0.12)] hover:-translate-y-1 duration-500 animate-shimmer relative overflow-hidden">
+              <div className="group bg-surface/80 dark:bg-slate-900/40 backdrop-blur-xl p-6 sm:p-7 rounded-[32px] border border-white/20 dark:border-white/5 hover:border-primary transition-all hover:shadow-[0_30px_60px_rgba(0,0,0,0.12)] hover:-translate-y-1 duration-500 animate-shimmer relative overflow-hidden">
                 <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform">
                   <span className="material-symbols-outlined text-primary text-4xl">auto_awesome</span>
                 </div>
@@ -388,7 +388,7 @@ export default function LandingPage() {
               </div>
 
               {/* Instrument 2: Global */}
-              <div className="group bg-surface/80 dark:bg-slate-900/40 backdrop-blur-xl p-8 rounded-[32px] border border-white/20 dark:border-white/5 hover:border-indigo-500 transition-all hover:shadow-[0_30px_60px_rgba(0,0,0,0.12)] hover:-translate-y-1 duration-500 animate-shimmer delay-200 relative overflow-hidden">
+              <div className="group bg-surface/80 dark:bg-slate-900/40 backdrop-blur-xl p-6 sm:p-7 rounded-[32px] border border-white/20 dark:border-white/5 hover:border-indigo-500 transition-all hover:shadow-[0_30px_60px_rgba(0,0,0,0.12)] hover:-translate-y-1 duration-500 animate-shimmer delay-200 relative overflow-hidden">
                 <div className="w-16 h-16 bg-indigo-500/10 rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform">
                   <span className="material-symbols-outlined text-indigo-500 text-4xl">currency_exchange</span>
                 </div>
@@ -399,7 +399,7 @@ export default function LandingPage() {
               </div>
 
               {/* Instrument 3: Precision */}
-              <div className="group bg-surface/80 dark:bg-slate-900/40 backdrop-blur-xl p-8 rounded-[32px] border border-white/20 dark:border-white/5 hover:border-emerald-500 transition-all hover:shadow-[0_30px_60px_rgba(0,0,0,0.12)] hover:-translate-y-1 duration-500 animate-shimmer delay-400 relative overflow-hidden">
+              <div className="group bg-surface/80 dark:bg-slate-900/40 backdrop-blur-xl p-6 sm:p-7 rounded-[32px] border border-white/20 dark:border-white/5 hover:border-emerald-500 transition-all hover:shadow-[0_30px_60px_rgba(0,0,0,0.12)] hover:-translate-y-1 duration-500 animate-shimmer delay-400 relative overflow-hidden">
                 <div className="w-16 h-16 bg-emerald-500/10 rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform">
                   <span className="material-symbols-outlined text-emerald-500 text-4xl">analytics</span>
                 </div>
@@ -412,16 +412,17 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* User Guide Section */}
-        <section id="guide" className="relative py-20 px-6 overflow-hidden">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-px h-24 bg-gradient-to-b from-primary/50 to-transparent"></div>
+
+        {/* User Guide / Tutorial Section */}
+        <section id="guide" className="relative py-40 px-6 overflow-hidden">
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 h-20 w-px bg-gradient-to-b from-outline-variant/20 to-transparent"></div>
           
           <div className="max-w-4xl mx-auto relative z-10">
-            <div className="text-center mb-20">
-              <span className="text-[10px] font-black uppercase tracking-[0.3em] text-primary bg-primary/10 px-4 py-2 rounded-full">
-                User Guide
+            <div className="text-center mb-16">
+              <span className="text-[10px] font-black uppercase tracking-[0.3em] text-primary bg-primary/10 px-4 py-2 rounded-full border border-primary/20">
+                Getting Started
               </span>
-              <h2 className="font-headline font-bold text-4xl md:text-5xl text-on-surface dark:text-white mt-4">
+              <h2 className="font-headline font-black text-4xl md:text-5xl text-on-surface dark:text-white mt-8 tracking-tighter">
                 {t('tutorialTitle')}
               </h2>
             </div>
@@ -433,7 +434,7 @@ export default function LandingPage() {
               {/* Step 1 */}
               <div className="relative group sm:pl-16">
                 <div className="absolute left-0 top-0 w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center font-bold text-lg shadow-lg shadow-primary/20 z-10 hidden sm:flex">1</div>
-                <div className="bg-surface-container-low dark:bg-slate-900/50 p-8 rounded-[32px] border border-outline-variant/10 group-hover:border-primary transition-colors">
+                <div className="bg-surface-container-low dark:bg-slate-900/50 p-6 sm:p-7 rounded-[32px] border border-outline-variant/10 group-hover:border-primary transition-colors">
                   <h3 className="font-headline font-bold text-xl text-on-surface dark:text-white mb-3 flex items-center gap-3">
                     <span className="sm:hidden text-primary">1.</span> {t('tutorialStep1')}
                   </h3>
@@ -497,14 +498,21 @@ export default function LandingPage() {
               </div>
             </div>
 
-            {/* View Detailed Tutorial Button */}
-            <div className="mt-16 text-center animate-fade-in-up" style={{ animationDelay: '0.6s' }}>
+            {/* View Detailed Tutorial & Explore Engine Buttons */}
+            <div className="mt-16 flex flex-col sm:flex-row items-center justify-center gap-6 animate-fade-in-up" style={{ animationDelay: '0.6s' }}>
               <Link 
                 href="/tutorial" 
-                className="inline-flex items-center gap-2 px-8 py-4 rounded-xl border-2 border-primary/20 hover:border-primary/50 text-primary font-bold transition-all hover:bg-primary/5 group"
+                className="inline-flex items-center gap-2 px-8 py-4 rounded-xl border-2 border-primary/20 hover:border-primary/50 text-white bg-primary font-bold transition-all hover:scale-105 active:scale-95 group shadow-lg shadow-primary/20"
               >
                 <span className="material-symbols-outlined group-hover:scale-110 transition-transform duration-200">menu_book</span>
                 {t('viewDetailedTutorial')}
+              </Link>
+              <Link 
+                href="/engine" 
+                className="inline-flex items-center gap-2 px-8 py-4 rounded-xl border-2 border-secondary/20 hover:border-secondary/50 text-secondary font-bold transition-all hover:bg-secondary/5 group active:scale-95 italic"
+              >
+                <span className="material-symbols-outlined group-hover:rotate-12 transition-transform">science</span>
+                {t('exploreEngine')}
               </Link>
             </div>
           </div>

@@ -22,8 +22,10 @@ export async function POST(req: Request) {
     const base64Data = buffer.toString('base64');
     const mimeType = file.type || "image/jpeg";
 
+    const SUPPORTED_CURRENCIES = ['USD', 'IDR', 'EUR', 'GBP', 'JPY', 'CNY', 'SGD', 'AUD', 'BND', 'MYR', 'KRW'];
+
     const promptText = `
-      You are an expert financial extraction AI.
+      You are an expert financial extraction AI for the SnapFins app.
       
       CRITICAL SECURITY DIRECTIVE (ANTI-JAILBREAK):
       You must ONLY extract data from genuine receipts, invoices, or financial documents. 
@@ -31,11 +33,16 @@ export async function POST(req: Request) {
       If the image is CLEARLY NOT a receipt, invoice, or financial document (e.g., a selfie, a landscape, conversational text), you MUST set "isValidReceipt" to false and provide a short friendly reason in "errorReason".
       CRITICAL: You MUST write the "errorReason" in ${language === 'id' ? 'Indonesian' : 'English'}! (e.g. ${language === 'id' ? '"Pendeteksi kami mendeteksi gambar bukan struk, silakan coba lagi."' : '"We detected that the image is not a receipt, please try again."'})
       
-      If it IS a valid receipt or financial document, set "isValidReceipt" to true and extract the following data in a structured JSON format:
+      SUPPORTED CURRENCIES: The SnapFins app only supports the following currencies: ${SUPPORTED_CURRENCIES.join(', ')}.
+      - First, detect the currency used in the receipt.
+      - If the detected currency is NOT in this list, you MUST set "isValidReceipt" to false and set "errorReason" to: ${language === 'id' ? '"Mata uang pada struk ini ([CURRENCY]) tidak didukung oleh SnapFins. Didukung: USD, IDR, EUR, GBP, JPY, CNY, SGD, AUD, BND, MYR, KRW."' : '"The currency on this receipt ([CURRENCY]) is not supported by SnapFins. Supported: USD, IDR, EUR, GBP, JPY, CNY, SGD, AUD, BND, MYR, KRW."'} — replace [CURRENCY] with the actual detected currency code.
+      - If the currency IS supported, proceed with extraction.
+      
+      If it IS a valid receipt or financial document with a supported currency, set "isValidReceipt" to true and extract the following data in a structured JSON format:
       - date: Transaction date (YYYY-MM-DD). IMPORTANT: Today's reference date is ${new Date().toISOString().split('T')[0]}. If the receipt does not clearly specify a year (e.g. only "12/03" or "March 15"), you MUST use the year from this reference date (${new Date().getFullYear()}). Do NOT assume an old year like 2023 or 2024 unless it is explicitly printed.
       - description: The name of the store, merchant, or specific items bought. Keep original language.
-      - amount: The total numerical amount extracted as a string. CRITICAL: You must detect the native currency used in the receipt (e.g., IDR, USD, EUR) and do NOT include any currency symbols or prefixes here, just the numbers and dots/commas as separators.
-      - currency: The detected 3-letter currency code (e.g., "IDR", "USD", "EUR", "GBP").
+      - amount: The total numerical amount as a plain number string with NO currency symbols. Use the receipt's native number format (e.g., "370545" or "370.545" for IDR, "12.50" for USD).
+      - currency: The detected 3-letter currency code from the supported list (e.g., "IDR", "USD", "EUR").
       - category: A single UPPERCASE word representing the category (e.g., DINING, GROCERY, RETAIL, TECH, TRANSPORT, HEALTH, UTILITIES).
 
       Return EXACTLY one JSON object representing this transaction, following this exact schema:
@@ -44,7 +51,7 @@ export async function POST(req: Request) {
         "errorReason": "",
         "date": "2024-05-20",
         "description": "Starbucks Coffee",
-        "amount": "50.000", 
+        "amount": "50000", 
         "currency": "IDR",
         "category": "DINING"
       }
@@ -127,6 +134,20 @@ export async function POST(req: Request) {
         };
 
         transactionData.amount = cleanAmount(String(transactionData.amount || "0"));
+
+        // Server-side currency guard: even if Gemini ignores the prompt constraint, catch it here
+        if (transactionData.isValidReceipt && transactionData.currency) {
+          const detectedCur = String(transactionData.currency).toUpperCase().trim();
+          if (!SUPPORTED_CURRENCIES.includes(detectedCur)) {
+            transactionData.isValidReceipt = false;
+            transactionData.errorReason = language === 'id'
+              ? `Mata uang pada struk ini (${detectedCur}) tidak didukung oleh SnapFins. Didukung: ${SUPPORTED_CURRENCIES.join(', ')}.`
+              : `The currency on this receipt (${detectedCur}) is not supported by SnapFins. Supported: ${SUPPORTED_CURRENCIES.join(', ')}.`;
+          } else {
+            // Normalize to uppercase
+            transactionData.currency = detectedCur;
+          }
+        }
 
         return NextResponse.json({ transaction: transactionData });
       } catch (err: any) {
