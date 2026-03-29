@@ -6,6 +6,7 @@ export const translations = {
     // ---- SHARED / NAV ----
     home: "Home",
     features: "Features",
+    navGuide: "Guide",
     login: "Login",
     logout: "Logout",
 
@@ -150,9 +151,11 @@ export const translations = {
     notAuthenticated:
       "Your session has expired. Please log in again to scan receipts.",
     confirmDeleteTransactionTitle: "Delete Transaction?",
-    confirmDeleteTransactionMsg: "Are you sure you want to delete this transaction?",
+    confirmDeleteTransactionMsg:
+      "Are you sure you want to delete this transaction?",
     confirmDeleteSelectedTitle: "Delete Selected Transactions?",
-    confirmDeleteSelectedMsg: (n: number) => `Are you sure you want to delete ${n} selected transactions? This cannot be undone.`,
+    confirmDeleteSelectedMsg: (n: number) =>
+      `Are you sure you want to delete ${n} selected transactions? This cannot be undone.`,
     editTransaction: "Edit Transaction",
     itemsSelected: (n: number) => `${n} Selected`,
     selectAll: "Select All",
@@ -191,24 +194,58 @@ export const translations = {
     // ---- TUTORIAL & SUPPORT ----
     tutorialTitle: "Getting Started with SnapFins",
     tutorialStep1: "1. Set Your Global Currency",
-    step1Desc: "Choose your primary currency (USD/IDR) in the header. All assets and older transactions will auto-convert instantly based on live market rates.",
+    step1Desc:
+      "Choose your primary currency (USD/IDR) in the header. All assets and older transactions will auto-convert instantly based on live market rates.",
     tutorialStep2: "2. Add Your Existing Balances",
-    step2Desc: "Navigate to the Assets page and use 'Opening Balance' to record money you already have in your savings or cash wallets.",
+    step2Desc:
+      "Navigate to the Assets page and use 'Opening Balance' to record money you already have in your savings or cash wallets.",
     tutorialStep3: "3. Track New Purchases",
-    step3Desc: "Use 'Buy / Move Into Asset' when purchasing Stocks or Crypto using your bank balance to keep your Net Worth calculation accurate.",
+    step3Desc:
+      "Use 'Buy / Move Into Asset' when purchasing Stocks or Crypto using your bank balance to keep your Net Worth calculation accurate.",
     tutorialStep4: "4. Hands-free AI Scanning",
-    step4Desc: "Upload or snap a photo of any receipt. Our Gemini AI extracts the date, merchant, and total amount for you with zero manual typing.",
+    step4Desc:
+      "Upload or snap a photo of any receipt. Our Gemini AI extracts the date, merchant, and total amount for you with zero manual typing.",
     tutorialStep5: "5. Review Your Analytics",
-    step5Desc: "Watch your Net Worth badge and transaction ledger react to your spending and income trends in real-time.",
+    step5Desc:
+      "Watch your Net Worth badge and transaction ledger react to your spending and income trends in real-time.",
     supportCreator: "Support the Creator",
     donateTitle: "Fuel the Development",
-    donateSubtitle: "If SnapFins helps you manage your wealth more clearly, consider supporting the journey!",
+    donateSubtitle:
+      "If SnapFins helps you manage your wealth more clearly, consider supporting the journey!",
+
+    // ---- DETAILED TUTORIAL PAGE ----
+    viewDetailedTutorial: "View Detailed Tutorial",
+    tutorialHeaderTitle: "The SnapFins Mastery Guide",
+    tutorialHeaderSubtitle:
+      "Learn how to architect your financial future with AI-powered precision.",
+    tutorialSection1Title: "1. The Blueprint: Assets & Balances",
+    tutorialSection1Desc:
+      "Before you scan your first receipt, you need a place for the money to live. Create 'Bank' and 'Cash' assets in the Asset tab. Use 'Opening Balance' to record your current holdings.",
+    tutorialSection2Title: "2. The Gemini Protocol: AI Scanning",
+    tutorialSection2Desc:
+      "Our Gemini AI is trained on thousands of receipt formats. For best results: ensures good lighting, keep the phone steady, and include the merchant name and total amount in the frame.",
+    tutorialSection3Title: "3. Command Center: The Living Ledger",
+    tutorialSection3Desc:
+      "The ledger isn't just a list; it's a dynamic tool. Use 'Pivot View' to group expenses by category or month instantly. Double-click any row to edit details on the fly.",
+    tutorialSection4Title: "4. Wealth Intelligence: Net Worth",
+    tutorialSection4Desc:
+      "SnapFins calculates your Net Worth by subtracting Liabilities from your total Assets. Stay in the green by keeping your bank balances updated and tracking your debts meticulously.",
+    tutorialSection5Title: "5. Data Sovereignty & Privacy",
+    tutorialSection5Desc:
+      "Your financial data is sensitive. SnapFins uses enterprise-grade encryption via Supabase. We never sell your data, and results from Gemini AI are processed securely. You can delete your entire history at any time.",
+    tutorialSection6Title: "6. The Conversion Engine",
+    tutorialSection6Desc:
+      "SnapFins isn't just a tracker; it's a live calculator. We fetch real-time market rates to convert your Crypto, Gold, and secondary bank balances into your primary currency automatically.",
+    backToHome: "Back to Home",
+    tutorialCTALogin: "Login to Architect Your Wealth",
+    tutorialCTADashboard: "Go to Dashboard",
   },
 
   id: {
     // ---- SHARED / NAV ----
     home: "Beranda",
     features: "Fitur",
+    navGuide: "Panduan",
     login: "Masuk",
     logout: "Keluar",
 
@@ -353,9 +390,11 @@ export const translations = {
     notAuthenticated:
       "Sesi Anda telah berakhir. Silakan masuk kembali untuk melakukan scan struk.",
     confirmDeleteTransactionTitle: "Hapus Transaksi?",
-    confirmDeleteTransactionMsg: "Apakah Anda yakin ingin menghapus transaksi ini?",
+    confirmDeleteTransactionMsg:
+      "Apakah Anda yakin ingin menghapus transaksi ini?",
     confirmDeleteSelectedTitle: "Hapus Transaksi Terpilih?",
-    confirmDeleteSelectedMsg: (n: number) => `Apakah Anda yakin ingin menghapus ${n} transaksi terpilih? Tindakan ini tidak dapat dibatalkan.`,
+    confirmDeleteSelectedMsg: (n: number) =>
+      `Apakah Anda yakin ingin menghapus ${n} transaksi terpilih? Tindakan ini tidak dapat dibatalkan.`,
     editTransaction: "Edit Transaksi",
     itemsSelected: (n: number) => `${n} Terpilih`,
     selectAll: "Pilih Semua",
@@ -385,18 +424,51 @@ export const translations = {
     filterMonth: "Bulan",
     filterYear: "Tahun",
     tutorialStep1: "1. Atur Mata Uang Global",
-    step1Desc: "Pilih mata uang utama Anda (USD/IDR) di header. Semua aset dan transaksi akan dikonversi otomatis berdasarkan kurs pasar saat ini.",
+    step1Desc:
+      "Pilih mata uang utama Anda (USD/IDR) di header. Semua aset dan transaksi akan dikonversi otomatis berdasarkan kurs pasar saat ini.",
     tutorialStep2: "2. Tambahkan Saldo Saat Ini",
-    step2Desc: "Buka halaman Aset dan gunakan 'Saldo Awal' untuk mencatat uang yang sudah Anda miliki di tabungan atau dompet tunai.",
+    step2Desc:
+      "Buka halaman Aset dan gunakan 'Saldo Awal' untuk mencatat uang yang sudah Anda miliki di tabungan atau dompet tunai.",
     tutorialStep3: "3. Catat Pembelian Aset Baru",
-    step3Desc: "Gunakan 'Beli / Pindahkan Aset' saat membeli Saham atau Kripto menggunakan saldo bank agar perhitungan Kekayaan Bersih tetap akurat.",
+    step3Desc:
+      "Gunakan 'Beli / Pindahkan Aset' saat membeli Saham atau Kripto menggunakan saldo bank agar perhitungan Kekayaan Bersih tetap akurat.",
     tutorialStep4: "4. Scan Struk Otomatis (AI)",
-    step4Desc: "Unggah atau foto struk belanja Anda. AI Gemini kami akan mengekstrak tanggal, merchant, dan jumlah total untuk Anda tanpa mengetik manual.",
+    step4Desc:
+      "Unggah atau foto struk belanja Anda. AI Gemini kami akan mengekstrak tanggal, merchant, dan jumlah total untuk Anda tanpa mengetik manual.",
     tutorialStep5: "5. Pantau Analitik Anda",
-    step5Desc: "Lihat badge Kekayaan Bersih dan buku besar transaksi Anda bereaksi terhadap tren belanja dan pendapatan secara real-time.",
+    step5Desc:
+      "Lihat badge Kekayaan Bersih dan buku besar transaksi Anda bereaksi terhadap tren belanja dan pendapatan secara real-time.",
     supportCreator: "Dukung Kreator",
     donateTitle: "Dukung Pengembangan",
-    donateSubtitle: "Jika SnapFins membantu Anda mengelola kekayaan dengan lebih jelas, pertimbangkan untuk mendukung perjalanan ini!",
+    donateSubtitle:
+      "Jika SnapFins membantu Anda mengelola kekayaan dengan lebih jelas, pertimbangkan untuk mendukung perjalanan ini!",
+
+    // ---- DETAILED TUTORIAL PAGE ----
+    viewDetailedTutorial: "Lihat Panduan Detail",
+    tutorialHeaderTitle: "Panduan Penguasaan SnapFins",
+    tutorialHeaderSubtitle:
+      "Pelajari cara menyusun masa depan finansial Anda dengan presisi bertenaga AI.",
+    tutorialSection1Title: "1. Cetak Biru: Aset & Saldo",
+    tutorialSection1Desc:
+      "Sebelum memindai struk pertama, Anda butuh tempat untuk menyimpan data uang tersebut. Buat aset 'Bank' dan 'Tunai' di tab Aset. Gunakan 'Saldo Awal' untuk mencatat simpanan Anda saat ini.",
+    tutorialSection2Title: "2. Protokol Gemini: Scan AI",
+    tutorialSection2Desc:
+      "AI Gemini kami dilatih pada ribuan format struk. Untuk hasil terbaik: pastikan pencahayaan cukup, pegang ponsel dengan stabil, dan pastikan nama merchant serta jumlah total masuk dalam bingkai.",
+    tutorialSection3Title: "3. Pusat Kendali: Buku Besar Dinamis",
+    tutorialSection3Desc:
+      "Buku besar bukan sekadar daftar; ini adalah alat dinamis. Gunakan 'Tampilan Pivot' untuk mengelompokkan pengeluaran berdasarkan kategori atau bulan secara instan. Klik dua kali baris mana pun untuk mengubah detail.",
+    tutorialSection4Title: "4. Kecerdasan Kekayaan: Kekayaan Bersih",
+    tutorialSection4Desc:
+      "SnapFins menghitung Kekayaan Bersih Anda dengan mengurangi Utang dari total Aset Anda. Tetap berada di zona hijau dengan memperbarui saldo bank dan memantau utang Anda dengan cermat.",
+    tutorialSection5Title: "5. Kedaulatan Data & Privasi",
+    tutorialSection5Desc:
+      "Data keuangan Anda sangat sensitif. SnapFins menggunakan enkripsi kelas perusahaan melalui Supabase. Kami tidak pernah menjual data Anda, dan hasil dari AI Gemini diproses dengan aman. Anda dapat menghapus seluruh riwayat Anda kapan saja.",
+    tutorialSection6Title: "6. Mesin Konversi Langsung",
+    tutorialSection6Desc:
+      "SnapFins bukan sekadar pelacak; ini adalah kalkulator langsung. Kami mengambil kurs pasar real-time untuk mengonversi saldo Kripto, Emas, dan bank asing Anda ke mata uang utama secara otomatis.",
+    backToHome: "Kembali ke Beranda",
+    tutorialCTALogin: "Masuk & Bangun Kekayaan Anda",
+    tutorialCTADashboard: "Buka Dasbor Saya",
     scanSuccessTitle: "Berhasil di-Scan",
     scanSuccessDate: (d: string) => `Tanggal: ${d}`,
     viewTransaction: "Lihat Transaksi",

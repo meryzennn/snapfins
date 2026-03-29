@@ -2,6 +2,7 @@
 
 import { useTheme } from "@/hooks/useTheme";
 import { useLang } from "@/hooks/useLang";
+import AuthModal from "@/components/AuthModal";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/client";
@@ -15,6 +16,7 @@ export default function LandingPage() {
   const [user, setUser] = useState<any>(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showSupportModal, setShowSupportModal] = useState(false);
+  const [activeSection, setActiveSection] = useState('home');
 
   useEffect(() => {
     setMounted(true);
@@ -26,6 +28,43 @@ export default function LandingPage() {
       }
     };
     checkUser();
+  }, []);
+
+  useEffect(() => {
+    const observerOptions = {
+      root: null,
+      rootMargin: '-20% 0px -70% 0px', // More precise "sweet spot" in the viewport
+      threshold: 0
+    };
+
+    const handleIntersect = (entries: IntersectionObserverEntry[]) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          setActiveSection(entry.target.id);
+        }
+      });
+    };
+
+    const observer = new IntersectionObserver(handleIntersect, observerOptions);
+    const sections = ['home', 'features', 'guide'];
+    
+    sections.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) observer.observe(el);
+    });
+
+    // Fallback for the very top of the page
+    const handleScroll = () => {
+      if (window.scrollY < 100) {
+        setActiveSection('home');
+      }
+    };
+    window.addEventListener('scroll', handleScroll);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('scroll', handleScroll);
+    };
   }, []);
 
   // Apply scroll lock specifically when the Login Modal is open.
@@ -66,31 +105,9 @@ export default function LandingPage() {
   };
 
   return (
-    <div className="font-body bg-surface text-on-surface antialiased min-h-screen">
+    <div className="font-body bg-surface text-on-surface antialiased min-h-screen scroll-smooth">
       {/* Login Modal */}
-      {showLoginModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-surface p-8 rounded-3xl shadow-2xl flex flex-col max-w-sm w-full border border-outline-variant/20 animate-in fade-in zoom-in duration-200">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="font-headline font-bold text-2xl text-on-surface">{t('signIn')}</h3>
-              <button onClick={() => setShowLoginModal(false)} className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-surface-container-high transition-colors text-on-surface-variant">
-                <span className="material-symbols-outlined text-lg">close</span>
-              </button>
-            </div>
-            <p className="text-sm text-on-surface-variant mb-6">{t('signInSubtitle')}</p>
-            <div className="space-y-4">
-              <button onClick={() => { setShowLoginModal(false); handleLogin('google'); }} className="group cursor-pointer w-full flex items-center justify-center gap-3 bg-white dark:bg-slate-800 text-slate-800 dark:text-white border border-outline-variant/30 py-3 px-4 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-all hover:shadow-md hover:-translate-y-1 active:scale-95 duration-300 font-semibold shadow-sm">
-                <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" className="w-5 h-5 group-hover:scale-110 transition-transform duration-300" />
-                {t('continueWithGoogle')}
-              </button>
-              <button onClick={() => { setShowLoginModal(false); handleLogin('github'); }} className="group cursor-pointer w-full flex items-center justify-center gap-3 bg-[#24292F] dark:bg-white text-white dark:text-gray-900 py-3 px-4 rounded-xl hover:bg-[#24292f]/90 dark:hover:bg-gray-100 transition-all hover:shadow-md hover:-translate-y-1 active:scale-95 duration-300 font-semibold shadow-sm">
-                <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 group-hover:scale-110 transition-transform duration-300"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23C10.53 4.8 11.28 4.65 12 4.65c.72 0 1.47.15 2.43.48 2.28-1.545 3.285-1.23 3.285-1.23.645 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" /></svg>
-                {t('continueWithGithub')}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <AuthModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} />
 
       {/* Top Navigation Bar */}
       <header className="fixed top-0 w-full z-50 bg-surface/80 dark:bg-gray-950/80 backdrop-blur-xl bg-surface-container-low dark:bg-gray-900 shadow-sm border-b border-outline-variant/30">
@@ -99,8 +116,24 @@ export default function LandingPage() {
             <span className="text-2xl font-extrabold tracking-tight text-on-surface dark:text-white font-headline group-hover:text-primary transition-colors">SnapFins</span>
           </Link>
           <nav className="hidden md:flex items-center gap-8">
-            <a className="text-primary dark:text-primary-container font-semibold transition-colors duration-200" href="#">{t('home')}</a>
-            <a className="text-on-surface-variant dark:text-gray-400 hover:text-primary dark:hover:text-primary-container transition-colors duration-200" href="#">{t('features')}</a>
+            <a 
+              className={`${activeSection === 'home' ? 'text-primary dark:text-primary-container font-bold' : 'text-on-surface-variant dark:text-gray-400 font-semibold'} transition-all duration-300`} 
+              href="#home"
+            >
+              {t('home')}
+            </a>
+            <a 
+              className={`${activeSection === 'features' ? 'text-primary dark:text-primary-container font-bold' : 'text-on-surface-variant dark:text-gray-400 font-semibold'} transition-all duration-300`} 
+              href="#features"
+            >
+              {t('features')}
+            </a>
+            <a 
+              className={`${activeSection === 'guide' ? 'text-primary dark:text-primary-container font-bold' : 'text-on-surface-variant dark:text-gray-400 font-semibold'} transition-all duration-300`} 
+              href="#guide"
+            >
+              {t('navGuide')}
+            </a>
           </nav>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
@@ -139,15 +172,15 @@ export default function LandingPage() {
 
       <main className="pt-24 overflow-hidden">
         {/* Hero Section */}
-        <section className="relative px-6 py-20 md:py-32 flex flex-col items-center text-center max-w-5xl mx-auto">
+        <section id="home" className="relative px-6 py-20 md:py-32 flex flex-col items-center text-center max-w-5xl mx-auto">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-secondary-container/30 text-on-secondary-container text-xs font-semibold mb-6">
             <span className="kinetic-spark"></span>
             {t('heroBadge')}
           </div>
-          <h1 className="font-headline font-extrabold text-5xl md:text-7xl lg:text-8xl tracking-tight text-on-surface leading-[1.1] mb-8">
-            {t('heroTitle1')}<br/>
-            <span className="text-primary-container">{t('heroTitle2')}</span>
-          </h1>
+              <h1 className="font-headline font-extrabold text-4xl md:text-7xl lg:text-8xl tracking-tight text-on-surface leading-[1.1] mb-8">
+                {t('heroTitle1')}<br/>
+                <span className="text-primary-container">{t('heroTitle2')}</span>
+              </h1>
           <p className="text-lg md:text-xl text-on-surface-variant max-w-2xl mx-auto mb-12 leading-relaxed font-medium">
             {t('heroSubtitle')}
           </p>
@@ -176,107 +209,204 @@ export default function LandingPage() {
             </button>
           </div>
           
-          {/* Hero Visual: Asymmetric Mock-up */}
-          <div className="relative w-full max-w-6xl mt-12 group">
-            <div className="absolute -top-12 -left-12 w-64 h-64 bg-primary/10 rounded-full blur-3xl -z-10"></div>
-            <div className="absolute -bottom-12 -right-12 w-96 h-96 bg-secondary/10 rounded-full blur-3xl -z-10"></div>
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
-              {/* Receipt Scan Visual */}
-              <div className="md:col-span-5 bg-surface-container-lowest rounded-2xl p-8 shadow-2xl shadow-on-surface/5 transform -rotate-3 hover:rotate-0 transition-transform duration-500 border border-outline-variant/10">
-                <img 
-                  className="w-full aspect-[3/4] object-cover rounded-lg mb-6 grayscale hover:grayscale-0 transition-all duration-700" 
-                  alt="Close-up of a paper receipt on a dark slate surface with a glowing green neon laser line" 
-                  src="https://lh3.googleusercontent.com/aida-public/AB6AXuCql1V3pS9DzpjkWluWFOXIAhS3_C2oH6btFY-n_PyCmG38hnRzqLEgKxY8NPtJb025KCIXoZyeXnTommVWlrgteiMj8QDsVqhJZ7Yk0AzLb8db0wsJJYfD8pqzqDF-fbPm7u3MNrwUTOXnGjCO2dMZRD3fz2oI23pLm2V7nJFEll7WEqJQBzksLEAP9g2BfnbGRgSQ4OpxwBBZvkA5LOXN1OBIw8nQAQnMzLUkVNLpmBX1ToUQzv2RKI41YP_NG36KIJkEonKznoc" 
-                />
-                <div className="space-y-3">
-                  <div className="h-2 w-3/4 bg-surface-container-high rounded hidden md:block border border-outline-variant/10"></div>
-                  <div className="h-2 w-1/2 bg-surface-container-high rounded hidden md:block border border-outline-variant/10"></div>
+          {/* Hero Visual: Full Interactive Dashboard Preview (First Impression) */}
+          <div id="dashboard-preview" className="relative w-full max-w-7xl mt-12 group animate-fade-in-up">
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] sm:w-[600px] h-[300px] sm:h-[600px] bg-primary/10 blur-[100px] sm:blur-[180px] rounded-full -z-10 animate-pulse"></div>
+            
+            {/* Simulated Dashboard Window (macOS) */}
+            <div className="bg-surface-container-lowest/80 dark:bg-slate-900/60 backdrop-blur-3xl rounded-[32px] p-4 sm:p-6 lg:p-10 shadow-[0_60px_150px_rgba(0,0,0,0.25)] dark:shadow-[0_60px_150px_rgba(0,0,0,0.7)] border border-white/20 dark:border-white/5 relative overflow-hidden">
+              {/* Window Header */}
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8 sm:mb-12">
+                <div className="flex gap-4 items-center w-full md:w-auto">
+                  <div className="flex gap-1.5 sm:gap-2">
+                    <div className="w-2.5 h-2.5 rounded-full bg-[#ff5f56]"></div>
+                    <div className="w-2.5 h-2.5 rounded-full bg-[#ffbd2e]"></div>
+                    <div className="w-2.5 h-2.5 rounded-full bg-[#27c93f]"></div>
+                  </div>
+                  <div className="h-4 w-px bg-outline-variant/30 hidden sm:block mx-1"></div>
+                  <div>
+                    <h3 className="font-headline font-bold text-xl sm:text-2xl text-on-surface dark:text-white">Financial Overview</h3>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                      </span>
+                      <span className="text-[9px] sm:text-[10px] uppercase font-black tracking-widest text-on-surface-variant/70">Real-time Wealth Insights</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex flex-row md:flex-row items-center gap-3 w-full md:w-auto">
+                  <div className="flex-1 md:flex-none px-3 py-2 rounded-lg bg-surface-container dark:bg-white/5 border border-outline-variant/30 text-[10px] sm:text-xs font-bold text-center">Manual Entry</div>
+                  <div className="flex-1 md:flex-none px-3 py-2 rounded-lg bg-primary text-white text-[10px] sm:text-xs font-bold shadow-lg shadow-primary/30 flex items-center justify-center gap-2">
+                    <span className="material-symbols-outlined text-sm">auto_awesome</span>
+                    Scan Receipt
+                  </div>
                 </div>
               </div>
-              
-              {/* Transition Arrow */}
-              <div className="hidden md:flex md:col-span-2 justify-center">
-                <span className="material-symbols-outlined text-primary text-5xl">trending_flat</span>
+
+              {/* Summary Cards Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+                {/* Total Net Worth */}
+                <div className="bg-surface-container-low/50 dark:bg-white/5 p-6 rounded-3xl border border-outline-variant/20 hover:scale-105 transition-all duration-300">
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="bg-rose-500/10 text-rose-500 text-[10px] font-black px-2 py-0.5 rounded flex items-center gap-1">
+                      <span className="material-symbols-outlined text-xs">trending_down</span>
+                      2.9%
+                    </div>
+                    <span className="material-symbols-outlined text-primary-container/40">account_balance</span>
+                  </div>
+                  <div className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant mb-1">Total Net Worth</div>
+                  <div className="text-2xl font-bold text-on-surface dark:text-white">Rp 8,180,227</div>
+                </div>
+
+                {/* Monthly Income */}
+                <div className="bg-surface-container-low/50 dark:bg-white/5 p-6 rounded-3xl border border-outline-variant/20 hover:scale-105 transition-all duration-300">
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="bg-emerald-500/10 text-emerald-500 text-[10px] font-black px-2 py-0.5 rounded flex items-center gap-1">
+                      NEW THIS PERIOD
+                    </div>
+                    <span className="material-symbols-outlined text-emerald-500/40">payments</span>
+                  </div>
+                  <div className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant mb-1">Monthly Income</div>
+                  <div className="text-2xl font-bold text-emerald-500">Rp 123,232</div>
+                  <div className="flex items-center gap-1.5 mt-2 text-[10px] text-on-surface-variant font-medium">
+                     <span className="material-symbols-outlined text-xs">calendar_today</span>
+                     2 days left this month
+                  </div>
+                </div>
+
+                {/* Total Investment */}
+                <div className="bg-surface-container-low/50 dark:bg-white/5 p-6 rounded-3xl border border-outline-variant/20 hover:scale-105 transition-all duration-300">
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="bg-indigo-500/10 text-indigo-500 text-[10px] font-black px-2 py-0.5 rounded flex items-center gap-1 uppercase">
+                      <span className="relative flex h-1.5 w-1.5 mr-1">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-indigo-500"></span>
+                      </span>
+                      Market Sync
+                    </div>
+                    <span className="material-symbols-outlined text-indigo-500/40">account_balance</span>
+                  </div>
+                  <div className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant mb-1">Total Investment</div>
+                  <div className="text-2xl font-bold text-indigo-500">Rp 8,180,227</div>
+                </div>
+
+                {/* Monthly Expense */}
+                <div className="bg-surface-container-low/50 dark:bg-white/5 p-6 rounded-3xl border border-outline-variant/20 hover:scale-105 transition-all duration-300">
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="bg-rose-500/10 text-rose-500 text-[10px] font-black px-2 py-0.5 rounded flex items-center gap-1 uppercase">
+                      New this period
+                    </div>
+                    <span className="material-symbols-outlined text-rose-500/40">shopping_bag</span>
+                  </div>
+                  <div className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant mb-1">Monthly Expense</div>
+                  <div className="text-2xl font-bold text-rose-500">Rp 370,545</div>
+                </div>
               </div>
-              
-              {/* Spreadsheet Results Visual */}
-              <div className="md:col-span-5 bg-surface-container-lowest rounded-2xl p-8 shadow-2xl shadow-on-surface/5 transform rotate-2 hover:rotate-0 transition-transform duration-500 border border-outline-variant/10">
-                <div className="overflow-hidden rounded-lg">
-                  <table className="w-full text-left text-sm">
-                    <thead className="bg-surface-container-low text-on-surface-variant font-medium">
+
+              {/* Ledger Section */}
+              <div className="space-y-4">
+                <div className="flex justify-between items-center mb-6">
+                  <div className="text-sm font-bold tracking-tight">Recent Transaction</div>
+                  <div className="flex gap-2">
+                    <div className="px-3 py-1 bg-surface-container-high rounded-lg text-[10px] font-black">GRID</div>
+                    <div className="px-3 py-1 text-on-surface-variant/50 text-[10px] font-black">PIVOT</div>
+                  </div>
+                </div>
+                
+                <div className="overflow-x-auto rounded-2xl border border-outline-variant/20 -mx-4 sm:mx-0">
+                  <table className="w-full text-left text-sm min-w-[600px] sm:min-w-0">
+                    <thead className="bg-surface-container-low/50 dark:bg-white/5 text-on-surface-variant uppercase tracking-widest font-black text-[10px]">
                       <tr>
-                        <th className="p-3">Date</th>
-                        <th className="p-3">Merchant</th>
-                        <th className="p-3 text-right">Amount</th>
+                        <th className="p-4">Date</th>
+                        <th className="p-4">Category</th>
+                        <th className="p-4">Description</th>
+                        <th className="p-4">Type</th>
+                        <th className="p-4 text-right">Amount</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-surface-container">
-                      <tr>
-                        <td className="p-3">Oct 24</td>
-                        <td className="p-3 font-semibold">Starbucks</td>
-                        <td className="p-3 text-secondary text-right font-bold">$5.40</td>
+                    <tbody className="divide-y divide-outline-variant/10 text-xs sm:text-sm">
+                      <tr className="hover:bg-primary/5 transition-colors">
+                        <td className="p-4 text-on-surface-variant/80">29/03/2026</td>
+                        <td className="p-4"><span className="px-2 py-0.5 bg-surface-container-high rounded text-[9px] font-black">GENERAL</span></td>
+                        <td className="p-4 font-bold">Coffee Subscription</td>
+                        <td className="p-4 text-rose-500 font-bold">Expense</td>
+                        <td className="p-4 text-rose-500 text-right font-black">-Rp 45,000</td>
                       </tr>
-                      <tr>
-                        <td className="p-3">Oct 23</td>
-                        <td className="p-3 font-semibold">Amazon</td>
-                        <td className="p-3 text-secondary text-right font-bold">$124.99</td>
-                      </tr>
-                      <tr className="bg-primary/5">
-                        <td className="p-3">Oct 23</td>
-                        <td className="p-3 font-semibold text-primary">Solana Purchase</td>
-                        <td className="p-3 text-primary text-right font-bold">$500.00</td>
+                      <tr className="hover:bg-primary/5 transition-colors group">
+                        <td className="p-4 text-on-surface-variant/80">29/03/2026</td>
+                        <td className="p-4"><span className="px-2 py-0.5 bg-surface-container-high rounded text-[9px] font-black">GENERAL</span></td>
+                        <td className="p-4 font-bold flex items-center gap-1 sm:gap-2">12121 <span className="bg-primary/10 text-primary text-[8px] font-weights-black px-1 sm:px-1.5 py-0.5 rounded">AI SCANNED</span></td>
+                        <td className="p-4 text-emerald-500 font-bold">Income</td>
+                        <td className="p-4 text-emerald-500 text-right font-black">+Rp 123,232</td>
                       </tr>
                     </tbody>
                   </table>
                 </div>
-                <div className="mt-6 flex justify-between items-center hidden md:flex">
-                  <span className="text-label-sm text-xs font-semibold text-on-surface-variant">Exported to Sheets</span>
-                  <span className="material-symbols-outlined text-secondary" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
-                </div>
               </div>
             </div>
           </div>
         </section>
 
-        {/* Features Bento Grid */}
-        <section className="py-24 px-6 bg-surface-container-low">
+        {/* Features: Precision Instruments Section */}
+        <section id="features" className="py-24 px-6 bg-surface-container-low dark:bg-slate-900/20 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-96 h-96 bg-primary/5 blur-[120px] rounded-full -z-10 animate-pulse"></div>
+          <div className="absolute bottom-0 left-0 w-96 h-96 bg-secondary/5 blur-[120px] rounded-full -z-10 animate-pulse delay-700"></div>
+          
           <div className="max-w-7xl mx-auto">
-            <div className="mb-16">
-              <h2 className="font-headline font-bold text-3xl md:text-4xl text-on-surface mb-4">{t('featuresSectionTitle')}</h2>
-              <p className="text-on-surface-variant max-w-xl">{t('featuresSectionSubtitle')}</p>
+            <div className="text-center mb-16">
+              <h2 className="font-headline font-bold text-3xl md:text-5xl text-on-surface dark:text-white mb-6">
+                {t('featuresSectionTitle')}
+              </h2>
+              <p className="text-on-surface-variant dark:text-gray-400 max-w-2xl mx-auto text-lg">
+                {t('featuresSectionSubtitle')}
+              </p>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-surface-container-lowest p-8 rounded-xl border border-outline-variant/10 hover:shadow-lg transition-all">
-                <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-6">
-                  <span className="material-symbols-outlined text-primary text-3xl">photo_camera</span>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {/* Instrument 1: AI */}
+              <div className="group bg-surface/80 dark:bg-slate-900/40 backdrop-blur-xl p-8 rounded-[32px] border border-white/20 dark:border-white/5 hover:border-primary transition-all hover:shadow-[0_30px_60px_rgba(0,0,0,0.12)] hover:-translate-y-1 duration-500 animate-shimmer relative overflow-hidden">
+                <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform">
+                  <span className="material-symbols-outlined text-primary text-4xl">auto_awesome</span>
                 </div>
-                <h3 className="font-headline font-bold text-xl text-on-surface mb-3">{t('feature1Title')}</h3>
-                <p className="text-on-surface-variant text-sm leading-relaxed">{t('feature1Desc')}</p>
+                <h3 className="font-headline font-bold text-xl text-on-surface dark:text-white mb-4">{t('feature1Title')}</h3>
+                <p className="text-on-surface-variant dark:text-gray-400 leading-relaxed">
+                  {t('feature1Desc')}
+                </p>
               </div>
-              <div className="bg-surface-container-lowest p-8 rounded-xl border border-outline-variant/10 hover:shadow-lg transition-all">
-                <div className="w-12 h-12 bg-secondary/10 rounded-lg flex items-center justify-center mb-6">
-                  <span className="material-symbols-outlined text-secondary text-3xl">grid_view</span>
+
+              {/* Instrument 2: Global */}
+              <div className="group bg-surface/80 dark:bg-slate-900/40 backdrop-blur-xl p-8 rounded-[32px] border border-white/20 dark:border-white/5 hover:border-indigo-500 transition-all hover:shadow-[0_30px_60px_rgba(0,0,0,0.12)] hover:-translate-y-1 duration-500 animate-shimmer delay-200 relative overflow-hidden">
+                <div className="w-16 h-16 bg-indigo-500/10 rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform">
+                  <span className="material-symbols-outlined text-indigo-500 text-4xl">currency_exchange</span>
                 </div>
-                <h3 className="font-headline font-bold text-xl text-on-surface mb-3">{t('feature2Title')}</h3>
-                <p className="text-on-surface-variant text-sm leading-relaxed">{t('feature2Desc')}</p>
+                <h3 className="font-headline font-bold text-xl text-on-surface dark:text-white mb-4">{t('feature3Title')}</h3>
+                <p className="text-on-surface-variant dark:text-gray-400 leading-relaxed">
+                  {t('feature3Desc')}
+                </p>
               </div>
-              <div className="bg-surface-container-lowest p-8 rounded-xl border border-outline-variant/10 hover:shadow-lg transition-all">
-                <div className="w-12 h-12 bg-tertiary-container/10 rounded-lg flex items-center justify-center mb-6">
-                  <span className="material-symbols-outlined text-tertiary-container text-3xl">account_balance_wallet</span>
+
+              {/* Instrument 3: Precision */}
+              <div className="group bg-surface/80 dark:bg-slate-900/40 backdrop-blur-xl p-8 rounded-[32px] border border-white/20 dark:border-white/5 hover:border-emerald-500 transition-all hover:shadow-[0_30px_60px_rgba(0,0,0,0.12)] hover:-translate-y-1 duration-500 animate-shimmer delay-400 relative overflow-hidden">
+                <div className="w-16 h-16 bg-emerald-500/10 rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform">
+                  <span className="material-symbols-outlined text-emerald-500 text-4xl">analytics</span>
                 </div>
-                <h3 className="font-headline font-bold text-xl text-on-surface mb-3">{t('feature3Title')}</h3>
-                <p className="text-on-surface-variant text-sm leading-relaxed">{t('feature3Desc')}</p>
+                <h3 className="font-headline font-bold text-xl text-on-surface dark:text-white mb-4">Precision Analytics</h3>
+                <p className="text-on-surface-variant dark:text-gray-400 leading-relaxed">
+                  Experience the clarity of real-time trend badges and growth tracking. Every calculation is verified for maximum accuracy.
+                </p>
               </div>
             </div>
           </div>
         </section>
 
-        {/* Getting Started Tutorial Section */}
-        <section id="how-to-use" className="py-24 px-6 bg-surface dark:bg-slate-950 relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-outline-variant/20 to-transparent"></div>
-          <div className="max-w-4xl mx-auto">
+        {/* User Guide Section */}
+        <section id="guide" className="relative py-20 px-6 overflow-hidden">
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-px h-24 bg-gradient-to-b from-primary/50 to-transparent"></div>
+          
+          <div className="max-w-4xl mx-auto relative z-10">
             <div className="text-center mb-20">
-              <span className="text-[10px] font-black uppercase tracking-[0.3em] text-primary bg-primary/5 px-4 py-1.5 rounded-full mb-4 inline-block">
+              <span className="text-[10px] font-black uppercase tracking-[0.3em] text-primary bg-primary/10 px-4 py-2 rounded-full">
                 User Guide
               </span>
               <h2 className="font-headline font-bold text-4xl md:text-5xl text-on-surface dark:text-white mt-4">
@@ -354,36 +484,41 @@ export default function LandingPage() {
                 </div>
               </div>
             </div>
+
+            {/* View Detailed Tutorial Button */}
+            <div className="mt-16 text-center animate-fade-in-up" style={{ animationDelay: '0.6s' }}>
+              <Link 
+                href="/tutorial" 
+                className="inline-flex items-center gap-2 px-8 py-4 rounded-xl border-2 border-primary/20 hover:border-primary/50 text-primary font-bold transition-all hover:bg-primary/5 group"
+              >
+                <span className="material-symbols-outlined group-hover:rotate-12 transition-transform">menu_book</span>
+                {t('viewDetailedTutorial')}
+              </Link>
+            </div>
           </div>
         </section>
 
+
         {/* CTA Section */}
-        <section className="py-24 px-6 max-w-7xl mx-auto">
-          <div className="bg-on-surface dark:bg-surface-container-high rounded-3xl p-12 md:p-24 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-1/2 h-full bg-primary/20 blur-[120px] rounded-full"></div>
-            <div className="relative z-10 text-center max-w-3xl mx-auto">
-              <h2 className="font-headline font-extrabold text-4xl md:text-5xl text-white mb-8">{t('ctaTitle')}</h2>
-              <p className="text-surface-variant/80 dark:text-gray-300 text-lg mb-12">{t('ctaSubtitle')}</p>
-              <div className="flex justify-center">
-                {user ? (
-                  <Link 
-                    href="/dashboard" 
-                    className="bg-white dark:bg-primary text-on-surface dark:text-white px-10 py-5 rounded-lg font-bold text-lg hover:bg-surface-container-lowest dark:hover:bg-primary-container transition-all hover:scale-105 duration-200 inline-block shadow-xl"
-                  >
-                    {t('navDashboard')}
-                  </Link>
-                ) : (
+        {!user && (
+          <section id="cta" className="py-24 px-6 max-w-7xl mx-auto">
+            <div className="bg-on-surface dark:bg-surface-container-high rounded-3xl p-12 md:p-24 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-1/2 h-full bg-primary/20 blur-[120px] rounded-full"></div>
+              <div className="relative z-10 text-center max-w-3xl mx-auto">
+                <h2 className="font-headline font-extrabold text-4xl md:text-5xl text-white mb-8">{t('ctaTitle')}</h2>
+                <p className="text-surface-variant/80 dark:text-gray-300 text-lg mb-12">{t('ctaSubtitle')}</p>
+                <div className="flex justify-center">
                   <button 
                     onClick={() => setShowLoginModal(true)} 
                     className="bg-white dark:bg-primary text-on-surface dark:text-white px-10 py-5 rounded-lg font-bold text-lg hover:bg-surface-container-lowest dark:hover:bg-primary-container transition-all hover:scale-105 duration-200 inline-block shadow-xl"
                   >
                     {t('ctaButton')}
                   </button>
-                )}
+                </div>
               </div>
             </div>
-          </div>
-        </section>
+          </section>
+        )}
       </main>
 
       {/* Footer */}
