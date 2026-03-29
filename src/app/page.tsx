@@ -113,7 +113,7 @@ export default function LandingPage() {
       <header className="fixed top-0 w-full z-50 bg-surface/80 dark:bg-gray-950/80 backdrop-blur-xl bg-surface-container-low dark:bg-gray-900 shadow-sm border-b border-outline-variant/30">
         <div className="flex justify-between items-center px-6 py-4 max-w-7xl mx-auto">
           <Link href="/" className="flex items-center gap-2 cursor-pointer group">
-            <span className="text-2xl font-extrabold tracking-tight text-on-surface dark:text-white font-headline group-hover:text-primary transition-colors">SnapFins</span>
+            <span className="text-2xl font-extrabold tracking-tighter text-indigo-700 dark:text-indigo-300 font-headline group-hover:text-primary transition-colors">SnapFins</span>
           </Link>
           <nav className="hidden md:flex items-center gap-8">
             <a 
@@ -525,7 +525,7 @@ export default function LandingPage() {
       <footer className="w-full border-t-0 bg-surface-container-low dark:bg-gray-950">
         <div className="flex flex-col md:flex-row justify-between items-center px-8 py-12 w-full max-w-7xl mx-auto">
           <div className="mb-8 md:mb-0">
-            <span className="text-lg font-bold text-on-surface dark:text-white font-headline">SnapFins</span>
+            <span className="text-xl font-headline font-extrabold tracking-tighter text-indigo-700 dark:text-indigo-300">SnapFins</span>
             <p className="text-on-surface-variant dark:text-gray-500 text-sm mt-2 font-bold uppercase tracking-widest">{t('footerRights')}</p>
           </div>
           <div className="flex gap-8 font-bold tracking-widest uppercase">

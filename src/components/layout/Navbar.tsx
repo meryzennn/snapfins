@@ -194,6 +194,7 @@ export default function Navbar({ userName, userEmail, userAvatar, onDeleteAccoun
               </div>
               <img
                 alt="User profile"
+                referrerPolicy="no-referrer"
                 className="w-8 h-8 md:w-10 md:h-10 rounded-full border-2 border-primary/20 object-cover shadow-sm"
                 src={
                   userAvatar ||

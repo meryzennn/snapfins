@@ -37,10 +37,7 @@ export default function TutorialPage() {
       <nav className="sticky top-0 z-50 w-full backdrop-blur-md bg-surface-container-lowest/70 dark:bg-slate-950/70 border-b border-outline-variant/10">
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2 group">
-             <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white shadow-lg shadow-primary/20 group-hover:rotate-12 transition-transform">
-               <span className="material-symbols-outlined text-xl">account_balance_wallet</span>
-             </div>
-             <span className="text-xl font-headline font-black tracking-tight text-on-surface dark:text-white">SnapFins</span>
+             <span className="text-xl font-headline font-extrabold tracking-tighter text-indigo-700 dark:text-indigo-300 group-hover:text-primary transition-colors">SnapFins</span>
           </Link>
           <div className="flex items-center gap-4">
             <Link 
