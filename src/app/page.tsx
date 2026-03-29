@@ -51,6 +51,9 @@ export default function LandingPage() {
       provider: provider,
       options: {
         redirectTo: `${window.location.origin}/auth/callback`,
+        queryParams: provider === 'github' ? { 
+          prompt: "select_account",
+        } : undefined,
       },
     });
   };
