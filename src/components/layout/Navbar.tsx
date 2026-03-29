@@ -74,7 +74,7 @@ export default function Navbar({ userName, userEmail, userAvatar, onDeleteAccoun
   const navItems = [
     { name: t("navDashboard"), href: "/dashboard", icon: "dashboard" },
     { name: t("navAsset"), href: "/assets", icon: "account_balance_wallet" },
-    { name: t("navAnalytics"), href: "#", icon: "monitoring" },
+    { name: t("navAnalytics"), href: "/analytics", icon: "monitoring" },
   ];
 
   return (
