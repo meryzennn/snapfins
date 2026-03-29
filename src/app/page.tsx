@@ -3,7 +3,7 @@
 import { useTheme } from "@/hooks/useTheme";
 import { useLang } from "@/hooks/useLang";
 import AuthModal from "@/components/AuthModal";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/client";
 import SupportModal from "@/components/SupportModal";
@@ -31,19 +31,34 @@ export default function LandingPage() {
     checkUser();
   }, []);
 
+  // Ref to prevent scroll spy from overriding a click-set section
+  // while the smooth scroll animation is still playing.
+  const clickLockedRef = useRef(false);
+  const lockTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleNavClick = (section: string) => {
+    setActiveSection(section);
+    // Lock the scroll spy for 700ms (longer than CSS scroll-smooth transition)
+    clickLockedRef.current = true;
+    if (lockTimerRef.current) clearTimeout(lockTimerRef.current);
+    lockTimerRef.current = setTimeout(() => {
+      clickLockedRef.current = false;
+    }, 700);
+  };
+
   useEffect(() => {
     const sections = ['home', 'features', 'guide'];
 
     const getActiveSection = () => {
+      // Don't override while a nav click is still animating
+      if (clickLockedRef.current) return;
+
       const scrollY = window.scrollY;
-      // Quick check: very top of the page → always 'home'
       if (scrollY < 80) {
         setActiveSection('home');
         return;
       }
 
-      // Walk the sections in reverse and pick the first whose top is above
-      // the current scroll position + a 120px navbar offset
       let current = 'home';
       for (const id of sections) {
         const el = document.getElementById(id);
@@ -54,7 +69,6 @@ export default function LandingPage() {
       setActiveSection(current);
     };
 
-    // Run on mount and on every scroll
     getActiveSection();
     window.addEventListener('scroll', getActiveSection, { passive: true });
     return () => window.removeEventListener('scroll', getActiveSection);
@@ -114,21 +128,21 @@ export default function LandingPage() {
             <a 
               className={`${activeSection === 'home' ? 'text-primary dark:text-primary-container font-bold' : 'text-on-surface-variant dark:text-gray-400 font-semibold'} transition-all duration-300 cursor-pointer`} 
               href="#home"
-              onClick={() => setActiveSection('home')}
+              onClick={() => handleNavClick('home')}
             >
               {t('home')}
             </a>
             <a 
               className={`${activeSection === 'features' ? 'text-primary dark:text-primary-container font-bold' : 'text-on-surface-variant dark:text-gray-400 font-semibold'} transition-all duration-300 cursor-pointer`} 
               href="#features"
-              onClick={() => setActiveSection('features')}
+              onClick={() => handleNavClick('features')}
             >
               {t('features')}
             </a>
             <a 
               className={`${activeSection === 'guide' ? 'text-primary dark:text-primary-container font-bold' : 'text-on-surface-variant dark:text-gray-400 font-semibold'} transition-all duration-300 cursor-pointer`} 
               href="#guide"
-              onClick={() => setActiveSection('guide')}
+              onClick={() => handleNavClick('guide')}
             >
               {t('navGuide')}
             </a>
@@ -489,7 +503,7 @@ export default function LandingPage() {
                 href="/tutorial" 
                 className="inline-flex items-center gap-2 px-8 py-4 rounded-xl border-2 border-primary/20 hover:border-primary/50 text-primary font-bold transition-all hover:bg-primary/5 group"
               >
-                <span className="material-symbols-outlined group-hover:rotate-12 transition-transform">menu_book</span>
+                <span className="material-symbols-outlined group-hover:scale-110 transition-transform duration-200">menu_book</span>
                 {t('viewDetailedTutorial')}
               </Link>
             </div>

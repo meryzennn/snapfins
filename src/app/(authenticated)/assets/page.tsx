@@ -34,6 +34,7 @@ export default function AssetsPage() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [menuPosition, setMenuPosition] = useState<{ top: number; right: number } | null>(null);
   const pageSize = 10;
 
 
@@ -44,12 +45,14 @@ export default function AssetsPage() {
     const handleClickOutside = (event: MouseEvent) => {
       if (!(event.target as Element).closest('.kebab-menu-container')) {
           setOpenMenuId(null);
+          setMenuPosition(null);
       }
     };
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setOpenMenuId(null);
+        setMenuPosition(null);
       }
     };
 
@@ -404,7 +407,7 @@ export default function AssetsPage() {
                 </div>
               </div>
 
-             <div className="flex-1 overflow-x-auto flex flex-col min-h-[450px] custom-scrollbar">
+             <div className="overflow-x-auto flex flex-col custom-scrollbar">
                 {selectedIds.length > 0 && (
                   <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-6 py-4 bg-primary/5 border-b border-primary/20 animate-in slide-in-from-top-2 duration-300">
                     <div className="flex items-center gap-3">
@@ -437,7 +440,7 @@ export default function AssetsPage() {
                         <div className="w-10 h-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
                     </div>
                 ) : assets.length === 0 ? (
-                    <div className="flex-1 flex flex-col items-center justify-center py-20 px-6 text-center min-h-[400px]">
+                    <div className="flex-1 flex flex-col items-center justify-center py-20 px-6 text-center">
                         <div className="w-16 h-16 bg-surface-container rounded-2xl flex items-center justify-center mb-6 shadow-sm border border-outline-variant/10">
                           <span className="material-symbols-outlined text-4xl text-primary opacity-90">
                               inventory_2
@@ -477,7 +480,7 @@ export default function AssetsPage() {
                         </button>
                     </div>
                 ) : (
-                    <table className="w-full text-left excel-grid">
+                    <table className="w-full min-w-[650px] text-left excel-grid bg-surface-container-lowest dark:bg-slate-900/50 text-xs font-body tracking-tight">
                         <thead>
                             <tr className="bg-slate-50 dark:bg-slate-900 text-on-surface-variant text-[10px] uppercase tracking-widest font-black sticky top-0 z-20 border-b border-outline-variant/10 shadow-[0_1px_3px_rgba(0,0,0,0.05)]">
                                 <th className="p-4 pl-6 text-center w-12">
@@ -492,12 +495,10 @@ export default function AssetsPage() {
                                 <th className="p-4 text-right whitespace-nowrap">{lang === "id" ? "Kuantitas" : "Quantity"}</th>
                                 <th className="p-4 text-right whitespace-nowrap">{lang === "id" ? "Nilai" : "Value"}</th>
                                 <th className="p-4 text-center whitespace-nowrap hidden sm:table-cell">{lang === "id" ? "Diperbarui" : "Updated"}</th>
-                                <th className="p-4 text-center whitespace-nowrap w-24 sticky right-0 bg-slate-50 dark:bg-slate-900 z-30 border-l border-outline-variant/10">
-                                    {lang === "id" ? "Aksi" : "Actions"}
-                                </th>
+                                <th className="p-2 text-center w-12 sticky right-0 bg-slate-50 dark:bg-slate-900 z-30 border-l border-outline-variant/10"></th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-outline-variant/10 text-sm font-semibold bg-white/20 dark:bg-slate-900/20 backdrop-blur-sm">
+                        <tbody className="text-on-surface text-sm font-semibold">
                             {paginatedAssets.map((asset) => (
                                 <tr key={asset.id} className={`hover:bg-grid-row-hover dark:hover:bg-slate-800/50 transition-colors group ${selectedIds.includes(asset.id) ? "bg-primary/[0.08]" : ""}`}>
                                     <td className="p-4 pl-6 text-center">
@@ -547,20 +548,30 @@ export default function AssetsPage() {
                                     <td className="p-4 text-center hidden sm:table-cell text-on-surface-variant font-bold text-[11px] uppercase tracking-widest">
                                         {new Date(asset.last_valued_at).toLocaleDateString(lang === "id" ? "id-ID" : "en-US", { month: "short", day: "numeric" })}
                                     </td>
-                                    <td className={`p-4 text-center kebab-menu-container sticky right-0 bg-white dark:bg-slate-950 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 border-l border-outline-variant/10 transition-all ${openMenuId === asset.id ? "z-40 shadow-[-10px_0_15px_-5px_rgba(0,0,0,0.1)] dark:shadow-[-10px_0_15px_-5px_rgba(0,0,0,0.3)]" : "z-20"}`}>
+                                    <td className={`p-2 text-center kebab-menu-container sticky right-0 bg-white dark:bg-slate-950 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 border-l border-outline-variant/10 transition-all ${openMenuId === asset.id ? "z-40 shadow-[-10px_0_15px_-5px_rgba(0,0,0,0.1)] dark:shadow-[-10px_0_15px_-5px_rgba(0,0,0,0.3)]" : "z-20"}`}>
                                         <div className="relative flex items-center justify-center text-left w-full h-full">
                                             <button 
                                                 onClick={(e) => {
                                                     e.stopPropagation();
-                                                    setOpenMenuId(openMenuId === asset.id ? null : asset.id);
+                                                    if (openMenuId === asset.id) {
+                                                      setOpenMenuId(null);
+                                                      setMenuPosition(null);
+                                                    } else {
+                                                      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                                                      setMenuPosition({ top: rect.top, right: window.innerWidth - rect.right });
+                                                      setOpenMenuId(asset.id);
+                                                    }
                                                 }}
-                                                className="w-8 h-8 rounded-full flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors cursor-pointer"
+                                                className="w-7 h-7 rounded-full flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors cursor-pointer"
                                             >
-                                                <span className="material-symbols-outlined text-[20px]">more_vert</span>
+                                                <span className="material-symbols-outlined text-[18px]">more_vert</span>
                                             </button>
                                             
-                                            {openMenuId === asset.id && (
-                                                <div className="absolute right-0 mt-1 w-32 bg-surface-container dark:bg-slate-800/95 backdrop-blur-md border border-outline-variant/30 rounded-xl shadow-[0_8px_25px_rgba(0,0,0,0.15)] z-50 py-1.5 origin-top-right animate-in fade-in zoom-in-95 duration-200 divide-y divide-outline-variant/10">
+                                            {openMenuId === asset.id && menuPosition && (
+                                                <div
+                                                    className="fixed w-36 bg-surface-container dark:bg-slate-800/95 backdrop-blur-md border border-outline-variant/30 rounded-xl shadow-[0_8px_25px_rgba(0,0,0,0.2)] z-[200] py-1.5 animate-in fade-in zoom-in-95 duration-200 divide-y divide-outline-variant/10"
+                                                    style={{ top: menuPosition.top, right: menuPosition.right, transform: 'translateY(-100%) translateY(-4px)' }}
+                                                >
                                                     <button 
                                                         onClick={(e) => {
                                                             e.stopPropagation();

@@ -173,6 +173,7 @@ export default function DashboardPage() {
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [tempScanData, setTempScanData] = useState<any>(null);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [menuPosition, setMenuPosition] = useState<{ top: number; right: number } | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -249,6 +250,7 @@ export default function DashboardPage() {
       // Kebab Menu Close on Outside Click
       if (!(event.target as Element).closest(".kebab-menu-container")) {
         setOpenMenuId(null);
+        setMenuPosition(null);
       }
     };
 
@@ -1920,7 +1922,7 @@ export default function DashboardPage() {
                   className="material-symbols-outlined text-primary text-2xl transition-transform duration-300 group-hover:scale-110"
                   style={{ fontVariationSettings: "'FILL' 1" }}
                 >
-                  account_balance
+                  show_chart
                 </span>
               </div>
             </div>
@@ -2214,33 +2216,23 @@ export default function DashboardPage() {
               </div>
             )}
           </div>
-          <div className="flex-1 overflow-x-auto flex flex-col min-h-[450px] custom-scrollbar rounded-lg shadow-sm border border-outline-variant/20">
-            <table className="w-full excel-grid bg-surface-container-lowest dark:bg-slate-900/50 text-xs font-body tracking-tight">
+          <div className="overflow-x-auto flex flex-col custom-scrollbar rounded-lg shadow-sm border border-outline-variant/20">
+            <table className="w-full min-w-[900px] excel-grid bg-surface-container-lowest dark:bg-slate-900/50 text-xs font-body tracking-tight">
               <thead className="bg-slate-50 dark:bg-slate-900 text-on-surface-variant uppercase font-bold text-[10px] tracking-widest border-b border-outline-variant/10 sticky top-0 z-20 shadow-[0_1px_3px_rgba(0,0,0,0.05)]">
                 {viewMode === "grid" ? (
                   <tr>
-                    <th className="p-4 text-center w-10">
-                      <SelectionToggle
+                    <th className="p-4 text-center w-[3%]"><SelectionToggle
                         checked={selectedIds.length > 0 && selectedIds.length === paginatedTransactions.length}
                         indeterminate={selectedIds.length > 0 && selectedIds.length < paginatedTransactions.length}
                         onChange={() => handleSelectAll(paginatedTransactions.map(tx => tx.id))}
-                      />
-                    </th>
-                    <th className="p-4 text-left w-24">{t("colDate")}</th>
-                    <th className="p-4 text-left w-32">
-                      {t("colCategory")}
-                    </th>
-                    <th className="p-4 text-left">
-                      {t("colDescription")}
-                    </th>
-                    <th className="p-4 text-left w-24">{t("colType")}</th>
-                    <th className="p-4 text-right min-w-[150px]">
-                      {t("colAmount")}
-                    </th>
-                    <th className="p-4 text-left w-40">
-                      {t("colLinkedAssets")}
-                    </th>
-                    <th className="p-4 text-center w-24 sticky right-0 bg-slate-50 dark:bg-slate-900 z-30 border-l border-outline-variant/10">{t("colActions")}</th>
+                      /></th>
+                    <th className="p-4 text-left w-[10%]">{t("colDate")}</th>
+                    <th className="p-4 text-left w-[15%]">{t("colCategory")}</th>
+                    <th className="p-4 text-left w-[30%]">{t("colDescription")}</th>
+                    <th className="p-4 text-left w-[10%]">{t("colType")}</th>
+                    <th className="p-4 text-right w-[16%]">{t("colAmount")}</th>
+                    <th className="p-4 text-left w-[14%]">{t("colLinkedAssets")}</th>
+                    <th className="p-2 text-center w-[5%] sticky right-0 bg-slate-50 dark:bg-slate-900 z-30 border-l border-outline-variant/10"></th>
                   </tr>
                 ) : (
                   <tr>
@@ -2344,20 +2336,30 @@ export default function DashboardPage() {
                             return tx.source || "—";
                           })()}
                         </td>
-                        <td className={`p-4 text-center kebab-menu-container sticky right-0 bg-white dark:bg-slate-950 group-hover:bg-grid-row-hover dark:group-hover:bg-[#1a202c] border-l border-outline-variant/10 transition-all ${openMenuId === tx.id ? "z-40 shadow-[-10px_0_15px_-5px_rgba(0,0,0,0.1)] dark:shadow-[-10px_0_15px_-5px_rgba(0,0,0,0.3)]" : "z-20"}`}>
+                        <td className={`p-2 text-center kebab-menu-container sticky right-0 bg-white dark:bg-slate-950 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 border-l border-outline-variant/10 transition-all ${openMenuId === tx.id ? "z-40 shadow-[-10px_0_15px_-5px_rgba(0,0,0,0.1)] dark:shadow-[-10px_0_15px_-5px_rgba(0,0,0,0.3)]" : "z-20"}`}>
                           <div className="relative flex items-center justify-center text-left w-full h-full">
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setOpenMenuId(openMenuId === tx.id ? null : tx.id);
+                                if (openMenuId === tx.id) {
+                                  setOpenMenuId(null);
+                                  setMenuPosition(null);
+                                } else {
+                                  const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                                  setMenuPosition({ top: rect.top, right: window.innerWidth - rect.right });
+                                  setOpenMenuId(tx.id);
+                                }
                               }}
-                              className="w-8 h-8 rounded-full flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors cursor-pointer"
+                              className="w-7 h-7 rounded-full flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors cursor-pointer"
                             >
-                              <span className="material-symbols-outlined text-[20px]">more_vert</span>
+                              <span className="material-symbols-outlined text-[18px]">more_vert</span>
                             </button>
-                            
-                            {openMenuId === tx.id && (
-                              <div className="absolute right-0 mt-1 w-32 bg-surface-container dark:bg-slate-800/95 backdrop-blur-md border border-outline-variant/30 rounded-xl shadow-[0_8px_25px_rgba(0,0,0,0.15)] z-50 py-1.5 origin-top-right animate-in fade-in zoom-in-95 duration-200 divide-y divide-outline-variant/10">
+
+                            {openMenuId === tx.id && menuPosition && (
+                              <div
+                                className="fixed w-36 bg-white dark:bg-slate-800/95 backdrop-blur-md border border-outline-variant/30 rounded-xl shadow-[0_8px_25px_rgba(0,0,0,0.2)] z-[200] py-1.5 animate-in fade-in zoom-in-95 duration-200 divide-y divide-outline-variant/10"
+                                style={{ top: menuPosition.top, right: menuPosition.right, transform: 'translateY(-100%) translateY(-4px)' }}
+                              >
                                 <button 
                                   onClick={(e) => {
                                     e.stopPropagation();
