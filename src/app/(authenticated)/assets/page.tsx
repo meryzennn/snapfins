@@ -17,6 +17,7 @@ import {
   getInvestedAssetsValue,
   getAssetsByCategory,
 } from "@/lib/assets";
+import { AssetsSkeleton } from "@/components/Skeleton";
 
 export default function AssetsPage() {
   const { theme, setTheme } = useTheme();
@@ -270,12 +271,8 @@ export default function AssetsPage() {
       return colors[cat] || "bg-gray-500";
   };
 
-  if (!mounted) {
-    return (
-      <div className="min-h-screen bg-surface flex items-center justify-center">
-        <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
-      </div>
-    );
+  if (!mounted || isLoading) {
+    return <AssetsSkeleton />;
   }
 
   return (
@@ -482,7 +479,7 @@ export default function AssetsPage() {
                 ) : (
                     <table className="w-full text-left excel-grid">
                         <thead>
-                            <tr className="bg-slate-50 dark:bg-slate-900 text-on-surface-variant text-[10px] uppercase tracking-widest font-black sticky top-0 z-10 border-b border-outline-variant/10">
+                            <tr className="bg-slate-50 dark:bg-slate-900 text-on-surface-variant text-[10px] uppercase tracking-widest font-black sticky top-0 z-20 border-b border-outline-variant/10 shadow-[0_1px_3px_rgba(0,0,0,0.05)]">
                                 <th className="p-4 pl-6 text-center w-12">
                                   <SelectionToggle
                                     checked={selectedIds.length > 0 && selectedIds.length === normalizedAssets.length}
@@ -511,7 +508,7 @@ export default function AssetsPage() {
                                     </td>
                                     <td className="p-4">
                                         <div className="flex flex-col">
-                                            <span className="text-on-surface font-bold text-[14px] truncate max-w-[150px] sm:max-w-xs">{asset.name}</span>
+                                            <span className="text-on-surface font-bold text-[14px] truncate max-w-[120px] sm:max-w-xs block">{asset.name}</span>
                                             {asset.symbol && <span className="text-[10px] font-black tracking-widest text-primary uppercase mt-0.5">{asset.symbol}</span>}
                                         </div>
                                     </td>
@@ -550,8 +547,8 @@ export default function AssetsPage() {
                                     <td className="p-4 text-center hidden sm:table-cell text-on-surface-variant font-bold text-[11px] uppercase tracking-widest">
                                         {new Date(asset.last_valued_at).toLocaleDateString(lang === "id" ? "id-ID" : "en-US", { month: "short", day: "numeric" })}
                                     </td>
-                                    <td className={`p-4 text-center kebab-menu-container sticky right-0 bg-white dark:bg-slate-950 border-l border-outline-variant/10 transition-all ${openMenuId === asset.id ? "z-40 shadow-[-10px_0_15px_-5px_rgba(0,0,0,0.1)] dark:shadow-[-10px_0_15px_-5px_rgba(0,0,0,0.3)]" : "z-20"}`}>
-                                        <div className="relative inline-block text-left">
+                                    <td className={`p-4 text-center kebab-menu-container sticky right-0 bg-white dark:bg-slate-950 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 border-l border-outline-variant/10 transition-all ${openMenuId === asset.id ? "z-40 shadow-[-10px_0_15px_-5px_rgba(0,0,0,0.1)] dark:shadow-[-10px_0_15px_-5px_rgba(0,0,0,0.3)]" : "z-20"}`}>
+                                        <div className="relative flex items-center justify-center text-left w-full h-full">
                                             <button 
                                                 onClick={(e) => {
                                                     e.stopPropagation();
