@@ -316,7 +316,7 @@ export default function AssetsPage() {
                   icon: "account_balance",
                   gradient: "bg-gradient-to-br from-white/60 dark:from-slate-900/60 to-surface-container-low/40 dark:to-slate-800/40",
                   iconBg: "bg-primary/5 group-hover:bg-primary/10",
-                  textClass: "text-on-surface"
+                  textClass: "text-on-surface font-black"
                 },
                 { 
                   label: lang === "id" ? "Aset Likuid" : "Liquid Assets", 
@@ -332,7 +332,7 @@ export default function AssetsPage() {
                   icon: "trending_up",
                   gradient: "bg-gradient-to-br from-white/60 dark:from-slate-900/60 to-surface-container-low/40 dark:to-slate-800/40",
                   iconBg: "bg-primary/5 group-hover:bg-primary/10",
-                  textClass: "text-on-surface"
+                  textClass: "text-on-surface font-black"
                 }
             ].map((card, idx) => (
                 <div key={idx} className={`glass-card p-6 rounded-2xl border border-white/40 dark:border-white/10 shadow-xl relative overflow-hidden group ${card.gradient}`}>
@@ -438,9 +438,9 @@ export default function AssetsPage() {
                         <div className="w-10 h-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
                     </div>
                 ) : assets.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center p-12 text-center h-[340px]">
+                    <div className="flex-1 flex flex-col items-center justify-center py-20 px-6 text-center min-h-[400px]">
                         <div className="w-16 h-16 bg-surface-container rounded-2xl flex items-center justify-center mb-6 shadow-sm border border-outline-variant/10">
-                          <span className="material-symbols-outlined text-4xl text-primary opacity-90 leading-none">
+                          <span className="material-symbols-outlined text-4xl text-primary opacity-90">
                               inventory_2
                           </span>
                         </div>
@@ -471,7 +471,7 @@ export default function AssetsPage() {
                         </div>
                         <button
                           onClick={() => setShowAddAssetModal(true)}
-                          className="mt-7 px-6 py-3 rounded-xl bg-gradient-to-r from-primary to-primary-container text-white font-bold text-sm shadow-[0_4px_15px_rgba(53,37,205,0.25)] transition-all active:scale-[0.98] flex items-center gap-2 cursor-pointer"
+                          className="mt-8 px-8 py-3.5 rounded-xl bg-gradient-to-r from-primary to-primary-container text-white font-bold text-sm shadow-[0_5px_20px_rgba(53,37,205,0.35)] transition-all active:scale-[0.98] flex items-center justify-center gap-2 magic-glow-hover cursor-pointer"
                         >
                           <span className="material-symbols-outlined text-lg">add</span>
                           {lang === "id" ? "Tambah Aset Pertama" : "Add Your First Asset"}
