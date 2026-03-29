@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Footer from '@/components/layout/Footer';
 
 export default function TermsOfService() {
   return (
@@ -42,9 +43,7 @@ export default function TermsOfService() {
         </section>
       </main>
 
-      <footer className="w-full py-8 bg-surface-container-low border-t border-outline-variant/30 text-center">
-        <p className="text-xs font-bold text-on-surface-variant tracking-widest uppercase">© 2026 0x5zen. All rights reserved.</p>
-      </footer>
+      <Footer />
     </div>
   );
 }

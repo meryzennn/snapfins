@@ -69,20 +69,27 @@ export function convert(amount: number, from: SupportedCurrency, to: SupportedCu
 
 /**
  * Formats a numeric value as a localized currency string.
+ * Decouples formatting from UI language: IDR uses id-ID, all others use en-US.
  */
-export function formatValue(amount: number, currency: SupportedCurrency, lang: 'en' | 'id'): string {
-  const locale = lang === 'id' ? 'id-ID' : 'en-US';
+export function formatValue(amount: number, currency: SupportedCurrency): string {
+  const locale = currency === 'IDR' ? 'id-ID' : 'en-US';
   const safeAmount = isNaN(amount) ? 0 : amount;
   
-  // Custom Rupiah format for clarity
+  // Custom Rupiah format: Rp1.000.000 (no space, dots for thousands, commas for decimals)
   if (currency === 'IDR') {
-    return 'Rp ' + new Intl.NumberFormat(locale).format(Math.round(safeAmount));
+    const formatter = new Intl.NumberFormat('id-ID', {
+      minimumFractionDigits: amount % 1 === 0 ? 0 : 2,
+      maximumFractionDigits: 2,
+    });
+    return 'Rp' + formatter.format(safeAmount);
   }
 
-  return new Intl.NumberFormat(locale, {
+  // Other currencies: $1,000,000.00 (Standard International / US style)
+  return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: currency,
     maximumFractionDigits: 2,
+    minimumFractionDigits: 2,
   }).format(safeAmount);
 }
 

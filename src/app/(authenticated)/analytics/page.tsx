@@ -65,7 +65,143 @@ const TX_CATEGORY_COLORS = [
 ];
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
-const MONTH_SHORT = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const MONTH_SHORT_EN = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const MONTH_SHORT_ID = ["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Agt","Sep","Okt","Nov","Des"];
+
+const ANALYTICS_TRANSLATIONS = {
+  en: {
+    pageTitle: "Analytics",
+    pageSub: "Your financial picture, in full detail.",
+    allMonths: "All Months",
+    netWorth: "Net Worth",
+    netWorthSub: "Total asset value",
+    totalIncome: "Total Income",
+    totalExpense: "Total Expense",
+    netCashflow: "Net Cashflow",
+    liquidAssets: "Liquid Assets",
+    invested: "Invested",
+    ofNetWorth: "of net worth",
+    savingsRate: "savings rate",
+    yearLabel: (y: number) => `Year ${y}`,
+    monthYear: (m: string, y: number) => `${m} ${y}`,
+    netWorthTitle: "Net Worth Trajectory",
+    netWorthSub2: (y: number) => `Running cashflow delta for ${y} — indicating how your net worth evolved month by month`,
+    noDataYet: "No data yet",
+    noDataSub: "Add transactions to see your net worth trajectory over time.",
+    incomeVsExpense: "Income vs Expense",
+    incomeVsExpenseSub: (y: number) => `Monthly comparison for ${y}`,
+    noTransactions: "No transactions",
+    noTransactionsSub: "Add transactions to see your income and expense trends.",
+    expenseByCategory: "Expense by Category",
+    expenseByCategorySub: "Where your money is going",
+    noExpensesYet: "No expenses yet",
+    noExpensesSub: "Your expense breakdown will appear here once you've added transactions.",
+    assetAllocation: "Asset Allocation",
+    assetAllocationSub: "How your wealth is distributed",
+    noAssets: "No assets",
+    noAssetsSub: "Add assets to see your allocation breakdown.",
+    liquidVsInvested: "Liquid vs Invested Assets",
+    liquidVsInvestedSub: "Understanding your financial flexibility",
+    noAssetsYet: "No assets yet",
+    noAssetsYetSub: "Add assets to analyse your liquidity profile.",
+    liquid: "Liquid",
+    spendingTrend: "Monthly Spending Trend",
+    spendingTrendSub: (y: number) => `Expense pattern across ${y}`,
+    noTxTrend: "No transactions",
+    noTxTrendSub: "Your monthly spending trend will appear here.",
+    keyInsights: "Key Insights",
+    keyInsightsSub: "Data-driven takeaways from your finances",
+    noInsights: "Add data to unlock insights",
+    noInsightsSub: "Insights are generated from your actual transactions and assets.",
+    topSpending: "Top Spending Category",
+    noExpensesRecorded: "No expenses recorded",
+    savingsRateLabel: "Savings Rate",
+    savedThisPeriod: (v: string) => `${v} saved this period`,
+    noIncomeRecorded: "No income recorded",
+    incomeExpenseRatio: "Income / Expense Ratio",
+    healthy: "Healthy — earning more than spending",
+    overspending: "⚠ Spending exceeds income",
+    noExpenses: "No expenses",
+    avgMonthlyExpense: "Average Monthly Expense",
+    avgMonthlyExpenseSub: "Average across all 12 months",
+    highestSpendingMonth: "Highest Spending Month",
+    spentLabel: (v: string) => `${v} spent`,
+    lowestSpendingMonth: "Lowest Spending Month",
+    largestAssetClass: "Largest Asset Class",
+    liquidAssetRatio: "Liquid Asset Ratio",
+    readilyAccessible: (v: string) => `${v} readily accessible`,
+    incomeLabel: "Income",
+    expenseLabel: "Expense",
+    netWorthLabel: "Net Worth",
+    investedLabel: "Invested",
+  },
+  id: {
+    pageTitle: "Analitik",
+    pageSub: "Gambaran keuangan Anda secara lengkap.",
+    allMonths: "Semua Bulan",
+    netWorth: "Kekayaan Bersih",
+    netWorthSub: "Total nilai aset",
+    totalIncome: "Total Pemasukan",
+    totalExpense: "Total Pengeluaran",
+    netCashflow: "Arus Kas Bersih",
+    liquidAssets: "Aset Likuid",
+    invested: "Diinvestasikan",
+    ofNetWorth: "dari kekayaan bersih",
+    savingsRate: "tingkat tabungan",
+    yearLabel: (y: number) => `Tahun ${y}`,
+    monthYear: (m: string, y: number) => `${m} ${y}`,
+    netWorthTitle: "Trajektori Kekayaan Bersih",
+    netWorthSub2: (y: number) => `Delta arus kas untuk ${y} — menunjukkan bagaimana kekayaan bersih Anda berkembang setiap bulan`,
+    noDataYet: "Belum ada data",
+    noDataSub: "Tambahkan transaksi untuk melihat trajektori kekayaan bersih Anda.",
+    incomeVsExpense: "Pemasukan vs Pengeluaran",
+    incomeVsExpenseSub: (y: number) => `Perbandingan bulanan untuk ${y}`,
+    noTransactions: "Belum ada transaksi",
+    noTransactionsSub: "Tambahkan transaksi untuk melihat tren pemasukan dan pengeluaran.",
+    expenseByCategory: "Pengeluaran per Kategori",
+    expenseByCategorySub: "Ke mana uang Anda pergi",
+    noExpensesYet: "Belum ada pengeluaran",
+    noExpensesSub: "Rincian pengeluaran Anda akan muncul di sini setelah Anda menambahkan transaksi.",
+    assetAllocation: "Alokasi Aset",
+    assetAllocationSub: "Bagaimana kekayaan Anda didistribusikan",
+    noAssets: "Belum ada aset",
+    noAssetsSub: "Tambahkan aset untuk melihat rincian alokasi Anda.",
+    liquidVsInvested: "Aset Likuid vs Diinvestasikan",
+    liquidVsInvestedSub: "Memahami fleksibilitas keuangan Anda",
+    noAssetsYet: "Belum ada aset",
+    noAssetsYetSub: "Tambahkan aset untuk menganalisis profil likuiditas Anda.",
+    liquid: "Likuid",
+    spendingTrend: "Tren Pengeluaran Bulanan",
+    spendingTrendSub: (y: number) => `Pola pengeluaran sepanjang ${y}`,
+    noTxTrend: "Belum ada transaksi",
+    noTxTrendSub: "Tren pengeluaran bulanan Anda akan muncul di sini.",
+    keyInsights: "Wawasan Utama",
+    keyInsightsSub: "Kesimpulan berbasis data dari keuangan Anda",
+    noInsights: "Tambah data untuk membuka wawasan",
+    noInsightsSub: "Wawasan dibuat dari transaksi dan aset nyata Anda.",
+    topSpending: "Kategori Pengeluaran Tertinggi",
+    noExpensesRecorded: "Belum ada pengeluaran tercatat",
+    savingsRateLabel: "Tingkat Tabungan",
+    savedThisPeriod: (v: string) => `${v} ditabung periode ini`,
+    noIncomeRecorded: "Belum ada pemasukan tercatat",
+    incomeExpenseRatio: "Rasio Pemasukan / Pengeluaran",
+    healthy: "Sehat — pemasukan lebih besar dari pengeluaran",
+    overspending: "⚠ Pengeluaran melebihi pemasukan",
+    noExpenses: "Belum ada pengeluaran",
+    avgMonthlyExpense: "Rata-rata Pengeluaran Bulanan",
+    avgMonthlyExpenseSub: "Rata-rata dari 12 bulan",
+    highestSpendingMonth: "Bulan dengan Pengeluaran Tertinggi",
+    spentLabel: (v: string) => `${v} dibelanjakan`,
+    lowestSpendingMonth: "Bulan dengan Pengeluaran Terendah",
+    largestAssetClass: "Kelas Aset Terbesar",
+    liquidAssetRatio: "Rasio Aset Likuid",
+    readilyAccessible: (v: string) => `${v} mudah diakses`,
+    incomeLabel: "Pemasukan",
+    expenseLabel: "Pengeluaran",
+    netWorthLabel: "Kekayaan Bersih",
+    investedLabel: "Diinvestasikan",
+  },
+};
 
 function parseTxAmount(tx: any, toCurrency: SupportedCurrency): number {
   const numStr: string = tx.amount || "0";
@@ -272,7 +408,8 @@ export default function AnalyticsPage() {
     return arr;
   }, [transactions]);
 
-  const monthsLabels = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const t = ANALYTICS_TRANSLATIONS[lang as "en" | "id"] || ANALYTICS_TRANSLATIONS.en;
+  const monthsLabels = lang === "id" ? MONTH_SHORT_ID : MONTH_SHORT_EN;
 
   // ── Filter transactions for selected period ────────────────────────────────
   const filteredTx = useMemo(() =>
@@ -344,13 +481,13 @@ export default function AnalyticsPage() {
       .filter(tx => new Date(tx.date).getFullYear() === selectedYear)
       .forEach(tx => {
         const m = new Date(tx.date).getMonth();
-        const key = MONTH_SHORT[m];
+        const key = MONTH_SHORT_EN[m];
         if (!map[key]) map[key] = { month: key, income: 0, expense: 0 };
         const v = parseTxAmount(tx, cur);
         if (tx.type === "Income" || tx.type === "Credit") map[key].income += v;
         else if (tx.type === "Expense" || tx.type === "Debit") map[key].expense += v;
       });
-    return MONTH_SHORT.map(m => map[m] || { month: m, income: 0, expense: 0 });
+    return MONTH_SHORT_EN.map(m => map[m] || { month: m, income: 0, expense: 0 });
   }, [transactions, selectedYear, cur]);
 
   // ── Expense category breakdown ─────────────────────────────────────────────
@@ -389,7 +526,7 @@ export default function AnalyticsPage() {
       .filter(tx => new Date(tx.date).getFullYear() === selectedYear)
       .forEach(tx => {
         const m = new Date(tx.date).getMonth();
-        const key = MONTH_SHORT[m];
+        const key = MONTH_SHORT_EN[m];
         const v = parseTxAmount(tx, cur);
         if (tx.type === "Income" || tx.type === "Credit") txByMonth[key] = (txByMonth[key] || 0) + v;
         else if (tx.type === "Expense" || tx.type === "Debit") txByMonth[key] = (txByMonth[key] || 0) - v;
@@ -397,7 +534,7 @@ export default function AnalyticsPage() {
 
     // Forward accumulation: running cashflow total
     let running = 0;
-    return MONTH_SHORT.map(m => {
+    return MONTH_SHORT_EN.map(m => {
       running += txByMonth[m] || 0;
       return { month: m, netWorth: running };
     });
@@ -418,7 +555,7 @@ export default function AnalyticsPage() {
   }, [spendTrend]);
 
   // ── Format helper (inside component scope) ────────────────────────────────
-  const fmt = (v: number) => formatValue(v, cur, lang as "en" | "id");
+  const fmt = (v: number) => formatValue(v, cur);
 
   // ── Loading / skeleton ────────────────────────────────────────────────────
   if (!mounted || isLoading) {
@@ -435,8 +572,8 @@ export default function AnalyticsPage() {
         {/* ── Page Header + Filters ─────────────────────────────────────── */}
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
           <div>
-            <h1 className="font-headline font-black text-2xl tracking-tight text-on-surface">Analytics</h1>
-            <p className="text-sm text-on-surface-variant mt-1">Your financial picture, in full detail.</p>
+            <h1 className="font-headline font-black text-2xl tracking-tight text-on-surface">{t.pageTitle}</h1>
+            <p className="text-sm text-on-surface-variant mt-1">{t.pageSub}</p>
           </div>
 
           {/* Filter chips */}
@@ -469,7 +606,7 @@ export default function AnalyticsPage() {
                 className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-surface-container-low border border-outline-variant/30 text-xs font-black text-on-surface hover:bg-surface-container transition-colors cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[14px] text-primary">date_range</span>
-                {selectedMonth === -1 ? "All Months" : monthsLabels[selectedMonth]}
+                {selectedMonth === -1 ? t.allMonths : monthsLabels[selectedMonth]}
                 <span className="material-symbols-outlined text-[12px] text-on-surface-variant">{showMonthDropdown ? "expand_less" : "expand_more"}</span>
               </button>
               {showMonthDropdown && (
@@ -477,7 +614,7 @@ export default function AnalyticsPage() {
                   <button
                     onClick={() => { setSelectedMonth(-1); setShowMonthDropdown(false); }}
                     className={`w-full text-left px-4 py-2 text-xs font-bold transition-colors hover:bg-primary/10 cursor-pointer ${selectedMonth === -1 ? "text-primary" : "text-on-surface"}`}
-                  >All Months</button>
+                  >{t.allMonths}</button>
                   {monthsLabels.map((m, i) => (
                     <button key={m} onClick={() => { setSelectedMonth(i); setShowMonthDropdown(false); }}
                       className={`w-full text-left px-4 py-2 text-xs font-bold transition-colors hover:bg-primary/10 cursor-pointer ${i === selectedMonth ? "text-primary" : "text-on-surface"}`}
@@ -493,47 +630,47 @@ export default function AnalyticsPage() {
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
           <SummaryCard
             icon="account_balance"
-            label="Net Worth"
+            label={t.netWorth}
             value={hasAssets ? fmt(netWorth) : "—"}
             badge={hasAssets ? trendBadge(netWorth, netWorth * 0.97) : undefined}
-            sub="Total asset value"
+            sub={t.netWorthSub}
             accent="text-indigo-500"
           />
           <SummaryCard
             icon="trending_up"
-            label="Total Income"
+            label={t.totalIncome}
             value={hasTransactions ? fmt(totalIncome) : "—"}
             badge={hasTransactions ? trendBadge(totalIncome, prevIncome) : undefined}
-            sub={selectedMonth === -1 ? `Year ${selectedYear}` : `${monthsLabels[selectedMonth]} ${selectedYear}`}
+            sub={selectedMonth === -1 ? t.yearLabel(selectedYear) : t.monthYear(monthsLabels[selectedMonth], selectedYear)}
             accent="text-emerald-500"
           />
           <SummaryCard
             icon="trending_down"
-            label="Total Expense"
+            label={t.totalExpense}
             value={hasTransactions ? fmt(totalExpense) : "—"}
             badge={hasTransactions ? trendBadge(totalExpense, prevExpense, true) : undefined}
-            sub={selectedMonth === -1 ? `Year ${selectedYear}` : `${monthsLabels[selectedMonth]} ${selectedYear}`}
+            sub={selectedMonth === -1 ? t.yearLabel(selectedYear) : t.monthYear(monthsLabels[selectedMonth], selectedYear)}
             accent="text-rose-500"
           />
           <SummaryCard
             icon="savings"
-            label="Net Cashflow"
+            label={t.netCashflow}
             value={hasTransactions ? fmt(netCashflow) : "—"}
-            sub={savingsRate !== 0 ? `${savingsRate.toFixed(1)}% savings rate` : ""}
+            sub={savingsRate !== 0 ? `${savingsRate.toFixed(1)}% ${t.savingsRate}` : ""}
             accent={netCashflow >= 0 ? "text-emerald-500" : "text-rose-500"}
           />
           <SummaryCard
             icon="water_drop"
-            label="Liquid Assets"
+            label={t.liquidAssets}
             value={hasAssets ? fmt(liquidAssets) : "—"}
-            sub={hasAssets && netWorth > 0 ? `${((liquidAssets / netWorth) * 100).toFixed(1)}% of net worth` : ""}
+            sub={hasAssets && netWorth > 0 ? `${((liquidAssets / netWorth) * 100).toFixed(1)}% ${t.ofNetWorth}` : ""}
             accent="text-blue-500"
           />
           <SummaryCard
             icon="rocket_launch"
-            label="Invested"
+            label={t.invested}
             value={hasAssets ? fmt(investedAssets) : "—"}
-            sub={hasAssets && netWorth > 0 ? `${((investedAssets / netWorth) * 100).toFixed(1)}% of net worth` : ""}
+            sub={hasAssets && netWorth > 0 ? `${((investedAssets / netWorth) * 100).toFixed(1)}% ${t.ofNetWorth}` : ""}
             accent="text-violet-500"
           />
         </div>
@@ -541,11 +678,11 @@ export default function AnalyticsPage() {
         {/* ── PART B: Net Worth Over Time ───────────────────────────────── */}
         <div className="bg-surface-container-lowest dark:bg-slate-900/60 border border-outline-variant/20 rounded-2xl p-5 shadow-sm">
           <SectionHeader
-            title="Net Worth Trajectory"
-            sub={`Running cashflow delta for ${selectedYear} — indicating how your net worth evolved month by month`}
+            title={t.netWorthTitle}
+            sub={t.netWorthSub2(selectedYear)}
           />
           {!hasTransactions ? (
-            <EmptyState icon="show_chart" title="No data yet" subtitle="Add transactions to see your net worth trajectory over time." />
+            <EmptyState icon="show_chart" title={t.noDataYet} subtitle={t.noDataSub} />
           ) : (
             <ResponsiveContainer width="100%" height={220}>
               <AreaChart data={netWorthOverTime} margin={{ top: 5, right: 10, bottom: 0, left: 0 }}>
@@ -559,7 +696,7 @@ export default function AnalyticsPage() {
                 <XAxis dataKey="month" tick={{ fill: "#64748b", fontSize: 10, fontWeight: 700 }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fill: "#64748b", fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={v => fmt(v).replace(/\s/g, "")} width={70} />
                 <Tooltip content={<DarkTooltip formatter={(v: number) => fmt(v)} />} />
-                <Area type="monotone" dataKey="netWorth" name="Net Worth" stroke={PALETTE.primary} strokeWidth={2.5} fill="url(#nwGradient)" dot={false} activeDot={{ r: 5, fill: PALETTE.primary }} />
+                <Area type="monotone" dataKey="netWorth" name={t.netWorthLabel} stroke={PALETTE.primary} strokeWidth={2.5} fill="url(#nwGradient)" dot={false} activeDot={{ r: 5, fill: PALETTE.primary }} />
               </AreaChart>
             </ResponsiveContainer>
           )}
@@ -568,11 +705,11 @@ export default function AnalyticsPage() {
         {/* ── PART B: Income vs Expense Over Time ──────────────────────── */}
         <div className="bg-surface-container-lowest dark:bg-slate-900/60 border border-outline-variant/20 rounded-2xl p-5 shadow-sm">
           <SectionHeader
-            title="Income vs Expense"
-            sub={`Monthly comparison for ${selectedYear}`}
+            title={t.incomeVsExpense}
+            sub={t.incomeVsExpenseSub(selectedYear)}
           />
           {!hasTransactions ? (
-            <EmptyState icon="bar_chart" title="No transactions" subtitle="Add transactions to see your income and expense trends." />
+            <EmptyState icon="bar_chart" title={t.noTransactions} subtitle={t.noTransactionsSub} />
           ) : (
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={monthlyChartData} margin={{ top: 5, right: 10, bottom: 0, left: 0 }} barGap={2}>
@@ -581,8 +718,8 @@ export default function AnalyticsPage() {
                 <YAxis tick={{ fill: "#64748b", fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={v => fmt(v).replace(/\s/g, "")} width={70} />
                 <Tooltip content={<DarkTooltip formatter={(v: number) => fmt(v)} />} />
                 <Legend wrapperStyle={{ fontSize: 10, fontWeight: 700, paddingTop: 12 }} />
-                <Bar dataKey="income" name="Income" fill={PALETTE.income} radius={[4,4,0,0]} maxBarSize={28} />
-                <Bar dataKey="expense" name="Expense" fill={PALETTE.expense} radius={[4,4,0,0]} maxBarSize={28} />
+                <Bar dataKey="income" name={t.incomeLabel} fill={PALETTE.income} radius={[4,4,0,0]} maxBarSize={28} />
+                <Bar dataKey="expense" name={t.expenseLabel} fill={PALETTE.expense} radius={[4,4,0,0]} maxBarSize={28} />
               </BarChart>
             </ResponsiveContainer>
           )}
@@ -593,9 +730,9 @@ export default function AnalyticsPage() {
 
           {/* Expense Breakdown */}
           <div className="bg-surface-container-lowest dark:bg-slate-900/60 border border-outline-variant/20 rounded-2xl p-5 shadow-sm">
-            <SectionHeader title="Expense by Category" sub="Where your money is going" />
+            <SectionHeader title={t.expenseByCategory} sub={t.expenseByCategorySub} />
             {expByCategory.length === 0 ? (
-              <EmptyState icon="donut_large" title="No expenses yet" subtitle="Your expense breakdown will appear here once you've added transactions." />
+              <EmptyState icon="donut_large" title={t.noExpensesYet} subtitle={t.noExpensesSub} />
             ) : (
               <div className="flex flex-col sm:flex-row items-center gap-4">
                 <ResponsiveContainer width={180} height={180}>
@@ -623,9 +760,9 @@ export default function AnalyticsPage() {
 
           {/* Asset Allocation */}
           <div className="bg-surface-container-lowest dark:bg-slate-900/60 border border-outline-variant/20 rounded-2xl p-5 shadow-sm">
-            <SectionHeader title="Asset Allocation" sub="How your wealth is distributed" />
+            <SectionHeader title={t.assetAllocation} sub={t.assetAllocationSub} />
             {assetAllocationData.length === 0 ? (
-              <EmptyState icon="pie_chart" title="No assets" subtitle="Add assets to see your allocation breakdown." />
+              <EmptyState icon="pie_chart" title={t.noAssets} subtitle={t.noAssetsSub} />
             ) : (
               <div className="flex flex-col sm:flex-row items-center gap-4">
                 <ResponsiveContainer width={180} height={180}>
@@ -654,9 +791,9 @@ export default function AnalyticsPage() {
 
         {/* ── PART B: Liquid vs Invested ────────────────────────────────── */}
         <div className="bg-surface-container-lowest dark:bg-slate-900/60 border border-outline-variant/20 rounded-2xl p-5 shadow-sm">
-          <SectionHeader title="Liquid vs Invested Assets" sub="Understanding your financial flexibility" />
+          <SectionHeader title={t.liquidVsInvested} sub={t.liquidVsInvestedSub} />
           {!hasAssets ? (
-            <EmptyState icon="water_drop" title="No assets yet" subtitle="Add assets to analyse your liquidity profile." />
+            <EmptyState icon="water_drop" title={t.noAssetsYet} subtitle={t.noAssetsYetSub} />
           ) : (
             <div className="flex flex-col gap-4">
               {/* Stacked bar visualization */}
@@ -669,7 +806,7 @@ export default function AnalyticsPage() {
                         style={{ width: `${(liquidAssets / netWorth) * 100}%` }}
                       >
                         {liquidAssets / netWorth > 0.12 && (
-                          <span className="text-[9px] font-black text-white uppercase tracking-wider px-1">Liquid</span>
+                          <span className="text-[9px] font-black text-white uppercase tracking-wider px-1">{t.liquid}</span>
                         )}
                       </div>
                       <div
@@ -677,7 +814,7 @@ export default function AnalyticsPage() {
                         style={{ width: `${(investedAssets / netWorth) * 100}%` }}
                       >
                         {investedAssets / netWorth > 0.12 && (
-                          <span className="text-[9px] font-black text-white uppercase tracking-wider px-1">Invested</span>
+                          <span className="text-[9px] font-black text-white uppercase tracking-wider px-1">{t.investedLabel}</span>
                         )}
                       </div>
                     </>
@@ -686,9 +823,9 @@ export default function AnalyticsPage() {
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 {[
-                  { label: "Liquid", value: liquidAssets, color: "bg-blue-500/10 text-blue-500", pctVal: liquidRatio },
-                  { label: "Invested", value: investedAssets, color: "bg-violet-500/10 text-violet-500", pctVal: netWorth > 0 ? (investedAssets / netWorth) * 100 : 0 },
-                  { label: "Net Worth", value: netWorth, color: "bg-indigo-500/10 text-indigo-500", pctVal: 100 },
+                  { label: t.liquid, value: liquidAssets, color: "bg-blue-500/10 text-blue-500", pctVal: liquidRatio },
+                  { label: t.investedLabel, value: investedAssets, color: "bg-violet-500/10 text-violet-500", pctVal: netWorth > 0 ? (investedAssets / netWorth) * 100 : 0 },
+                  { label: t.netWorthLabel, value: netWorth, color: "bg-indigo-500/10 text-indigo-500", pctVal: 100 },
                 ].map(item => (
                   <div key={item.label} className={`rounded-xl p-3 ${item.color.split(" ")[0]}`}>
                     <p className={`text-[10px] font-black uppercase tracking-widest ${item.color.split(" ")[1]}`}>{item.label}</p>
@@ -703,9 +840,9 @@ export default function AnalyticsPage() {
 
         {/* ── PART B: Spending Trend ──────────────────────────────────────── */}
         <div className="bg-surface-container-lowest dark:bg-slate-900/60 border border-outline-variant/20 rounded-2xl p-5 shadow-sm">
-          <SectionHeader title="Monthly Spending Trend" sub={`Expense pattern across ${selectedYear}`} />
+          <SectionHeader title={t.spendingTrend} sub={t.spendingTrendSub(selectedYear)} />
           {!hasTransactions ? (
-            <EmptyState icon="timeline" title="No transactions" subtitle="Your monthly spending trend will appear here." />
+            <EmptyState icon="timeline" title={t.noTxTrend} subtitle={t.noTxTrendSub} />
           ) : (
             <ResponsiveContainer width="100%" height={180}>
               <AreaChart data={spendTrend} margin={{ top: 5, right: 10, bottom: 0, left: 0 }}>
@@ -719,7 +856,7 @@ export default function AnalyticsPage() {
                 <XAxis dataKey="month" tick={{ fill: "#64748b", fontSize: 10, fontWeight: 700 }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fill: "#64748b", fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={v => fmt(v).replace(/\s/g, "")} width={70} />
                 <Tooltip content={<DarkTooltip formatter={(v: number) => fmt(v)} />} />
-                <Area type="monotone" dataKey="expense" name="Expense" stroke={PALETTE.expense} strokeWidth={2.5} fill="url(#expGradient)" dot={false} activeDot={{ r: 5, fill: PALETTE.expense }} />
+                <Area type="monotone" dataKey="expense" name={t.expenseLabel} stroke={PALETTE.expense} strokeWidth={2.5} fill="url(#expGradient)" dot={false} activeDot={{ r: 5, fill: PALETTE.expense }} />
               </AreaChart>
             </ResponsiveContainer>
           )}
@@ -727,56 +864,56 @@ export default function AnalyticsPage() {
 
         {/* ── PART C: Insight Cards ─────────────────────────────────────── */}
         <div>
-          <SectionHeader title="Key Insights" sub="Data-driven takeaways from your finances" />
+          <SectionHeader title={t.keyInsights} sub={t.keyInsightsSub} />
           {!hasTransactions && !hasAssets ? (
-            <EmptyState icon="lightbulb" title="Add data to unlock insights" subtitle="Insights are generated from your actual transactions and assets." />
+            <EmptyState icon="lightbulb" title={t.noInsights} subtitle={t.noInsightsSub} />
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {hasTransactions && (
                 <>
                   <InsightCard
                     icon="category"
-                    title="Top Spending Category"
+                    title={t.topSpending}
                     value={topExpenseCategory ? topExpenseCategory.name : "—"}
-                    sub={topExpenseCategory ? `${fmt(topExpenseCategory.value)} (${pct(topExpenseCategory.value, totalExpense)})` : "No expenses recorded"}
+                    sub={topExpenseCategory ? `${fmt(topExpenseCategory.value)} (${pct(topExpenseCategory.value, totalExpense)})` : t.noExpensesRecorded}
                     color="bg-rose-500"
                   />
                   <InsightCard
                     icon="percent"
-                    title="Savings Rate"
+                    title={t.savingsRateLabel}
                     value={totalIncome > 0 ? `${savingsRate.toFixed(1)}%` : "—"}
-                    sub={totalIncome > 0 ? `${fmt(netCashflow)} saved this period` : "No income recorded"}
+                    sub={totalIncome > 0 ? t.savedThisPeriod(fmt(netCashflow)) : t.noIncomeRecorded}
                     color={savingsRate >= 0 ? "bg-emerald-500" : "bg-rose-500"}
                   />
                   <InsightCard
                     icon="balance"
-                    title="Income / Expense Ratio"
+                    title={t.incomeExpenseRatio}
                     value={totalExpense > 0 ? `${(totalIncome / totalExpense).toFixed(2)}×` : "—"}
-                    sub={totalExpense > 0 ? (totalIncome >= totalExpense ? "Healthy — earning more than spending" : "⚠ Spending exceeds income") : "No expenses"}
+                    sub={totalExpense > 0 ? (totalIncome >= totalExpense ? t.healthy : t.overspending) : t.noExpenses}
                     color={totalIncome >= totalExpense ? "bg-emerald-500" : "bg-amber-500"}
                   />
                   <InsightCard
                     icon="trending_down"
-                    title="Average Monthly Expense"
+                    title={t.avgMonthlyExpense}
                     value={avgMonthlyExpense > 0 ? fmt(avgMonthlyExpense) : "—"}
-                    sub="Average across all 12 months"
+                    sub={t.avgMonthlyExpenseSub}
                     color="bg-violet-500"
                   />
                   {worstMonth && (
                     <InsightCard
                       icon="warning"
-                      title="Highest Spending Month"
+                      title={t.highestSpendingMonth}
                       value={worstMonth.month}
-                      sub={`${fmt(worstMonth.expense)} spent`}
+                      sub={t.spentLabel(fmt(worstMonth.expense))}
                       color="bg-rose-600"
                     />
                   )}
                   {bestMonth && (
                     <InsightCard
                       icon="thumb_up"
-                      title="Lowest Spending Month"
+                      title={t.lowestSpendingMonth}
                       value={bestMonth.month}
-                      sub={`${fmt(bestMonth.expense)} spent`}
+                      sub={t.spentLabel(fmt(bestMonth.expense))}
                       color="bg-emerald-600"
                     />
                   )}
@@ -786,16 +923,16 @@ export default function AnalyticsPage() {
                 <>
                   <InsightCard
                     icon="pie_chart"
-                    title="Largest Asset Class"
+                    title={t.largestAssetClass}
                     value={biggestAssetCategory ? biggestAssetCategory.name : "—"}
                     sub={biggestAssetCategory ? `${fmt(biggestAssetCategory.value)} (${pct(biggestAssetCategory.value, netWorth)})` : ""}
                     color="bg-indigo-500"
                   />
                   <InsightCard
                     icon="water_drop"
-                    title="Liquid Asset Ratio"
+                    title={t.liquidAssetRatio}
                     value={netWorth > 0 ? `${liquidRatio.toFixed(1)}%` : "—"}
-                    sub={`${fmt(liquidAssets)} readily accessible`}
+                    sub={t.readilyAccessible(fmt(liquidAssets))}
                     color="bg-blue-500"
                   />
                 </>
