@@ -423,6 +423,9 @@ export const translations = {
     allMonths: "Semua Bulan",
     filterMonth: "Bulan",
     filterYear: "Tahun",
+    
+    // ---- TUTORIAL & SUPPORT ----
+    tutorialTitle: "Memulai dengan SnapFins",
     tutorialStep1: "1. Atur Mata Uang Global",
     step1Desc:
       "Pilih mata uang utama Anda (USD/IDR) di header. Semua aset dan transaksi akan dikonversi otomatis berdasarkan kurs pasar saat ini.",
