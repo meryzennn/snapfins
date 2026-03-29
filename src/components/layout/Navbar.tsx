@@ -137,7 +137,7 @@ export default function Navbar({ userName, userEmail, userAvatar, onDeleteAccoun
               <div className="px-3 py-2 border-b border-outline-variant/10 font-black text-[9px] uppercase tracking-widest text-on-surface-variant bg-slate-50 dark:bg-slate-800">
                 {t("preferredCurrency")}
               </div>
-              <div className="max-h-60 overflow-y-auto py-1 scrollbar-thin">
+              <div className="max-h-60 overflow-y-auto py-1 no-scrollbar">
                 {(Object.keys(currencySymbols) as SupportedCurrency[]).map((c) => (
                   <button
                     key={c}

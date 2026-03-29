@@ -555,7 +555,7 @@ export default function AnalyticsPage() {
   }, [spendTrend]);
 
   // ── Format helper (inside component scope) ────────────────────────────────
-  const fmt = (v: number) => formatValue(v, cur, lang as "en" | "id");
+  const fmt = (v: number) => formatValue(v, cur);
 
   // ── Loading / skeleton ────────────────────────────────────────────────────
   if (!mounted || isLoading) {

@@ -73,7 +73,7 @@ export default function DashboardPage() {
   const [showYearDropdown, setShowYearDropdown] = useState(false);
   const [showMonthDropdown, setShowMonthDropdown] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 50;
+  const pageSize = 10;
   // Manual Entry States
   const [showManualEntry, setShowManualEntry] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -398,11 +398,11 @@ export default function DashboardPage() {
       : (hasHistory ? (lang === "id" ? "vs bulan lalu" : "vs last month") : "");
 
     return {
-      income: formatValue(incomeCurrent, currency, lang),
-      expense: formatValue(expenseCurrent, currency, lang),
-      totalAssetsStr: formatValue(totalAssets, currency, lang),
-      totalInvestmentStr: formatValue(totalInvestment, currency, lang),
-      netWorth: formatValue(netWorthNow, currency, lang),
+      income: formatValue(incomeCurrent, currency),
+      expense: formatValue(expenseCurrent, currency),
+      totalAssetsStr: formatValue(totalAssets, currency),
+      totalInvestmentStr: formatValue(totalInvestment, currency),
+      netWorth: formatValue(netWorthNow, currency),
       incomeTrend: iTrend !== null ? (iTrend === "NEW" ? "NEW" : (iTrend as number).toFixed(1)) : "—",
       expenseTrend: eTrend !== null ? (eTrend === "NEW" ? "NEW" : (eTrend as number).toFixed(1)) : "—",
       netWorthTrend: nwTrend !== null ? (nwTrend === "NEW" ? "NEW" : (nwTrend as number).toFixed(1)) : "—",
@@ -1332,7 +1332,7 @@ export default function DashboardPage() {
                       <div>
                         <p className="text-[10px] uppercase tracking-widest font-black text-secondary">Total Amount</p>
                         <p className="font-black text-3xl text-on-surface dark:text-white tracking-tighter">
-                          {formatValue(Number(tempScanData.amount), (tempScanData.currency || currency) as SupportedCurrency, lang as "en" | "id")}
+                          {formatValue(Number(tempScanData.amount), (tempScanData.currency || currency) as SupportedCurrency)}
                         </p>
                       </div>
                     </div>
@@ -2221,18 +2221,18 @@ export default function DashboardPage() {
               <thead className="bg-slate-50 dark:bg-slate-900 text-on-surface-variant uppercase font-bold text-[10px] tracking-widest border-b border-outline-variant/10 sticky top-0 z-20 shadow-[0_1px_3px_rgba(0,0,0,0.05)]">
                 {viewMode === "grid" ? (
                   <tr>
-                    <th className="p-4 text-center w-[3%]"><SelectionToggle
+                    <th className="p-2.5 sm:p-4 text-center w-[3%]"><SelectionToggle
                         checked={selectedIds.length > 0 && selectedIds.length === paginatedTransactions.length}
                         indeterminate={selectedIds.length > 0 && selectedIds.length < paginatedTransactions.length}
                         onChange={() => handleSelectAll(paginatedTransactions.map(tx => tx.id))}
                       /></th>
-                    <th className="p-4 text-left w-[10%]">{t("colDate")}</th>
-                    <th className="p-4 text-left w-[15%]">{t("colCategory")}</th>
-                    <th className="p-4 text-left w-[30%]">{t("colDescription")}</th>
-                    <th className="p-4 text-left w-[10%]">{t("colType")}</th>
-                    <th className="p-4 text-right w-[16%]">{t("colAmount")}</th>
-                    <th className="p-4 text-left w-[14%]">{t("colLinkedAssets")}</th>
-                    <th className="p-2 text-center w-[5%] sticky right-0 bg-slate-50 dark:bg-slate-900 z-30 border-l border-outline-variant/10"></th>
+                    <th className="p-2.5 sm:p-4 text-left w-[10%]">{t("colDate")}</th>
+                    <th className="p-2.5 sm:p-4 text-left w-[15%]">{t("colCategory")}</th>
+                    <th className="p-2.5 sm:p-4 text-left w-[30%]">{t("colDescription")}</th>
+                    <th className="p-2.5 sm:p-4 text-left w-[10%]">{t("colType")}</th>
+                    <th className="p-2.5 sm:p-4 text-right w-[16%]">{t("colAmount")}</th>
+                    <th className="p-2.5 sm:p-4 text-left w-[14%]">{t("colLinkedAssets")}</th>
+                    <th className="p-2 text-center w-[5%] bg-slate-50 dark:bg-slate-900 border-l border-outline-variant/10"></th>
                   </tr>
                 ) : (
                   <tr>
@@ -2262,31 +2262,31 @@ export default function DashboardPage() {
                         key={tx.id}
                         className={`hover:bg-grid-row-hover dark:hover:bg-slate-800/50 transition-colors group border-b border-outline-variant/5 text-sm font-semibold ${selectedIds.includes(tx.id) ? "bg-primary/[0.08]" : ""}`}
                       >
-                        <td className="p-4 text-center">
+                        <td className="p-2.5 sm:p-4 text-center">
                           <SelectionToggle
                             checked={selectedIds.includes(tx.id)}
                             onChange={() => handleSelectRow(tx.id)}
                           />
                         </td>
-                        <td className="p-4 font-mono text-slate-500 whitespace-nowrap">
+                        <td className="p-2.5 sm:p-4 font-mono text-slate-500 whitespace-nowrap text-[12px] sm:text-sm">
                           {(() => {
                             if (!tx.date) return "—";
                             const [y, m, d] = tx.date.split("-");
                             return `${d}/${m}/${y}`;
                           })()}
                         </td>
-                        <td className="p-4">
+                        <td className="p-2.5 sm:p-4 text-[12px] sm:text-sm">
                           <span
                             className={`px-1.5 py-0.5 rounded font-bold uppercase text-[9px] ${getCategoryStyle(tx.color)}`}
                           >
                             {tx.category}
                           </span>
                         </td>
-                        <td className="p-4 font-medium">
+                        <td className="p-2.5 sm:p-4 font-medium text-[12px] sm:text-sm">
                           <div className="flex items-center gap-2">
-                            <span className="truncate max-w-[120px] sm:max-w-xs block">{tx.description}</span>
+                            <span className="truncate max-w-[80px] sm:max-w-xs block">{tx.description}</span>
                             {tx.isAi && (
-                              <span className="inline-flex shrink-0 items-center gap-1 text-[9px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded-full ml-1">
+                              <span className="inline-flex shrink-0 items-center gap-1 text-[8px] sm:text-[9px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded-full ml-1">
                                 <span className="material-symbols-outlined text-[10px]">
                                   auto_awesome
                                 </span>
@@ -2296,12 +2296,12 @@ export default function DashboardPage() {
                           </div>
                         </td>
                         <td
-                          className={`px-3 py-2 font-bold ${tx.type === "Credit" || tx.type === "Income" ? "text-secondary" : tx.type === "Investment" ? "text-indigo-500" : "text-error"}`}
+                          className={`px-2.5 sm:px-3 py-2 font-bold text-[12px] sm:text-sm ${tx.type === "Credit" || tx.type === "Income" ? "text-secondary" : tx.type === "Investment" ? "text-indigo-500" : "text-error"}`}
                         >
                           {tx.type === "Credit" || tx.type === "Income" ? t("typeIncome") : tx.type === "Debit" || tx.type === "Expense" ? t("typeExpense") : t("typeInvestment")}
                         </td>
                         <td
-                          className={`p-4 text-right font-black tabular-nums text-[14px] ${tx.type === "Income" || tx.type === "Credit" ? "text-secondary" : "text-error"}`}
+                          className={`p-2.5 sm:p-4 text-right font-black tabular-nums text-[13px] sm:text-[14px] ${tx.type === "Income" || tx.type === "Credit" ? "text-secondary" : "text-error"}`}
                         >
                           <div className="flex flex-col items-end">
                             <span className="tabular-nums">
@@ -2312,31 +2312,37 @@ export default function DashboardPage() {
                                   (tx.currency || "IDR") as SupportedCurrency,
                                   currency as SupportedCurrency
                                 )),
-                                currency as SupportedCurrency,
-                                lang
+                                currency as SupportedCurrency
                               )}
                             </span>
                           </div>
                         </td>
-                        <td className="p-4 text-on-surface-variant font-black text-[11px] uppercase tracking-widest whitespace-nowrap">
+                        <td className="p-2.5 sm:p-4 text-on-surface-variant font-black text-[10px] sm:text-[11px] uppercase tracking-widest whitespace-nowrap">
                           {(() => {
+                            let content: React.ReactNode = "—";
+                            let isLinked = false;
+                            
                             if (tx.linked_asset_id) {
-                              const linkedA = cashAssets.find(
-                                (a) => a.id === tx.linked_asset_id,
-                              );
-                              return linkedA ? (
-                                <div className="flex items-center gap-1.5 justify-end md:justify-start">
-                                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary/40 animate-pulse"></span>
-                                  {linkedA.name}
-                                </div>
-                              ) : (
-                                tx.source
-                              );
+                              const linkedA = cashAssets.find((a) => a.id === tx.linked_asset_id);
+                              if (linkedA) {
+                                content = linkedA.name;
+                                isLinked = true;
+                              } else {
+                                content = tx.source || "—";
+                              }
+                            } else {
+                              content = tx.source || "—";
                             }
-                            return tx.source || "—";
+
+                            return (
+                              <div className="flex items-center gap-1.5 justify-end md:justify-start">
+                                <span className={`inline-block w-1.5 h-1.5 rounded-full ${isLinked ? "bg-primary/40 animate-pulse" : "bg-outline-variant/30"}`}></span>
+                                {content}
+                              </div>
+                            );
                           })()}
                         </td>
-                        <td className={`p-2 text-center kebab-menu-container sticky right-0 bg-white dark:bg-slate-950 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 border-l border-outline-variant/10 transition-all ${openMenuId === tx.id ? "z-40 shadow-[-10px_0_15px_-5px_rgba(0,0,0,0.1)] dark:shadow-[-10px_0_15px_-5px_rgba(0,0,0,0.3)]" : "z-20"}`}>
+                        <td className="p-2.5 sm:p-4 text-center kebab-menu-container bg-white dark:bg-slate-950 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 transition-all z-20">
                           <div className="relative flex items-center justify-center text-left w-full h-full">
                             <button
                               onClick={(e) => {
@@ -2350,14 +2356,14 @@ export default function DashboardPage() {
                                   setOpenMenuId(tx.id);
                                 }
                               }}
-                              className="w-7 h-7 rounded-full flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors cursor-pointer"
+                              className="w-7 h-7 rounded-lg flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-slate-200 dark:hover:bg-slate-800 transition-all cursor-pointer group/btn"
                             >
-                              <span className="material-symbols-outlined text-[18px]">more_vert</span>
+                              <span className="material-symbols-outlined text-[18px] group-hover/btn:scale-110 transition-transform">menu</span>
                             </button>
 
                             {openMenuId === tx.id && menuPosition && (
                               <div
-                                className="fixed w-36 bg-white dark:bg-slate-800/95 backdrop-blur-md border border-outline-variant/30 rounded-xl shadow-[0_8px_25px_rgba(0,0,0,0.2)] z-[200] py-1.5 animate-in fade-in zoom-in-95 duration-200 divide-y divide-outline-variant/10"
+                                className="fixed w-36 bg-slate-900/95 dark:bg-slate-900/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-[0_10px_30px_rgba(0,0,0,0.4)] z-[200] py-1.5 animate-in fade-in zoom-in-95 duration-200 divide-y divide-white/5"
                                 style={{ top: menuPosition.top, right: menuPosition.right, transform: 'translateY(-100%) translateY(-4px)' }}
                               >
                                 <button 
@@ -2366,10 +2372,10 @@ export default function DashboardPage() {
                                     handleEdit(tx);
                                     setOpenMenuId(null);
                                   }}
-                                  className="w-full text-left px-4 py-2 hover:bg-primary/5 dark:hover:bg-primary/10 transition-colors flex items-center justify-between group/item cursor-pointer"
+                                  className="w-full text-left px-4 py-2.5 hover:bg-white/5 transition-colors flex items-center justify-between group/item cursor-pointer"
                                 >
-                                  <span className="text-[11px] font-bold text-on-surface group-hover/item:text-primary transition-colors">{t("btnEdit")}</span>
-                                  <span className="material-symbols-outlined text-[16px] text-on-surface-variant group-hover/item:text-primary transition-colors">edit</span>
+                                  <span className="text-[11px] font-black uppercase tracking-wider text-white/90 group-hover/item:text-primary-container transition-colors">{t("btnEdit")}</span>
+                                  <span className="material-symbols-outlined text-[16px] text-primary-container group-hover/item:scale-110 transition-all">edit</span>
                                 </button>
                                 <button 
                                   onClick={(e) => {
@@ -2377,10 +2383,10 @@ export default function DashboardPage() {
                                     handleDeleteClick([tx.id]);
                                     setOpenMenuId(null);
                                   }}
-                                  className="w-full text-left px-4 py-2 hover:bg-error/5 dark:hover:bg-error/10 transition-colors flex items-center justify-between group/item cursor-pointer"
+                                  className="w-full text-left px-4 py-2.5 hover:bg-white/5 transition-colors flex items-center justify-between group/item cursor-pointer"
                                 >
-                                  <span className="text-[11px] font-bold text-error">{t("btnDelete")}</span>
-                                  <span className="material-symbols-outlined text-[16px] text-error">delete</span>
+                                  <span className="text-[11px] font-black uppercase tracking-wider text-rose-400 group-hover/item:text-rose-300 transition-colors">{t("btnDelete")}</span>
+                                  <span className="material-symbols-outlined text-[16px] text-rose-400 group-hover/item:scale-110 transition-all">delete</span>
                                 </button>
                               </div>
                             )}
@@ -2415,27 +2421,27 @@ export default function DashboardPage() {
                         </td>
                         <td className="p-4 text-right font-black tabular-nums text-[13px] text-secondary">
                           {row.received > 0
-                            ? `+${formatValue(row.received, currency, lang)}`
+                            ? `+${formatValue(row.received, currency)}`
                             : "-"}
                         </td>
                         <td className="p-4 text-right font-black tabular-nums text-[13px] text-error">
                           {row.spent > 0
-                            ? `-${formatValue(row.spent, currency, lang)}`
+                            ? `-${formatValue(row.spent, currency)}`
                             : "-"}
                         </td>
                         <td className="p-4 text-right font-black tabular-nums text-[13px] text-primary">
                           {row.invested > 0
-                            ? formatValue(row.invested, currency, lang)
+                            ? formatValue(row.invested, currency)
                             : "-"}
                         </td>
                         <td
                           className={`p-4 text-right font-black tabular-nums text-[13px] ${net > 0 ? "text-secondary" : net < 0 ? "text-error" : "text-slate-500"}`}
                         >
                           {net > 0
-                            ? `+${formatValue(net, currency, lang)}`
+                            ? `+${formatValue(net, currency)}`
                             : net < 0
-                              ? `-${formatValue(Math.abs(net), currency, lang)}`
-                              : formatValue(0, currency, lang)}
+                              ? `-${formatValue(Math.abs(net), currency)}`
+                              : formatValue(0, currency)}
                         </td>
                       </tr>
                     );
@@ -2457,31 +2463,54 @@ export default function DashboardPage() {
             <span>{t("displayingResults", filteredTransactions.length)}</span>
             <div className="flex items-center gap-4">
               {totalPages > 1 && (
-                <div className="flex items-center gap-2 mr-4 bg-surface-container-low dark:bg-slate-800 p-1 rounded-lg border border-outline-variant/10">
+                <div className="flex items-center gap-1 bg-surface-container-low dark:bg-slate-800 p-1 rounded-xl border border-outline-variant/10 shadow-sm">
                   <button
                     disabled={currentPage === 1}
                     onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                    className="flex items-center gap-1 px-2 py-1 rounded hover:bg-surface-container-lowest dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                    className="flex items-center justify-center min-w-[32px] h-8 rounded-lg hover:bg-surface-container-lowest dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer text-on-surface-variant hover:text-primary active:scale-95"
+                    title={t("btnPrev")}
                   >
-                    <span className="material-symbols-outlined text-sm">
-                      chevron_left
-                    </span>
-                    {t("btnPrev")}
+                    <span className="material-symbols-outlined text-lg">chevron_left</span>
                   </button>
-                  <span className="px-2 border-x border-outline-variant/20">
-                    {t("pageIndicator", currentPage, totalPages)}
-                  </span>
+                  
+                  <div className="flex items-center gap-1 mx-1">
+                    {(() => {
+                      const range: (number | string)[] = [];
+                      const delta = 1;
+                      const left = currentPage - delta;
+                      const right = currentPage + delta + 1;
+                      
+                      for (let i = 1; i <= totalPages; i++) {
+                        if (i === 1 || i === totalPages || (i >= left && i < right)) {
+                          range.push(i);
+                        } else if (range[range.length - 1] !== "...") {
+                          range.push("...");
+                        }
+                      }
+                      
+                      return range.map((p, idx) => (
+                        typeof p === 'number' ? (
+                          <button
+                            key={idx}
+                            onClick={() => setCurrentPage(p)}
+                            className={`min-w-[32px] h-8 rounded-lg text-[11px] font-black transition-all cursor-pointer active:scale-90 ${currentPage === p ? "bg-primary text-white shadow-lg shadow-primary/20 scale-105" : "text-on-surface-variant hover:bg-surface-container-lowest dark:hover:bg-slate-700 hover:text-on-surface"}`}
+                          >
+                            {p}
+                          </button>
+                        ) : (
+                          <span key={idx} className="px-1 text-on-surface-variant opacity-40 text-[11px] font-black tracking-widest">{p}</span>
+                        )
+                      ));
+                    })()}
+                  </div>
+
                   <button
                     disabled={currentPage === totalPages}
-                    onClick={() =>
-                      setCurrentPage((p) => Math.min(totalPages, p + 1))
-                    }
-                    className="flex items-center gap-1 px-2 py-1 rounded hover:bg-surface-container-lowest dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    className="flex items-center justify-center min-w-[32px] h-8 rounded-lg hover:bg-surface-container-lowest dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer text-on-surface-variant hover:text-primary active:scale-95"
+                    title={t("btnNext")}
                   >
-                    {t("btnNext")}
-                    <span className="material-symbols-outlined text-sm">
-                      chevron_right
-                    </span>
+                    <span className="material-symbols-outlined text-lg">chevron_right</span>
                   </button>
                 </div>
               )}
