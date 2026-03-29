@@ -2219,7 +2219,7 @@ export default function DashboardPage() {
           </div>
           <div className="flex-1 overflow-x-auto flex flex-col min-h-[450px] custom-scrollbar rounded-lg shadow-sm border border-outline-variant/20">
             <table className="w-full excel-grid bg-surface-container-lowest dark:bg-slate-900/50 text-xs font-body tracking-tight">
-              <thead className="bg-slate-50 dark:bg-slate-900 text-on-surface-variant uppercase font-bold text-[10px] tracking-widest border-b border-outline-variant/10">
+              <thead className="bg-slate-50 dark:bg-slate-900 text-on-surface-variant uppercase font-bold text-[10px] tracking-widest border-b border-outline-variant/10 sticky top-0 z-20 shadow-[0_1px_3px_rgba(0,0,0,0.05)]">
                 {viewMode === "grid" ? (
                   <tr>
                     <th className="p-4 text-center w-10">
@@ -2295,9 +2295,9 @@ export default function DashboardPage() {
                         </td>
                         <td className="p-4 font-medium">
                           <div className="flex items-center gap-2">
-                            {tx.description}
+                            <span className="truncate max-w-[120px] sm:max-w-xs block">{tx.description}</span>
                             {tx.isAi && (
-                              <span className="inline-flex items-center gap-1 text-[9px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded-full ml-2">
+                              <span className="inline-flex shrink-0 items-center gap-1 text-[9px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded-full ml-1">
                                 <span className="material-symbols-outlined text-[10px]">
                                   auto_awesome
                                 </span>
@@ -2347,8 +2347,8 @@ export default function DashboardPage() {
                             return tx.source || "—";
                           })()}
                         </td>
-                        <td className={`p-4 text-center kebab-menu-container sticky right-0 bg-white dark:bg-slate-950 border-l border-outline-variant/10 transition-all ${openMenuId === tx.id ? "z-40 shadow-[-10px_0_15px_-5px_rgba(0,0,0,0.1)] dark:shadow-[-10px_0_15px_-5px_rgba(0,0,0,0.3)]" : "z-20"}`}>
-                          <div className="relative inline-block text-left">
+                        <td className={`p-4 text-center kebab-menu-container sticky right-0 bg-white dark:bg-slate-950 group-hover:bg-grid-row-hover dark:group-hover:bg-[#1a202c] border-l border-outline-variant/10 transition-all ${openMenuId === tx.id ? "z-40 shadow-[-10px_0_15px_-5px_rgba(0,0,0,0.1)] dark:shadow-[-10px_0_15px_-5px_rgba(0,0,0,0.3)]" : "z-20"}`}>
+                          <div className="relative flex items-center justify-center text-left w-full h-full">
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();

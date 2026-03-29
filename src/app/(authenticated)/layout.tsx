@@ -5,7 +5,6 @@ import { createClient } from "@/utils/supabase/client";
 import { useLang } from "@/hooks/useLang";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
-import MobileNav from "@/components/layout/MobileNav";
 import { useTheme } from "@/hooks/useTheme";
 
 export default function AuthenticatedLayout({
@@ -80,7 +79,6 @@ export default function AuthenticatedLayout({
       </main>
 
       <Footer />
-      <MobileNav />
 
       {/* Global Delete Account Confirmation Modal */}
       {showDeleteConfirm && (

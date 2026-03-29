@@ -269,6 +269,33 @@ export default function Navbar({ userName, userEmail, userAvatar, onDeleteAccoun
           </div>
         </div>
       </div>
+
+      {/* Mobile Sticky Navigation Tabs */}
+      <div className="md:hidden flex items-center justify-around w-full overflow-x-auto scrollbar-none border-t border-outline-variant/20 px-4 py-2 bg-surface/50 dark:bg-slate-900/50 backdrop-blur-md">
+        {navItems.map((item) => (
+          <Link
+            key={item.href}
+            href={item.href}
+            className={`transition-colors flex flex-col items-center gap-1 relative px-2 py-1 ${
+              pathname === item.href
+                ? "text-primary font-bold opacity-100"
+                : "text-on-surface-variant font-medium opacity-70 hover:opacity-100 uppercase tracking-widest text-[9px]"
+            }`}
+          >
+            <span 
+              className={`material-symbols-outlined text-[18px] ${pathname === item.href ? "text-primary rounded-full bg-primary/10 p-1" : ""}`}
+              style={pathname === item.href ? { fontVariationSettings: "'FILL' 1" } : {}}
+            >
+              {item.icon}
+            </span>
+            <span className={`text-[9px] uppercase tracking-widest ${
+              pathname === item.href ? "" : "hidden"
+            }`}>
+              {item.name}
+            </span>
+          </Link>
+        ))}
+      </div>
     </nav>
   );
 }
