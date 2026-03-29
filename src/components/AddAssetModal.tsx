@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useLang } from "@/hooks/useLang";
 import { type AssetCategory, ASSET_CATEGORIES, type ValuationMode } from "@/lib/assets";
 import { currencySymbols, type SupportedCurrency } from "@/lib/currency";
+import { useScrollLock } from "@/hooks/useScrollLock";
 
 type AcquisitionMode = "opening_balance" | "via_transaction";
 
@@ -16,6 +17,7 @@ interface AddAssetModalProps {
 
 export default function AddAssetModal({ onClose, onSubmit, cashAssets = [] }: AddAssetModalProps) {
   const { t, lang } = useLang();
+  useScrollLock(true);
   const [step, setStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);

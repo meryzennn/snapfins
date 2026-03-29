@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { useLang } from "@/hooks/useLang";
 import { type AssetCategory, ASSET_CATEGORIES, type ValuationMode } from "@/lib/assets";
 import { currencySymbols, type SupportedCurrency } from "@/lib/currency";
+import { useScrollLock } from "@/hooks/useScrollLock";
 
 interface EditAssetModalProps {
   initialData: any;
@@ -13,6 +14,7 @@ interface EditAssetModalProps {
 
 export default function EditAssetModal({ initialData, onClose, onSubmit }: EditAssetModalProps) {
   const { t, lang } = useLang();
+  useScrollLock(true);
   const [step, setStep] = useState(3);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);

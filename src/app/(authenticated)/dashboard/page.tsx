@@ -15,6 +15,7 @@ import {
 import { useEffect, useState, useRef } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { deleteUserAccountAction } from "@/app/actions/user";
+import { useScrollLock } from "@/hooks/useScrollLock";
 import Link from "next/link";
 import SelectionToggle from "@/components/SelectionToggle";
 const assignColor = (category: string) => {
@@ -174,6 +175,9 @@ export default function DashboardPage() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Apply scroll lock if any modal is visible
+  useScrollLock(!!(showManualEntry || showDeleteTxModal || scanSuccess || showScanModal || isScanning || scanError));
 
   // Currency & Rate Initialization
   useEffect(() => {
@@ -376,8 +380,14 @@ export default function DashboardPage() {
     const eTrend = (expenseCurrent !== null && !isNaN(expenseCurrent)) ? computeTrend(expenseCurrent, expensePrev) : null;
 
     // NW trend vs prior snapshoted net worth (localStorage). 
-    // If no prior net worth exists, we show as "NEW" for the badge.
-    const nwTrend = priorNetWorth !== null ? computeTrend(netWorthNow, priorNetWorth) : (netWorthNow > 0 ? "NEW" : null);
+    // If no prior snapshot exists, we derive an "Implied Baseline" 
+    // based on this period's net savings (Income - Expense).
+    const currentPeriodDelta = (incomeCurrent || 0) - (expenseCurrent || 0);
+    const impliedBaseline = netWorthNow - currentPeriodDelta;
+    
+    // Choose between actual snapshot or implied delta-based trend
+    const baselineForTrend = priorNetWorth !== null ? priorNetWorth : impliedBaseline;
+    const nwTrend = computeTrend(netWorthNow, baselineForTrend) || (netWorthNow > 0 ? "NEW" : null);
 
     const hasHistory = incomePrev > 0 || expensePrev > 0;
     const comparisonContext = isAllMonths

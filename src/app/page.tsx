@@ -5,12 +5,16 @@ import { useLang } from "@/hooks/useLang";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/client";
+import SupportModal from "@/components/SupportModal";
+import { useScrollLock } from "@/hooks/useScrollLock";
 
 export default function LandingPage() {
   const { theme, setTheme } = useTheme();
   const { lang, setLang, t } = useLang();
   const [mounted, setMounted] = useState(false);
   const [user, setUser] = useState<any>(null);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showSupportModal, setShowSupportModal] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -24,7 +28,10 @@ export default function LandingPage() {
     checkUser();
   }, []);
 
-  const [showLoginModal, setShowLoginModal] = useState(false);
+  // Apply scroll lock specifically when the Login Modal is open.
+  // SupportModal handles its own scroll lock internally.
+  useScrollLock(showLoginModal);
+
 
   const toggleTheme = () => {
     const isDark = theme === 'dark';
@@ -160,6 +167,13 @@ export default function LandingPage() {
                 {t('heroGetStarted')}
               </button>
             )}
+            <button 
+              onClick={() => setShowSupportModal(true)} 
+              className="bg-surface-container-high dark:bg-slate-800 px-10 py-5 rounded-lg text-on-surface dark:text-white font-bold text-lg border border-outline-variant/30 hover:bg-surface-container-highest dark:hover:bg-slate-700 transition-all active:scale-95 w-full sm:w-auto text-center flex items-center justify-center gap-2 group shadow-sm"
+            >
+              <span className="material-symbols-outlined text-primary group-hover:scale-125 transition-transform">favorite</span>
+              {t('supportCreator')}
+            </button>
           </div>
           
           {/* Hero Visual: Asymmetric Mock-up */}
@@ -257,6 +271,92 @@ export default function LandingPage() {
           </div>
         </section>
 
+        {/* Getting Started Tutorial Section */}
+        <section id="how-to-use" className="py-24 px-6 bg-surface dark:bg-slate-950 relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-outline-variant/20 to-transparent"></div>
+          <div className="max-w-4xl mx-auto">
+            <div className="text-center mb-20">
+              <span className="text-[10px] font-black uppercase tracking-[0.3em] text-primary bg-primary/5 px-4 py-1.5 rounded-full mb-4 inline-block">
+                User Guide
+              </span>
+              <h2 className="font-headline font-bold text-4xl md:text-5xl text-on-surface dark:text-white mt-4">
+                {t('tutorialTitle')}
+              </h2>
+            </div>
+
+            <div className="space-y-12 relative">
+              {/* Connecting Line */}
+              <div className="absolute left-[20px] top-4 bottom-4 w-px bg-gradient-to-b from-primary via-secondary to-transparent hidden sm:block"></div>
+
+              {/* Step 1 */}
+              <div className="relative group sm:pl-16">
+                <div className="absolute left-0 top-0 w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center font-bold text-lg shadow-lg shadow-primary/20 z-10 hidden sm:flex">1</div>
+                <div className="bg-surface-container-low dark:bg-slate-900/50 p-8 rounded-[32px] border border-outline-variant/10 group-hover:border-primary transition-colors">
+                  <h3 className="font-headline font-bold text-xl text-on-surface dark:text-white mb-3 flex items-center gap-3">
+                    <span className="sm:hidden text-primary">1.</span> {t('tutorialStep1')}
+                  </h3>
+                  <p className="text-on-surface-variant dark:text-gray-400 leading-relaxed font-medium">
+                    {t('step1Desc')}
+                  </p>
+                </div>
+              </div>
+
+              {/* Step 2 */}
+              <div className="relative group sm:pl-16">
+                <div className="absolute left-0 top-0 w-10 h-10 rounded-full bg-secondary text-white flex items-center justify-center font-bold text-lg shadow-lg shadow-secondary/20 z-10 hidden sm:flex">2</div>
+                <div className="bg-surface-container-low dark:bg-slate-900/50 p-8 rounded-[32px] border border-outline-variant/10 group-hover:border-secondary transition-colors">
+                  <h3 className="font-headline font-bold text-xl text-on-surface dark:text-white mb-3 flex items-center gap-3">
+                    <span className="sm:hidden text-secondary">2.</span> {t('tutorialStep2')}
+                  </h3>
+                  <p className="text-on-surface-variant dark:text-gray-400 leading-relaxed font-medium">
+                    {t('step2Desc')}
+                  </p>
+                </div>
+              </div>
+
+              {/* Step 3 */}
+              <div className="relative group sm:pl-16">
+                <div className="absolute left-0 top-0 w-10 h-10 rounded-full bg-indigo-500 text-white flex items-center justify-center font-bold text-lg shadow-lg shadow-indigo-500/20 z-10 hidden sm:flex">3</div>
+                <div className="bg-surface-container-low dark:bg-slate-900/50 p-8 rounded-[32px] border border-outline-variant/10 group-hover:border-indigo-500 transition-colors">
+                  <h3 className="font-headline font-bold text-xl text-on-surface dark:text-white mb-3 flex items-center gap-3">
+                    <span className="sm:hidden text-indigo-500">3.</span> {t('tutorialStep3')}
+                  </h3>
+                  <p className="text-on-surface-variant dark:text-gray-400 leading-relaxed font-medium">
+                    {t('step3Desc')}
+                  </p>
+                </div>
+              </div>
+
+              {/* Step 4 */}
+              <div className="relative group sm:pl-16">
+                <div className="absolute left-0 top-0 w-10 h-10 rounded-full bg-emerald-500 text-white flex items-center justify-center font-bold text-lg shadow-lg shadow-emerald-500/20 z-10 hidden sm:flex">4</div>
+                <div className="bg-surface-container-low dark:bg-slate-900/50 p-8 rounded-[32px] border border-outline-variant/10 group-hover:border-emerald-500 transition-colors">
+                  <div className="flex bg-primary/10 text-primary text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-md mb-2 w-fit">AI Powered</div>
+                  <h3 className="font-headline font-bold text-xl text-on-surface dark:text-white mb-3 flex items-center gap-3">
+                    <span className="sm:hidden text-emerald-500">4.</span> {t('tutorialStep4')}
+                  </h3>
+                  <p className="text-on-surface-variant dark:text-gray-400 leading-relaxed font-medium">
+                    {t('step4Desc')}
+                  </p>
+                </div>
+              </div>
+
+              {/* Step 5 */}
+              <div className="relative group sm:pl-16">
+                <div className="absolute left-0 top-0 w-10 h-10 rounded-full bg-rose-500 text-white flex items-center justify-center font-bold text-lg shadow-lg shadow-rose-500/20 z-10 hidden sm:flex">5</div>
+                <div className="bg-surface-container-low dark:bg-slate-900/50 p-8 rounded-[32px] border border-outline-variant/10 group-hover:border-rose-500 transition-colors">
+                  <h3 className="font-headline font-bold text-xl text-on-surface dark:text-white mb-3 flex items-center gap-3">
+                    <span className="sm:hidden text-rose-500">5.</span> {t('tutorialStep5')}
+                  </h3>
+                  <p className="text-on-surface-variant dark:text-gray-400 leading-relaxed font-medium">
+                    {t('step5Desc')}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* CTA Section */}
         <section className="py-24 px-6 max-w-7xl mx-auto">
           <div className="bg-on-surface dark:bg-surface-container-high rounded-3xl p-12 md:p-24 relative overflow-hidden">
@@ -300,6 +400,7 @@ export default function LandingPage() {
           </div>
         </div>
       </footer>
+      {showSupportModal && <SupportModal onClose={() => setShowSupportModal(false)} />}
     </div>
   );
 }
