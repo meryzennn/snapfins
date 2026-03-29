@@ -310,36 +310,10 @@ export default function DashboardPage() {
       const txMonth = txDate.getMonth();
       const txYear = txDate.getFullYear();
 
-      // Extract numeric value safely
-      let numStr = tx.amount;
-      const txCurrency = normalizeCurrency(
-        tx.currency ||
-          (numStr.includes("IDR") || numStr.includes("Rp")
-            ? "IDR"
-            : numStr.includes("$") || numStr.includes("USD")
-              ? "USD"
-              : numStr.includes("€") || numStr.includes("EUR")
-                ? "EUR"
-                : numStr.includes("£") || numStr.includes("GBP")
-                  ? "GBP"
-                  : numStr.includes("¥") ||
-                      numStr.includes("JPY") ||
-                      numStr.includes("CNY")
-                    ? "JPY"
-                    : numStr.includes("₩") || numStr.includes("KRW")
-                      ? "KRW"
-                      : currency),
-      );
-
-      let cleanAmount = numStr.replace(/[^0-9.,-]/g, "");
-      if (txCurrency === "IDR") {
-        cleanAmount = cleanAmount.replace(/\./g, "").replace(/,/g, ".");
-      } else {
-        cleanAmount = cleanAmount.replace(/,/g, "");
-      }
-
-      const rawVal = parseFloat(cleanAmount) || 0;
-      const val = convert(rawVal, txCurrency, currency);
+      // EXPLICIT NUMERIC PARSING - No logic guessing!
+      const rawVal = Number(tx.amount) || 0;
+      const txCurrency = (tx.currency || currency) as SupportedCurrency;
+      const val = convert(rawVal, txCurrency, currency as SupportedCurrency);
 
       // Only Income / Expense for period reporting — no Investment in cashflow
       if (isAllMonths) {
@@ -750,8 +724,8 @@ export default function DashboardPage() {
     const locale = editCurrency === "IDR" ? "id-ID" : "en-US";
     
     // Ensure amount is a number and format it for the input field
-    const numericAmount = parseFloat(tx.amount.toString().replace(/[^0-9.-]/g, "")) || 0;
-    const formattedAmount = new Intl.NumberFormat(locale).format(numericAmount);
+    const numericAmount = Number(tx.amount) || 0;
+    const formattedAmount = formatValue(numericAmount, editCurrency as SupportedCurrency).replace(/[^\d.,]/g, '');
 
     setManualForm({
       date: tx.date || new Date().toISOString().split("T")[0],
@@ -836,14 +810,19 @@ export default function DashboardPage() {
 
       // 1. Smart Locale-Aware Parser
       const isIDR = manualForm.currency === "IDR";
-      const rawText = manualForm.amount.toString();
+      const rawText = manualForm.amount.toString().trim();
       let finalAmount: number;
       
+      // Remove symbols but keep semantic separators
+      const cleanedText = rawText.replace(/[^\d.,-]/g, '');
+      
       if (isIDR) {
-        const cleaned = rawText.replace(/\./g, "").replace(/,/g, ".");
+        // IDR: 370.000,00 -> remove dots, change comma to dot
+        const cleaned = cleanedText.replace(/\./g, "").replace(/,/g, ".");
         finalAmount = parseFloat(cleaned);
       } else {
-        const cleaned = rawText.replace(/,/g, "");
+        // USD/General: 1,000.00 -> remove commas
+        const cleaned = cleanedText.replace(/,/g, "");
         finalAmount = parseFloat(cleaned);
       }
 
@@ -900,9 +879,10 @@ export default function DashboardPage() {
 
         // Reverse OLD asset balance effect before applying the update
         if (editingTx.linked_asset_id) {
-          const oldAmt = parseFloat(editingTx.amount.toString().replace(/[^0-9.-]/g, "")) || 0;
+          const oldAmt = Number(editingTx.amount) || 0;
           const oldIsIncome = editingTx.type === "Credit" || editingTx.type === "Income";
-          const oldDelta = oldIsIncome ? -oldAmt : oldAmt; // reversal
+          // To reverse: if it was an expense (-), we add it back (+).
+          const oldDelta = oldIsIncome ? -oldAmt : oldAmt;
           await applyAssetDeltaInternal(editingTx.linked_asset_id, oldDelta, editingTx.currency || "USD");
         }
 
@@ -2307,12 +2287,8 @@ export default function DashboardPage() {
                             <span className="tabular-nums">
                               {tx.type === "Income" || tx.type === "Credit" ? "+" : "-"}
                               {formatValue(
-                                Math.abs(convert(
-                                  parseFloat(String(tx.amount).replace(/[^0-9.,-]/g, "")) || 0,
-                                  (tx.currency || "IDR") as SupportedCurrency,
-                                  currency as SupportedCurrency
-                                )),
-                                currency as SupportedCurrency
+                                Math.abs(Number(tx.amount) || 0),
+                                (tx.currency || currency) as SupportedCurrency
                               )}
                             </span>
                           </div>
