@@ -11,6 +11,7 @@ import Footer from '@/components/layout/Footer';
 import { useScrollLock } from "@/hooks/useScrollLock";
 import { LandingPageSkeleton } from "@/components/Skeleton";
 import { useReveal } from "@/hooks/useReveal";
+import ProfileDropdown from "@/components/layout/ProfileDropdown";
 
 export default function LandingPage() {
   const { theme, setTheme } = useTheme();
@@ -177,9 +178,12 @@ export default function LandingPage() {
               </div>
             </div>
             {user ? (
-              <Link href="/dashboard" className="hidden md:block px-6 py-2.5 rounded-lg bg-primary text-white font-semibold hover:bg-primary-container hover:text-on-primary-container active:scale-95 transition-colors duration-200 shadow-sm">
-                {t('navDashboard')}
-              </Link>
+              <ProfileDropdown 
+                userName={user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || "User"}
+                userEmail={user.email}
+                userAvatar={user.user_metadata?.avatar_url || user.user_metadata?.picture}
+                showDashboardLink={true}
+              />
             ) : (
               <button 
                 onClick={() => setShowLoginModal(true)} 
