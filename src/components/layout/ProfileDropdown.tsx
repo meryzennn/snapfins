@@ -4,7 +4,10 @@ import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useTheme } from "@/hooks/useTheme";
 import { useLang } from "@/hooks/useLang";
+import { useCurrency } from "@/hooks/useCurrency";
+import { convert, formatValue, type SupportedCurrency } from "@/lib/currency";
 import { createClient } from "@/utils/supabase/client";
+import * as XLSX from "xlsx";
 
 interface ProfileDropdownProps {
   userName: string | null;
@@ -22,9 +25,11 @@ export default function ProfileDropdown({
   showDashboardLink = true
 }: ProfileDropdownProps) {
   const { theme, setTheme } = useTheme();
-  const { t } = useLang();
+  const { t, lang } = useLang();
+  const { currency } = useCurrency();
   const [mounted, setMounted] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -66,6 +71,89 @@ export default function ProfileDropdown({
         "transition-to-dark",
       );
     });
+  };
+
+  const handleExportAllData = async () => {
+    setIsExporting(true);
+    const supabase = createClient();
+    const { data: userData } = await supabase.auth.getUser();
+
+    if (!userData?.user) {
+      alert("Authentication required");
+      setIsExporting(false);
+      return;
+    }
+
+    try {
+      const [{ data: transactions }, { data: assets }] = await Promise.all([
+        supabase.from("transactions").select("*").eq("user_id", userData.user.id).order("date", { ascending: false }),
+        supabase.from("assets").select("*").eq("user_id", userData.user.id)
+      ]);
+
+      if (!transactions || !assets) throw new Error("Failed to fetch data");
+
+      // Create workbook
+      const wb = XLSX.utils.book_new();
+
+      // 1. Summary Sheet
+      const totalAssetsValue = assets.reduce((sum, a) => {
+        const val = Number(a.current_value) || 0;
+        const assetCur = (a.currency || "USD") as SupportedCurrency;
+        return sum + convert(val, assetCur, currency as SupportedCurrency);
+      }, 0);
+
+      const summaryData = [
+        ["Financial Summary Report"],
+        [],
+        ["Metric", "Value", "Notes"],
+        ["Export Date", new Date().toLocaleString(), ""],
+        ["User", userName || userEmail, ""],
+        ["Base Currency", currency, "All converted metrics use this base"],
+        ["Total Assets Value", totalAssetsValue, `Converted to ${currency}`],
+        ["Transacton Count", transactions.length, ""],
+        ["Asset Count", assets.length, ""],
+      ];
+      const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
+      XLSX.utils.book_append_sheet(wb, wsSummary, "Summary");
+
+      // 2. Assets Sheet
+      const assetHeaders = [["Asset Name", "Category", "Current Value", "Currency", "Symbol", "Last Updated"]];
+      const assetRows = assets.map(a => [
+        a.name,
+        a.category,
+        a.current_value,
+        a.currency,
+        a.symbol || "-",
+        a.updated_at ? new Date(a.updated_at).toLocaleDateString() : "-"
+      ]);
+      const wsAssets = XLSX.utils.aoa_to_sheet([...assetHeaders, ...assetRows]);
+      XLSX.utils.book_append_sheet(wb, wsAssets, "Assets");
+
+      // 3. Transactions Sheet
+      const txHeaders = [["Date", "Category", "Description", "Type", "Amount", "Currency", "Source Account"]];
+      const txRows = transactions.map(tx => [
+        tx.date,
+        tx.category,
+        tx.description,
+        tx.type,
+        tx.amount,
+        tx.currency,
+        tx.source || "-"
+      ]);
+      const wsTransactions = XLSX.utils.aoa_to_sheet([...txHeaders, ...txRows]);
+      XLSX.utils.book_append_sheet(wb, wsTransactions, "Transactions");
+
+      // Trigger download
+      const timestamp = new Date().toISOString().split('T')[0];
+      XLSX.writeFile(wb, `snapfins_report_${timestamp}.xlsx`);
+      
+      setShowDropdown(false);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to export Excel. Please try again.");
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   return (
@@ -138,6 +226,19 @@ export default function ProfileDropdown({
               </div>
             </button>
           )}
+
+          <div className="h-px bg-outline-variant/10 my-1 mx-2" />
+
+          <button
+            onClick={handleExportAllData}
+            disabled={isExporting}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-on-surface dark:text-white hover:bg-surface-container-low dark:hover:bg-white/5 transition-colors text-sm font-bold group disabled:opacity-50"
+          >
+            <span className={`material-symbols-outlined text-on-surface-variant dark:text-gray-400 group-hover:text-primary transition-colors ${isExporting ? 'animate-spin' : ''}`}>
+              {isExporting ? 'sync' : 'download'}
+            </span>
+            <span>{isExporting ? (lang === 'id' ? 'Mengekspor...' : 'Exporting...') : (lang === 'id' ? 'Ekspor Data (Excel)' : 'Export Data (Excel)')}</span>
+          </button>
 
           <div className="h-px bg-outline-variant/10 my-1 mx-2" />
 

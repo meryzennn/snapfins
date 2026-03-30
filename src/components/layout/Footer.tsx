@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useLang } from "@/hooks/useLang";
 import SupportModal from "@/components/SupportModal";
 import GithubStarButton from "@/components/GithubStarButton";
+import { AnimatePresence } from "framer-motion";
 
 export default function Footer({ containerClassName = "max-w-7xl" }: { containerClassName?: string }) {
   const { t } = useLang();
@@ -13,7 +14,7 @@ export default function Footer({ containerClassName = "max-w-7xl" }: { container
       <div className={`${containerClassName} mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-10 md:gap-8`}>
         {/* Left Section: Brand + Copyright */}
         <div className="flex flex-col items-center md:items-start">
-          <p className="font-extrabold tracking-tighter text-indigo-700 dark:text-indigo-300 font-headline text-2xl uppercase">
+          <p className="font-extrabold tracking-tighter text-indigo-700 dark:text-indigo-300 font-headline text-2xl">
             SnapFins
           </p>
           <p className="font-inter text-[11px] uppercase tracking-widest font-medium text-slate-500 dark:text-slate-400 mt-2 text-center md:text-left">
@@ -48,9 +49,9 @@ export default function Footer({ containerClassName = "max-w-7xl" }: { container
           {/* Reverted Support Button - Indigo Vibe + Fixed Size */}
           <button 
             onClick={() => setShowSupportModal(true)}
-            className="group flex items-center justify-center gap-2.5 w-full sm:w-[220px] h-[44px] rounded-full bg-indigo-500/10 dark:bg-indigo-500/20 border border-indigo-500/20 text-indigo-700 dark:text-indigo-400 font-bold text-[11px] sm:text-xs uppercase tracking-widest hover:bg-indigo-500/20 dark:hover:bg-indigo-500/30 transition-all cursor-pointer shadow-sm active:scale-95"
+            className="group flex items-center justify-center gap-2.5 w-full sm:w-[220px] h-[44px] rounded-full bg-indigo-500/10 dark:bg-indigo-500/20 border border-indigo-500/20 text-indigo-700 dark:text-indigo-400 font-bold text-[11px] sm:text-xs uppercase tracking-widest hover:bg-indigo-500/20 dark:hover:bg-indigo-500/30 transition-all cursor-pointer shadow-sm active:scale-95 hover:shadow-indigo-500/20 hover:shadow-lg"
           >
-            <span className="material-symbols-outlined text-sm group-hover:scale-125 transition-transform">favorite</span>
+            <span className="material-symbols-outlined text-sm group-hover:scale-125 group-hover:text-rose-500 transition-all animate-heart-pulse">favorite</span>
             {t('supportCreator')}
           </button>
 
@@ -58,7 +59,9 @@ export default function Footer({ containerClassName = "max-w-7xl" }: { container
         </div>
       </div>
 
-      {showSupportModal && <SupportModal onClose={() => setShowSupportModal(false)} />}
+      <AnimatePresence mode="wait">
+        {showSupportModal && <SupportModal onClose={() => setShowSupportModal(false)} />}
+      </AnimatePresence>
     </footer>
   );
 }

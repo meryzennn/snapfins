@@ -12,6 +12,7 @@ import { useScrollLock } from "@/hooks/useScrollLock";
 import { LandingPageSkeleton } from "@/components/Skeleton";
 import { useReveal } from "@/hooks/useReveal";
 import ProfileDropdown from "@/components/layout/ProfileDropdown";
+import { AnimatePresence } from "framer-motion";
 
 export default function LandingPage() {
   const { theme, setTheme } = useTheme();
@@ -127,7 +128,9 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-background selection:bg-primary/20 font-body text-on-surface antialiased scroll-smooth">
       {/* Login Modal */}
-      <AuthModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} />
+      <AnimatePresence mode="wait">
+        {showLoginModal && <AuthModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} />}
+      </AnimatePresence>
 
       {/* Top Navigation Bar */}
       <header className="fixed top-0 w-full z-50 bg-surface/80 dark:bg-gray-950/80 backdrop-blur-xl bg-surface-container-low dark:bg-gray-900 shadow-sm border-b border-outline-variant/30">
@@ -228,9 +231,9 @@ export default function LandingPage() {
             )}
             <button 
               onClick={() => setShowSupportModal(true)} 
-              className="bg-surface-container-high dark:bg-slate-800 px-8 py-5 rounded-lg text-on-surface dark:text-white font-bold text-lg border border-outline-variant/30 hover:bg-surface-container-highest dark:hover:bg-slate-700 transition-all active:scale-95 w-full sm:w-auto text-center flex items-center justify-center gap-2 group shadow-sm"
+              className="bg-surface-container-high dark:bg-slate-800 px-8 py-5 rounded-lg text-on-surface dark:text-white font-bold text-lg border border-outline-variant/30 hover:bg-surface-container-highest dark:hover:bg-slate-700 transition-all active:scale-95 w-full sm:w-auto text-center flex items-center justify-center gap-2 group shadow-sm hover:shadow-indigo-500/20 hover:shadow-xl hover:-translate-y-1"
             >
-              <span className="material-symbols-outlined text-rose-500 group-hover:scale-125 transition-transform">favorite</span>
+              <span className="material-symbols-outlined text-rose-500 group-hover:scale-125 transition-all animate-heart-pulse">favorite</span>
               {t('supportCreator')}
             </button>
           </div>
@@ -506,7 +509,9 @@ export default function LandingPage() {
       </main>
 
       <Footer />
-      {showSupportModal && <SupportModal onClose={() => setShowSupportModal(false)} />}
+      <AnimatePresence mode="wait">
+        {showSupportModal && <SupportModal onClose={() => setShowSupportModal(false)} />}
+      </AnimatePresence>
     </div>
   );
 }

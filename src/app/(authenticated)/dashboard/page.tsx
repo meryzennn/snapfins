@@ -449,75 +449,7 @@ export default function DashboardPage() {
       ? Math.ceil(filteredTransactions.length / pageSize)
       : Math.ceil(pivotRows.length / pageSize);
 
-  const handleDownloadCSV = () => {
-    const periodLabel = selectedMonth === -1 
-      ? `${selectedYear}` 
-      : `${(t("months") as unknown as string[])[selectedMonth]}_${selectedYear}`;
 
-    if (viewMode === "grid") {
-      const headers = [
-        t("colDate"),
-        t("colCategory"),
-        t("colDescription"),
-        t("colType"),
-        t("colAmount"),
-        t("colLinkedAssets"),
-      ];
-      const rows = filteredTransactions.map((tx) => [
-        tx.date,
-        tx.category,
-        tx.description.replace(/,/g, ""),
-        tx.type,
-        tx.amount.replace(/[^0-9.]/g, ""),
-        tx.source ? tx.source.replace(/,/g, "") : "",
-      ]);
-      const csvContent = [
-        headers.join(","),
-        ...rows.map((e) => e.join(",")),
-      ].join("\n");
-      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.setAttribute("href", url);
-      link.setAttribute(
-        "download",
-        `snapfins_ledger_${periodLabel}_${new Date().toISOString().split("T")[0]}.csv`,
-      );
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    } else {
-      const headers = [
-        t("colCategory"),
-        t("colIncome"),
-        t("colExpense"),
-        t("colInvested"),
-        t("colNetBalance"),
-      ];
-      const rows = pivotRows.map((r) => [
-        r.category,
-        r.received,
-        r.spent,
-        r.invested,
-        r.received - r.spent,
-      ]);
-      const csvContent = [
-        headers.join(","),
-        ...rows.map((e) => e.join(",")),
-      ].join("\n");
-      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.setAttribute("href", url);
-      link.setAttribute(
-        "download",
-        `snapfins_pivot_${periodLabel}_${new Date().toISOString().split("T")[0]}.csv`,
-      );
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }
-  };
 
 
   const dashboardSmartRefresh = async (currentRows: any[], userId: string, prefCurrency: SupportedCurrency) => {
@@ -1620,15 +1552,7 @@ export default function DashboardPage() {
                   </button>
                 </div>
               )}
-              <button
-                onClick={handleDownloadCSV}
-                className="hover:text-primary transition-colors flex items-center gap-1 cursor-pointer"
-              >
-                <span className="material-symbols-outlined text-sm">
-                  download
-                </span>
-                {t("downloadCSV")}
-              </button>
+
             </div>
           </div>
         </section>
