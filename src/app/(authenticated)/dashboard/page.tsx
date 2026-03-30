@@ -16,11 +16,12 @@ import { useEffect, useState, useRef } from "react";
 import { createPortal } from "react-dom";
 import { createClient } from "@/utils/supabase/client";
 import { deleteUserAccountAction } from "@/app/actions/user";
-import { useScrollLock } from "@/hooks/useScrollLock";
 import Link from "next/link";
 import SelectionToggle from "@/components/SelectionToggle";
 import { DashboardSkeleton } from "@/components/Skeleton";
 import RowActionMenu from "@/components/RowActionMenu";
+import TransactionModal from "@/components/TransactionModal";
+import ScanReceiptModal from "@/components/ScanReceiptModal";
 const assignColor = (category: string) => {
   const map: Record<string, string> = {
     DINING: "purple",
@@ -58,38 +59,34 @@ export default function DashboardPage() {
   const { lang, setLang, t } = useLang();
   const { currency, setCurrency } = useCurrency();
   const [mounted, setMounted] = useState(false);
-  const [isScanning, setIsScanning] = useState(false);
-  const [scanError, setScanError] = useState<string | null>(null);
-  const [scanSuccess, setScanSuccess] = useState<{ date: string } | null>(null);
+  
   // View & Filter States
   const [viewMode, setViewMode] = useState<"grid" | "pivot">("grid");
   const [filterCategory, setFilterCategory] = useState<string>("ALL");
-  const [selectedMonth, setSelectedMonth] = useState<number>(
-    new Date().getMonth(),
-  ); // 0-11, -1 for ALL
-  const [selectedYear, setSelectedYear] = useState<number>(
-    new Date().getFullYear(),
-  );
+  const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth()); // 0-11, -1 for ALL
+  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [showCurrencyDropdown, setShowCurrencyDropdown] = useState(false);
   const [showYearDropdown, setShowYearDropdown] = useState(false);
   const [showMonthDropdown, setShowMonthDropdown] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
-  // Manual Entry States
+
+  // Modal States
   const [showManualEntry, setShowManualEntry] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showScanModal, setShowScanModal] = useState(false);
   const [cashAssets, setCashAssets] = useState<any[]>([]);
-  const [manualForm, setManualForm] = useState({
-    date: new Date().toISOString().split("T")[0],
-    category: "GENERAL",
-    description: "",
-    type: "Expense",
-    currency: currency, // Use user's preference
-    amount: "",
-    source: "",
-    linked_asset_id: "",
-  });
+  const [editingTx, setEditingTx] = useState<any>(null);
+  const [showDeleteTxModal, setShowDeleteTxModal] = useState(false);
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [assetRows, setAssetRows] = useState<any[]>([]);
+  const [priorNetWorth, setPriorNetWorth] = useState<number | null>(null);
+  const [isLoadingTx, setIsLoadingTx] = useState(true);
+  const [ratesInitialized, setRatesInitialized] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [deleteQueue, setDeleteQueue] = useState<string[]>([]);
+  const [isDeletingRows, setIsDeletingRows] = useState(false);
+  const [scanSuccess, setScanSuccess] = useState<any>(null);
 
   // --- Trend Indicator Component with 5s Loop ---
   const TrendIndicator = ({ trend, isExpense = false, context }: { trend: string, isExpense?: boolean, context?: string }) => {
@@ -146,21 +143,7 @@ export default function DashboardPage() {
     );
   };
 
-  const [transactions, setTransactions] = useState<any[]>([]);
-  // Raw asset rows from DB — totalAssets is derived at render time (reactive to currency changes)
-  const [assetRows, setAssetRows] = useState<any[]>([]);
-  const [priorNetWorth, setPriorNetWorth] = useState<number | null>(null);
-  const [isLoadingTx, setIsLoadingTx] = useState(true);
-  const [ratesInitialized, setRatesInitialized] = useState(false);
-  
-  // Selection & Action States
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [editingTx, setEditingTx] = useState<any>(null);
-  const [showDeleteTxModal, setShowDeleteTxModal] = useState(false);
-  const [deleteQueue, setDeleteQueue] = useState<string[]>([]);
-  const [isDeletingRows, setIsDeletingRows] = useState(false);
-
-  // Local alias for imported function to resolve potential bundler reference issues
+  // Local alias for imported function
   const setRates = updateExchangeRates;
 
   // Refs for "Click Outside" behavior
@@ -168,24 +151,11 @@ export default function DashboardPage() {
   const yearDropdownRef = useRef<HTMLDivElement>(null);
   const monthDropdownRef = useRef<HTMLDivElement>(null);
 
-  // Immersive Scan States (New)
-  const [showScanModal, setShowScanModal] = useState(false);
-  const [scanStep, setScanStep] = useState<'select' | 'camera' | 'analyzing' | 'confirm'>('select');
-  const [scanningLogs, setScanningLogs] = useState<string[]>([]);
-  const [capturedImage, setCapturedImage] = useState<string | null>(null);
-  const [tempScanData, setTempScanData] = useState<any>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Apply scroll lock if any modal is visible
-  useScrollLock(!!(showManualEntry || showDeleteTxModal || scanSuccess || showScanModal || isScanning || scanError));
-
   // Currency & Rate Initialization
   useEffect(() => {
     const initRates = async () => {
       const CACHE_KEY = "snapfins_exchange_rates";
-      const CACHE_TTL = 6 * 60 * 60 * 1000; // 6 hours
+      const CACHE_TTL = 6 * 60 * 60 * 1000;
 
       try {
         const cached = localStorage.getItem(CACHE_KEY);
@@ -197,20 +167,11 @@ export default function DashboardPage() {
             return;
           }
         }
-
-        // Fetch new rates if cache missing or expired
         const res = await fetch("https://open.er-api.com/v6/latest/USD");
         const data = await res.json();
-
         if (data && data.rates) {
           setRates(data.rates);
-          localStorage.setItem(
-            CACHE_KEY,
-            JSON.stringify({
-              rates: data.rates,
-              timestamp: Date.now(),
-            })
-          );
+          localStorage.setItem(CACHE_KEY, JSON.stringify({ rates: data.rates, timestamp: Date.now() }));
         }
       } catch (error) {
         console.error("Failed to fetch exchange rates:", error);
@@ -218,29 +179,17 @@ export default function DashboardPage() {
         setRatesInitialized(true);
       }
     };
-
     initRates();
   }, []);
 
-  // Handle Outside Click & Scroll for Dropdowns
+  // Handle Outside Click & Dropdowns
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
-      
-      // Category Filter Dropdown
-      if (filterDropdownRef.current && !filterDropdownRef.current.contains(target)) {
-        setShowFilterDropdown(false);
-      }
-      // Year Dropdown
-      if (yearDropdownRef.current && !yearDropdownRef.current.contains(target)) {
-        setShowYearDropdown(false);
-      }
-      // Month Dropdown
-      if (monthDropdownRef.current && !monthDropdownRef.current.contains(target)) {
-        setShowMonthDropdown(false);
-      }
+      if (filterDropdownRef.current && !filterDropdownRef.current.contains(target)) setShowFilterDropdown(false);
+      if (yearDropdownRef.current && !yearDropdownRef.current.contains(target)) setShowYearDropdown(false);
+      if (monthDropdownRef.current && !monthDropdownRef.current.contains(target)) setShowMonthDropdown(false);
     };
-
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setShowFilterDropdown(false);
@@ -248,10 +197,8 @@ export default function DashboardPage() {
         setShowMonthDropdown(false);
       }
     };
-
     document.addEventListener("mousedown", handleClickOutside);
     document.addEventListener("keydown", handleKeyDown);
-
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
       document.removeEventListener("keydown", handleKeyDown);
@@ -705,25 +652,6 @@ export default function DashboardPage() {
 
   const handleEdit = (tx: any) => {
     setEditingTx(tx);
-    
-    // Determine the locale for formatting the initial field value
-    const editCurrency = tx.currency || currency;
-    const locale = editCurrency === "IDR" ? "id-ID" : "en-US";
-    
-    // Ensure amount is a number and format it for the input field
-    const numericAmount = Number(tx.amount) || 0;
-    const formattedAmount = formatValue(numericAmount, editCurrency as SupportedCurrency).replace(/[^\d.,]/g, '');
-
-    setManualForm({
-      date: tx.date || new Date().toISOString().split("T")[0],
-      category: tx.category || "GENERAL",
-      description: tx.description || "",
-      type: tx.type === "Debit" ? "Expense" : tx.type === "Credit" ? "Income" : tx.type,
-      currency: editCurrency,
-      amount: formattedAmount,
-      source: tx.source || "",
-      linked_asset_id: tx.linked_asset_id || "",
-    });
     setShowManualEntry(true);
   };
 
@@ -785,304 +713,22 @@ export default function DashboardPage() {
   }, []);
 
 
-  const handleManualSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-
-    try {
-      const supabase = createClient();
-      const { data: userData } = await supabase.auth.getUser();
-
-      if (!userData?.user) throw new Error("Not authenticated");
-
-      // 1. Smart Locale-Aware Parser
-      const isIDR = manualForm.currency === "IDR";
-      const rawText = manualForm.amount.toString().trim();
-      let finalAmount: number;
-      
-      // Remove symbols but keep semantic separators
-      const cleanedText = rawText.replace(/[^\d.,-]/g, '');
-      
-      if (isIDR) {
-        // IDR: 370.000,00 -> remove dots, change comma to dot
-        const cleaned = cleanedText.replace(/\./g, "").replace(/,/g, ".");
-        finalAmount = parseFloat(cleaned);
-      } else {
-        // USD/General: 1,000.00 -> remove commas
-        const cleaned = cleanedText.replace(/,/g, "");
-        finalAmount = parseFloat(cleaned);
-      }
-
-      if (isNaN(finalAmount)) throw new Error("Invalid amount entered");
-
-      // 2. Map UI labels to DB internal types (CRITICAL FOR DB INTEGRITY)
-      const dbType = manualForm.type === "Expense" ? "Debit" 
-                   : manualForm.type === "Income" ? "Credit" 
-                   : manualForm.type;
-
-      // 3. Build Payload
-      // If a linked asset is selected, use its name as the source label for the Linked Assets column
-      const linkedAssetForPayload = manualForm.linked_asset_id
-        ? assetRows.find((a: any) => a.id === manualForm.linked_asset_id)
-        : null;
-      const sourceLabel = linkedAssetForPayload
-        ? linkedAssetForPayload.name
-        : manualForm.source || (editingTx ? editingTx.source : "Manual Entry");
-
-      const txPayload: any = {
-        user_id: userData.user.id,
-        date: manualForm.date,
-        category: manualForm.category.toUpperCase(),
-        description: manualForm.description,
-        type: dbType,
-        amount: Number(finalAmount),
-        currency: manualForm.currency,
-        source: sourceLabel,
-        linked_asset_id: manualForm.linked_asset_id || null,
-      };
-
-      // Guard: only fire when assetId is a real non-empty UUID string.
-      const applyAssetDeltaInternal = async (assetId: string, delta: number, txCurrency: string) => {
-        if (!assetId || assetId.trim() === "") return;
-        const linkedAsset = assetRows.find((a: any) => a.id === assetId);
-        if (!linkedAsset) {
-          console.warn("applyAssetDelta: asset not found for id", assetId);
-          return;
-        }
-        const amtInAssetCur = convert(delta, txCurrency as SupportedCurrency, linkedAsset.currency as SupportedCurrency);
-        const newValue = Math.max(0, Number(linkedAsset.current_value) + amtInAssetCur);
-        const { error: assetUpdateError } = await supabase.from("assets").update({ current_value: newValue }).eq("id", assetId);
-        if (assetUpdateError) {
-          console.error("applyAssetDelta DB error:", assetUpdateError.message);
-          return;
-        }
-        setAssetRows((prev: any[]) =>
-          prev.map((a: any) => a.id === assetId ? { ...a, current_value: newValue } : a)
-        );
-      };
-
-      if (editingTx) {
-        const targetId = editingTx.id;
-
-        // Reverse OLD asset balance effect before applying the update
-        if (editingTx.linked_asset_id) {
-          const oldAmt = Number(editingTx.amount) || 0;
-          const oldIsIncome = editingTx.type === "Credit" || editingTx.type === "Income";
-          // To reverse: if it was an expense (-), we add it back (+).
-          const oldDelta = oldIsIncome ? -oldAmt : oldAmt;
-          await applyAssetDeltaInternal(editingTx.linked_asset_id, oldDelta, editingTx.currency || "USD");
-        }
-
-        const { data: updatedData, error: updateError } = await supabase
-          .from("transactions")
-          .update(txPayload)
-          .eq("id", targetId)
-          .select();
-
-        if (updateError) {
-          throw new Error(`DB Error: ${updateError.message} (${updateError.code})`);
-        }
-
-        if (updatedData && updatedData.length > 0) {
-          // Apply NEW asset balance effect
-          if (manualForm.linked_asset_id) {
-            const newIsIncome = dbType === "Credit";
-            const newDelta = newIsIncome ? finalAmount : -finalAmount;
-            await applyAssetDeltaInternal(manualForm.linked_asset_id, newDelta, manualForm.currency);
-          }
-
-          const mappedTx = { ...updatedData[0], isAi: updatedData[0].is_ai };
-          setTransactions((prev) =>
-            prev.map(tx => tx.id === targetId ? mappedTx : tx)
-          );
-          setShowManualEntry(false);
-          setEditingTx(null);
-          fetchTransactions();
-        } else {
-          throw new Error("Failed to update transaction. It may have been deleted or you do not have permission.");
-        }
-      } else {
-        // INSERT New Transaction
-        txPayload.is_ai = false;
-        txPayload.color = assignColor(manualForm.category.toUpperCase());
-
-        const { data: insertedData, error: insertError } = await supabase
-          .from("transactions")
-          .insert([txPayload])
-          .select();
-
-        if (insertError) throw insertError;
-
-        if (insertedData && insertedData.length > 0) {
-          // Apply asset balance change for the linked account
-          if (manualForm.linked_asset_id) {
-            const isIncome = dbType === "Credit";
-            const delta = isIncome ? finalAmount : -finalAmount;
-            await applyAssetDeltaInternal(manualForm.linked_asset_id, delta, manualForm.currency);
-          }
-
-          const mappedTx = { ...insertedData[0], isAi: insertedData[0].is_ai };
-          setTransactions((prev) => [mappedTx, ...prev]);
-          setShowManualEntry(false);
-          fetchTransactions();
-        }
-      }
-
-      // Reset Form
-      setManualForm({
-        date: new Date().toISOString().split("T")[0],
-        category: "GENERAL",
-        description: "",
-        type: "Expense",
-        currency,
-        amount: "",
-        source: "",
-        linked_asset_id: "",
-      });
-
-    } catch (err: any) {
-      alert("Failed to save: " + err.message);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const startCamera = async () => {
-    setScanStep("camera");
-    setScanError(null);
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment" },
-        audio: false,
-      });
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-      }
-    } catch (err: any) {
-      console.error("Camera access failed:", err);
-      setScanError(t("cameraAccessDenied") || "Camera access denied. Please check permissions.");
-      setScanStep("select");
-    }
-  };
-
-  const stopCamera = () => {
-    if (videoRef.current && videoRef.current.srcObject) {
-      const stream = videoRef.current.srcObject as MediaStream;
-      stream.getTracks().forEach((track) => track.stop());
-      videoRef.current.srcObject = null;
-    }
-  };
-
-  const processScanData = async (file: File | Blob) => {
-    setScanStep("analyzing");
-    setScanError(null);
-    setScanningLogs(["> Establishing connection to Gemini AI..."]);
-
-    // Staggered log gimmick
-    const addLog = (msg: string, delay: number) => 
-      new Promise(resolve => setTimeout(() => {
-        setScanningLogs(prev => [...prev, msg]);
-        resolve(null);
-      }, delay));
-
-    try {
-      const supabase = createClient();
-      const { data: userData } = await supabase.auth.getUser();
-      
-      if (!userData?.user) {
-        throw new Error(t("notAuthenticated") || "Please login first to scan receipts.");
-      }
-
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("language", lang);
-
-      // Animation start
-      const scanPromise = fetch("/api/scan", { method: "POST", body: formData });
-      
-      await addLog("> Accessing visual processing matrix... [OK]", 800);
-      await addLog("> Extracting merchant and total... [IN PROGRESS]", 1200);
-
-      const res = await scanPromise;
-      const data = await res.json();
-
-      if (res.ok && data.transaction) {
-        if (data.transaction.isValidReceipt === false) {
-          throw new Error(data.transaction.errorReason || t("tryAgainWithDifferent"));
-        }
-
-        await addLog("> Validating tax categories... [DONE]", 600);
-        await addLog("> Ready for confirmation.", 400);
-
-        setTempScanData({
-          ...data.transaction,
-          userId: userData.user.id
-        });
-        setScanStep("confirm");
-      } else {
-        throw new Error(data.error || t("scanErrorHint"));
-      }
-    } catch (error: any) {
-      console.error(error);
-      setScanError(error.message || t("tryAgainWithDifferent"));
-      setScanStep("select");
-    }
-  };
-
-  const capturePhoto = () => {
-    if (videoRef.current && canvasRef.current) {
-      const video = videoRef.current;
-      const canvas = canvasRef.current;
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      const ctx = canvas.getContext("2d");
-      if (ctx) {
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        canvas.toBlob((blob) => {
-          if (blob) {
-            stopCamera();
-            processScanData(blob);
-          }
-        }, "image/jpeg", 0.9);
-      }
-    }
-  };
-
-  const handleScan = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setShowScanModal(true); // Open the modal so the user sees the progress/error
-    await processScanData(file);
-    // Reset input
-    if (fileInputRef.current) fileInputRef.current.value = "";
-  };
-
+  // ── SHARED DB HELPERS ───────────────────────────────────────────────────
   const applyAssetDelta = async (assetId: string, delta: number, txCurrency: string) => {
     if (!assetId || assetId.trim() === "") return;
     const supabase = createClient();
     const linkedAsset = assetRows.find((a: any) => a.id === assetId);
     if (!linkedAsset) {
-      console.warn("applyAssetDelta (shared): asset not found for id", assetId);
+      console.warn("applyAssetDelta: asset not found", assetId);
       return;
     }
     const amtInAssetCur = convert(delta, txCurrency as SupportedCurrency, linkedAsset.currency as SupportedCurrency);
-    
-    // CRITICAL: Prevent NaN from reaching the database
-    if (isNaN(amtInAssetCur)) {
-      console.error("applyAssetDelta (shared): Calculated delta is NaN. Aborting DB update.");
-      return;
-    }
+    if (isNaN(amtInAssetCur)) return;
 
     const newValue = Math.max(0, Number(linkedAsset.current_value) + amtInAssetCur);
-    
-    if (isNaN(newValue)) {
-      console.error("applyAssetDelta (shared): New value is NaN. Aborting DB update.");
-      return;
-    }
-
-    const { error: assetUpdateError } = await supabase.from("assets").update({ current_value: newValue }).eq("id", assetId);
-    if (assetUpdateError) {
-      console.error("applyAssetDelta (shared) DB error:", assetUpdateError.message);
+    const { error } = await supabase.from("assets").update({ current_value: newValue }).eq("id", assetId);
+    if (error) {
+      console.error("applyAssetDelta error:", error.message);
       return;
     }
     setAssetRows((prev: any[]) =>
@@ -1090,57 +736,95 @@ export default function DashboardPage() {
     );
   };
 
-  const finalizeScan = async () => {
-    if (!tempScanData) return;
-    setIsScanning(true);
-    try {
-      const supabase = createClient();
-      const linkedAsset = assetRows.find((a: any) => a.id === tempScanData.linkedAssetId);
-      const sourceName = linkedAsset ? linkedAsset.name : "Gemini Vision";
-      
-      const cleanAmount = Number(tempScanData.amount);
-      if (isNaN(cleanAmount)) {
-        throw new Error("Invalid transaction amount: NaN");
+  const handleTransactionSubmit = async (form: any) => {
+    const supabase = createClient();
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData?.user) throw new Error("Auth required");
+
+    const isIDR = form.currency === "IDR";
+    const rawAmount = parseFloat(form.amount.replace(isIDR ? /\./g : /,/g, "").replace(/,/g, ".")) || 0;
+    const dbType = form.type === "Income" ? "Credit" : "Debit";
+    
+    const asset = form.linked_asset_id ? assetRows.find((a: any) => a.id === form.linked_asset_id) : null;
+    const sourceLabel = asset ? asset.name : (form.source || "Manual Entry");
+
+    const payload = {
+      user_id: userData.user.id,
+      date: form.date,
+      category: form.category.toUpperCase(),
+      description: form.description,
+      type: dbType,
+      amount: rawAmount,
+      currency: form.currency,
+      source: sourceLabel,
+      linked_asset_id: form.linked_asset_id || null,
+      is_ai: false,
+      color: assignColor(form.category.toUpperCase()),
+    };
+
+    if (editingTx) {
+      // Reverse old balance
+      if (editingTx.linked_asset_id) {
+        const oldAmt = Number(editingTx.amount) || 0;
+        const oldIsIncome = editingTx.type === "Credit" || editingTx.type === "Income";
+        await applyAssetDelta(editingTx.linked_asset_id, oldIsIncome ? -oldAmt : oldAmt, editingTx.currency || "USD");
       }
 
-      const newTx = {
-        user_id: tempScanData.userId,
-        date: tempScanData.date,
-        category: tempScanData.category || "GENERAL",
-        color: assignColor(tempScanData.category || "GENERAL"),
-        description: tempScanData.description,
-        type: "Debit", // Normalize to DB schema type for Expenses
-        amount: String(cleanAmount), // Save as string but guaranteed numeric
-        currency: tempScanData.currency || "IDR",
-        source: sourceName,
-        linked_asset_id: tempScanData.linkedAssetId || null,
-        is_ai: true,
-      };
-
-      const { data: insertedData, error } = await supabase
-        .from("transactions")
-        .insert([newTx])
-        .select();
-
+      const { data, error } = await supabase.from("transactions").update(payload).eq("id", editingTx.id).select();
       if (error) throw error;
       
-      if (insertedData) {
-        // Apply balance update
-        if (tempScanData.linkedAssetId) {
-          await applyAssetDelta(tempScanData.linkedAssetId, -cleanAmount, tempScanData.currency || "IDR");
+      if (data?.[0]) {
+        // Apply new balance
+        if (form.linked_asset_id) {
+          await applyAssetDelta(form.linked_asset_id, dbType === "Credit" ? rawAmount : -rawAmount, form.currency);
         }
-        
-        const mappedTx = { ...insertedData[0], isAi: insertedData[0].is_ai };
-        setTransactions((prev) => [mappedTx, ...prev]);
-        await fetchTransactions();
-        setShowScanModal(false);
-        setTempScanData(null);
-        setScanStep("select");
+        setTransactions(prev => prev.map(tx => tx.id === editingTx.id ? { ...data[0], isAi: data[0].is_ai } : tx));
+        setEditingTx(null);
+        fetchTransactions();
       }
-    } catch (error: any) {
-      alert("Failed to save: " + error.message);
-    } finally {
-      setIsScanning(false);
+    } else {
+      const { data, error } = await supabase.from("transactions").insert([payload]).select();
+      if (error) throw error;
+      
+      if (data?.[0]) {
+        if (form.linked_asset_id) {
+          await applyAssetDelta(form.linked_asset_id, dbType === "Credit" ? rawAmount : -rawAmount, form.currency);
+        }
+        setTransactions(prev => [{ ...data[0], isAi: data[0].is_ai }, ...prev]);
+        fetchTransactions();
+      }
+    }
+  };
+
+  const handleScanSuccess = async (tempData: any, assetId?: string, amount?: number, cur?: string) => {
+    const supabase = createClient();
+    const asset = assetId ? assetRows.find((a: any) => a.id === assetId) : null;
+    
+    // Ensure we have a valid numeric amount
+    const rawAmount = Number(amount) || 0;
+    
+    const payload = {
+      user_id: tempData.userId || (await supabase.auth.getUser()).data.user?.id,
+      date: tempData.date,
+      category: tempData.category || "GENERAL",
+      color: assignColor(tempData.category || "GENERAL"),
+      description: tempData.description,
+      type: "Debit",
+      amount: rawAmount,
+      currency: cur || "IDR",
+      source: asset ? asset.name : "Gemini Vision",
+      linked_asset_id: assetId || null,
+      is_ai: true,
+    };
+
+    const { data, error } = await supabase.from("transactions").insert([payload]).select();
+    if (error) throw error;
+    
+    if (data?.[0]) {
+      if (assetId) await applyAssetDelta(assetId, -rawAmount, cur || "IDR");
+      setTransactions(prev => [{ ...data[0], isAi: data[0].is_ai }, ...prev]);
+      setScanSuccess(data[0]);
+      fetchTransactions();
     }
   };
 
@@ -1150,498 +834,37 @@ export default function DashboardPage() {
 
   return (
     <>
-      {/* Immersive Scan Modal */}
-      {showScanModal && (
-        <div className="fixed inset-0 z-[100] flex items-start sm:items-center justify-center bg-black/70 backdrop-blur-md px-3 pt-20 pb-0 sm:p-6 animate-in fade-in duration-300">
-          <div className="bg-surface dark:bg-slate-900 p-4 sm:p-8 rounded-3xl shadow-2xl flex flex-col w-full sm:max-w-xl max-h-[calc(100svh-180px)] sm:max-h-[85svh] border border-white/10 relative overflow-hidden">
-            {/* Modal Header */}
-            <div className="flex justify-between items-center mb-3 sm:mb-8 relative z-10">
-              <div>
-                <h3 className="font-headline font-bold text-lg sm:text-3xl text-on-surface dark:text-white mb-0.5 sm:mb-1">
-                  {scanStep === 'select' ? t("scanReceipt") : 
-                   scanStep === 'camera' ? t("cameraCapture") || "Camera Scan" : 
-                   scanStep === 'analyzing' ? t("analyzing") || "Analyzing..." : 
-                   t("confirmEntry")}
-                </h3>
-                <p className="text-[10px] sm:text-sm text-on-surface-variant dark:text-gray-400 font-medium italic opacity-70">
-                  {scanStep === 'select' ? "Choose your input source" : 
-                   scanStep === 'camera' ? "Align receipt within the frame" : 
-                   scanStep === "analyzing" ? "Gemini AI is processing your image" : 
-                   "Verify the extracted information"}
-                </p>
-              </div>
-              <button
-                onClick={() => {
-                  stopCamera();
-                  setShowScanModal(false);
-                  setScanStep("select");
-                }}
-                className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-surface-container-high dark:hover:bg-slate-800 transition-colors text-on-surface-variant cursor-pointer"
-              >
-                <span className="material-symbols-outlined">close</span>
-              </button>
-            </div>
-            {/* Step Selection Wrapper */}
-            <div className="flex-1 overflow-y-auto pr-1 -mr-1 scrollbar-thin">
-              {scanStep === "select" && (
-                <div className="grid grid-cols-2 gap-3 animate-in slide-in-from-bottom-4 duration-500">
-                  <button
-                    onClick={() => {
-                        setScanStep("camera");
-                        startCamera();
-                    }}
-                    className="flex flex-col items-center justify-center p-4 sm:p-8 rounded-2xl border-2 border-outline-variant/20 bg-surface-container-low dark:bg-slate-800/50 hover:border-primary hover:bg-primary/5 transition-all group cursor-pointer"
-                  >
-                    <div className="w-10 h-10 sm:w-16 sm:h-16 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                      <span className="material-symbols-outlined text-xl sm:text-3xl">photo_camera</span>
-                    </div>
-                    <span className="font-bold text-sm sm:text-lg">{lang === 'id' ? 'Gunakan Kamera' : 'Use Camera'}</span>
-                    <span className="text-[10px] text-on-surface-variant mt-1 hidden sm:block">{lang === 'id' ? 'Scan struk fisik' : 'Scan physical receipt'}</span>
-                  </button>
+      <ScanReceiptModal
+        isOpen={showScanModal}
+        onClose={() => setShowScanModal(false)}
+        onSuccess={handleScanSuccess}
+        cashAssets={cashAssets}
+        lang={lang}
+        currency={currency}
+        t={t as any}
+        formatValue={formatValue as any}
+      />
 
-                  <label className="flex flex-col items-center justify-center p-4 sm:p-8 rounded-2xl border-2 border-outline-variant/20 bg-surface-container-low dark:bg-slate-800/50 hover:border-secondary hover:bg-secondary/5 transition-all group cursor-pointer">
-                    <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) processScanData(file);
-                        }}
-                    />
-                    <div className="w-10 h-10 sm:w-16 sm:h-16 rounded-2xl bg-secondary/10 text-secondary flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                      <span className="material-symbols-outlined text-xl sm:text-3xl">upload_file</span>
-                    </div>
-                    <span className="font-bold text-sm sm:text-lg">{lang === 'id' ? 'Upload Struk' : 'Upload Receipt'}</span>
-                    <span className="text-[10px] text-on-surface-variant mt-1 hidden sm:block">{lang === 'id' ? 'Pilih dari galeri' : 'Select from gallery'}</span>
-                  </label>
-                </div>
-              )}
+      <TransactionModal
+        isOpen={showManualEntry}
+        onClose={() => {
+          setShowManualEntry(false);
+          setEditingTx(null);
+        }}
+        onSubmit={handleTransactionSubmit}
+        initialData={editingTx}
+        cashAssets={cashAssets}
+        lang={lang}
+        currency={currency as SupportedCurrency}
+        t={t as any}
+        formatValue={formatValue as any}
+      />
 
-            {/* Step 2: Camera Live */}
-            {scanStep === 'camera' && (
-              <div className="relative rounded-2xl overflow-hidden h-[45svh] sm:h-[55svh] bg-black border-2 border-primary/30 shadow-2xl animate-in zoom-in duration-300">
-                <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
-                
-                {/* Scanner Overlay UI */}
-                <div className="absolute inset-0 scanner-overlay-gradient pointer-events-none">
-                  {/* Corners */}
-                  <div className="scanner-corner top-4 left-4 border-t-4 border-l-4"></div>
-                  <div className="scanner-corner top-4 right-4 border-t-4 border-r-4"></div>
-                  <div className="scanner-corner bottom-4 left-4 border-b-4 border-l-4"></div>
-                  <div className="scanner-corner bottom-4 right-4 border-b-4 border-r-4"></div>
-                  {/* Scan Line */}
-                  <div className="animate-scan-line"></div>
-                </div>
-
-                {/* Capture Button only — use X above to exit */}
-                <div className="absolute bottom-8 inset-x-0 flex justify-center items-center">
-                  <button 
-                    onClick={capturePhoto}
-                    className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-4 border-primary p-1 bg-white/20 backdrop-blur-sm group hover:scale-110 transition-all cursor-pointer"
-                  >
-                    <div className="w-full h-full rounded-full bg-primary flex items-center justify-center shadow-lg group-hover:bg-primary-container">
-                      <span className="material-symbols-outlined text-white text-2xl sm:text-3xl">camera_alt</span>
-                    </div>
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Step 3: Analyzing Gimmick */}
-            {scanStep === 'analyzing' && (
-              <div className="flex flex-col items-center py-10 animate-in fade-in duration-500">
-                <div className="relative w-48 h-48 mb-8">
-                  <div className="absolute inset-0 rounded-full border-4 border-primary/20 border-t-primary animate-spin"></div>
-                  <div className="absolute inset-4 rounded-full border-4 border-secondary/20 border-b-secondary animate-spin [animation-duration:2s]"></div>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="material-symbols-outlined text-primary text-6xl animate-pulse">auto_awesome</span>
-                  </div>
-                </div>
-                
-                <h4 className="text-xl font-bold dark:text-white mb-6 flex items-center gap-3">
-                  <span className="w-3 h-3 bg-secondary rounded-full animate-pulse"></span>
-                  Analyzing with Gemini AI...
-                </h4>
-
-                {/* Terminal-style Logs */}
-                <div className="w-full bg-slate-950 rounded-2xl p-6 font-mono text-xs text-secondary shadow-lg border border-white/5 space-y-2 max-h-40 overflow-y-auto">
-                  {scanningLogs.map((log, idx) => (
-                    <div key={idx} className={idx === scanningLogs.length - 1 ? "terminal-cursor" : ""}>
-                      {log}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Step 4: Confirm Entry — scrollable summary only */}
-            {scanStep === 'confirm' && tempScanData && (
-              <div className="animate-in slide-in-from-right-4 duration-500">
-                <div className="bg-surface-container-low dark:bg-slate-800/80 rounded-2xl p-4 sm:p-6 border border-outline-variant/30">
-                  <div className="grid grid-cols-2 gap-y-4">
-                    <div className="col-span-2 flex items-center gap-3 mb-1">
-                       <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                          <span className="material-symbols-outlined text-primary text-xl">receipt_long</span>
-                       </div>
-                       <div>
-                          <p className="text-[10px] uppercase tracking-widest font-black text-on-surface-variant opacity-60">Merchant</p>
-                          <p className="font-bold text-base sm:text-xl text-on-surface dark:text-white capitalize">{tempScanData.description}</p>
-                       </div>
-                    </div>
-                    <div>
-                      <p className="text-[10px] uppercase tracking-widest font-black text-on-surface-variant opacity-60">Date</p>
-                      <p className="font-bold text-sm text-on-surface dark:text-white">{tempScanData.date}</p>
-                    </div>
-                    <div>
-                      <p className="text-[10px] uppercase tracking-widest font-black text-on-surface-variant opacity-60">Category</p>
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-primary/10 text-primary">
-                        {tempScanData.category}
-                      </span>
-                    </div>
-                    <div className="col-span-2 pt-3 border-t border-outline-variant/10">
-                      <p className="text-[10px] uppercase tracking-widest font-black text-secondary">Total Amount</p>
-                      <p className="font-black text-2xl sm:text-3xl text-on-surface dark:text-white tracking-tighter">
-                        {formatValue(Number(tempScanData.amount), (tempScanData.currency || currency) as SupportedCurrency)}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-            </div>
-
-            {/* Confirm step sticky footer — account selector + actions outside scroll area */}
-            {scanStep === 'confirm' && tempScanData && (
-              <div className="shrink-0 pt-4 mt-2 border-t border-outline-variant/10 space-y-3">
-                <div>
-                  <label className="block text-xs font-black uppercase tracking-widest text-on-surface-variant opacity-70 mb-1.5">
-                    {lang === 'id' ? 'Bayar dari Akun' : 'Paid from Account'} <span className="text-error font-black">*</span>
-                  </label>
-                  <div className="relative">
-                    <select
-                      value={tempScanData.linkedAssetId || ""}
-                      onChange={(e) => setTempScanData({ ...tempScanData, linkedAssetId: e.target.value })}
-                      className="w-full bg-surface-container-low dark:bg-slate-800 border-2 border-outline-variant/20 focus:border-secondary rounded-xl px-4 py-3 text-on-surface font-bold text-sm transition-colors outline-none cursor-pointer appearance-none pr-10"
-                    >
-                      <option value="">{lang === 'id' ? "— Pilih Akun Pembayar —" : "— Select Paying Account —"}</option>
-                      {cashAssets.map((a: any) => (
-                        <option key={a.id} value={a.id}>
-                          {a.name} ({a.currency})
-                        </option>
-                      ))}
-                    </select>
-                    <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-on-surface-variant opacity-50">
-                      expand_more
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => setScanStep('select')}
-                    className="flex-1 py-3 rounded-2xl bg-surface-container-high dark:bg-slate-800 text-on-surface dark:text-white font-bold hover:bg-surface-variant transition-all cursor-pointer text-sm"
-                  >
-                    {lang === 'id' ? 'Coba Lagi' : 'Try Again'}
-                  </button>
-                  {cashAssets.length > 0 ? (
-                    <button
-                      onClick={finalizeScan}
-                      disabled={isScanning || !tempScanData?.linkedAssetId}
-                      className="flex-1 py-3 rounded-2xl bg-secondary text-white font-black hover:brightness-110 active:scale-95 transition-all shadow-lg shadow-secondary/20 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 text-sm"
-                    >
-                      {isScanning ? <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></div> : (lang === 'id' ? 'Konfirmasi' : 'Confirm Entry')}
-                    </button>
-                  ) : (
-                    <a
-                      href="/assets"
-                      className="flex-1 py-3 rounded-2xl bg-primary text-white font-black hover:brightness-110 active:scale-95 transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2 cursor-pointer text-sm"
-                    >
-                      <span className="material-symbols-outlined text-sm">add</span>
-                      {lang === 'id' ? 'Tambah Akun' : 'Add Account'}
-                    </a>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {scanError && (
-              <div className="shrink-0 mt-2 p-3 rounded-xl bg-error/10 border border-error/20 flex items-start gap-2 animate-in fade-in zoom-in duration-300">
-                <span className="material-symbols-outlined text-error text-lg">error</span>
-                <p className="text-[10px] sm:text-xs font-semibold text-error-container line-clamp-2">{scanError}</p>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Manual Entry Modal */}
-      {showManualEntry && (
-        <div className="fixed inset-0 z-[100] flex items-start sm:items-center justify-center bg-black/60 backdrop-blur-sm px-3 pt-20 pb-0 sm:p-6">
-          <div
-            className="bg-surface p-4 sm:p-8 rounded-3xl shadow-2xl flex flex-col w-full sm:max-w-lg max-h-[calc(100svh-180px)] sm:max-h-[85svh] border border-outline-variant/20 animate-in fade-in zoom-in duration-200"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex justify-between items-center mb-3 sm:mb-6">
-              <div>
-                <h3 className="font-headline font-bold text-lg sm:text-2xl text-on-surface">
-                  {editingTx ? t("editTransaction") : t("manualEntryTitle")}
-                </h3>
-                {!editingTx && (
-                  <p className="text-[10px] text-on-surface-variant/60 font-medium mt-0.5">
-                    {lang === "id"
-                      ? "Catat peristiwa arus kas — pendapatan atau pengeluaran"
-                      : "Record a cashflow event — income or expense"}
-                  </p>
-                )}
-              </div>
-              <button
-                onClick={() => setShowManualEntry(false)}
-                className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-surface-container-high transition-colors text-on-surface-variant cursor-pointer"
-              >
-                <span className="material-symbols-outlined text-lg">close</span>
-              </button>
-            </div>
-
-            <form onSubmit={handleManualSubmit} className="space-y-3 sm:space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">
-                    {t("labelDate")}
-                  </label>
-                  <input
-                    type="date"
-                    required
-                    value={manualForm.date}
-                    onChange={(e) =>
-                      setManualForm({ ...manualForm, date: e.target.value })
-                    }
-                    className="w-full bg-surface-container-low border border-outline-variant/30 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 text-on-surface text-sm focus:outline-none focus:border-primary transition-colors"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">
-                    {t("labelAmount")}
-                  </label>
-                  <div className="flex bg-surface-container-low border border-outline-variant/30 rounded-xl focus-within:border-primary transition-colors overflow-hidden">
-                    <div className="relative flex items-center">
-                      <select
-                        value={manualForm.currency}
-                        onChange={(e) => {
-                          const newCurrency = e.target.value as SupportedCurrency;
-                          const raw = manualForm.amount.replace(/[^0-9]/g, "");
-                          
-                          if (raw) {
-                            const locale = newCurrency === "IDR" ? "id-ID" : "en-US";
-                            const numericVal = parseInt(raw, 10);
-                            const fmt = new Intl.NumberFormat(locale).format(numericVal);
-                            
-                            setManualForm({
-                              ...manualForm,
-                              currency: newCurrency,
-                              amount: fmt,
-                            });
-                          } else {
-                            setManualForm({
-                              ...manualForm,
-                              currency: newCurrency,
-                            });
-                          }
-                        }}
-                        className="bg-transparent text-on-surface text-[10px] font-black pl-3 pr-6 py-3 focus:outline-none border-r border-outline-variant/30 cursor-pointer w-20 shrink-0 appearance-none"
-                      >
-                        {Object.keys(currencySymbols).map((c) => (
-                          <option
-                            key={c}
-                            value={c}
-                            className="bg-surface dark:bg-slate-900 text-on-surface"
-                          >
-                            {c}
-                          </option>
-                        ))}
-                      </select>
-                      <span className="material-symbols-outlined absolute right-1.5 pointer-events-none text-xs text-on-surface-variant opacity-50">
-                        expand_more
-                      </span>
-                    </div>
-                    <input
-                      type="text"
-                      placeholder={
-                        manualForm.currency === "IDR" ? "50.000" : "50,000"
-                      }
-                      required
-                      value={manualForm.amount}
-                      onChange={(e) => {
-                        const numericStr = e.target.value.replace(/\D/g, "");
-                        if (!numericStr) {
-                          setManualForm({ ...manualForm, amount: "" });
-                        } else {
-                          const locale =
-                            manualForm.currency === "IDR" ? "id-ID" : "en-US";
-                          setManualForm({
-                            ...manualForm,
-                            amount: new Intl.NumberFormat(locale).format(
-                              parseInt(numericStr, 10),
-                            ),
-                          });
-                        }
-                      }}
-                      className="flex-grow bg-transparent px-3 py-3 text-on-surface text-sm focus:outline-none font-mono font-bold"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">
-                  {t("labelDescription")}
-                </label>
-                <input
-                  type="text"
-                  placeholder={t("placeholderDescription")}
-                  required
-                  value={manualForm.description}
-                  onChange={(e) =>
-                    setManualForm({
-                      ...manualForm,
-                      description: e.target.value,
-                    })
-                  }
-                  className="w-full bg-surface-container-low border border-outline-variant/30 rounded-xl px-4 py-3 text-on-surface text-sm focus:outline-none focus:border-primary transition-colors"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">
-                    {t("labelCategory")}
-                  </label>
-                  <input
-                    type="text"
-                    placeholder={t("placeholderCategory")}
-                    required
-                    value={manualForm.category}
-                    onChange={(e) =>
-                      setManualForm({ ...manualForm, category: e.target.value })
-                    }
-                    className="w-full bg-surface-container-low border border-outline-variant/30 rounded-xl px-4 py-3 text-on-surface text-sm focus:outline-none focus:border-primary transition-colors uppercase"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">
-                    {t("labelType")}
-                  </label>
-                  <select
-                    value={manualForm.type}
-                    onChange={(e) =>
-                      setManualForm({ ...manualForm, type: e.target.value })
-                    }
-                    className="w-full bg-surface-container-low border border-outline-variant/30 rounded-xl px-4 py-3 text-on-surface text-sm focus:outline-none focus:border-primary transition-colors"
-                  >
-                    <option
-                      value="Expense"
-                      className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
-                    >
-                      {t("typeExpense")}
-                    </option>
-                    <option
-                      value="Income"
-                      className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
-                    >
-                      {t("typeIncome")}
-                    </option>
-                  </select>
-                  <p className="text-[10px] text-on-surface-variant/55 mt-1.5 leading-relaxed">
-                    {manualForm.type === "Income"
-                      ? (lang === "id"
-                          ? "Uang yang Anda terima sekarang — gaji, transfer masuk, atau refund."
-                          : "Money received now — such as salary, transfer in, or refund.")
-                      : (lang === "id"
-                          ? "Uang yang Anda keluarkan — tagihan, belanja, atau pembayaran."
-                          : "Money spent now — such as bills, food, or purchases.")}
-                  </p>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">
-                  {manualForm.type === "Income"
-                    ? (lang === "id" ? "Akun Tujuan" : "Destination Account")
-                    : (lang === "id" ? "Akun Sumber" : "Source Account")}
-                </label>
-                <select
-                  value={manualForm.linked_asset_id}
-                  onChange={(e) => setManualForm({ ...manualForm, linked_asset_id: e.target.value })}
-                  className="w-full bg-surface-container-low border border-outline-variant/30 rounded-xl px-4 py-3 text-on-surface text-sm focus:outline-none focus:border-primary transition-colors cursor-pointer"
-                >
-                  <option value="">{lang === "id" ? "— Pilih Akun —" : "— Select Account —"}</option>
-                  {cashAssets.map((a: any) => (
-                    <option key={a.id} value={a.id}>
-                      {a.name}{a.currency ? ` (${a.currency})` : ""}
-                    </option>
-                  ))}
-                </select>
-                {!manualForm.linked_asset_id ? (
-                  <p className="text-[10px] text-amber-500 mt-1 flex items-center gap-1.5 font-bold">
-                    <span className="material-symbols-outlined text-sm">info</span>
-                    {lang === "id"
-                      ? "Butuh akun Kas/Bank/E-wallet sebelum mencatat transaksi."
-                      : "Need a Cash/Bank/E-wallet account before recording transactions."}
-                  </p>
-                ) : (
-                  <p className="text-[10px] text-on-surface-variant/55 mt-1.5">
-                    {manualForm.type === "Income"
-                      ? (lang === "id"
-                          ? "✓ Saldo akun ini akan bertambah · Net Worth akan naik"
-                          : "✓ This account balance will increase · Net Worth goes up")
-                      : (lang === "id"
-                          ? "✓ Saldo akun ini akan berkurang · Net Worth akan turun"
-                          : "✓ This account balance will decrease · Net Worth goes down")}
-                  </p>
-                )}
-              </div>
-
-              <div className="pt-4">
-                {cashAssets.length === 0 ? (
-                  <a
-                    href="/assets"
-                    className="w-full py-4 rounded-2xl bg-primary text-white font-black hover:brightness-110 active:scale-95 transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2 cursor-pointer"
-                  >
-                    <span className="material-symbols-outlined text-[20px]">add</span>
-                    {lang === "id" ? "Tambah Akun di Halaman Aset" : "Add Your First Account in Assets"}
-                  </a>
-                ) : (
-                  <button
-                    type="submit"
-                    disabled={isSubmitting || !manualForm.linked_asset_id}
-                    className="w-full bg-primary hover:bg-primary-container text-white px-6 py-4 rounded-xl font-bold transition-all hover:shadow-lg active:scale-95 cursor-pointer disabled:opacity-70 disabled:pointer-events-none disabled:scale-100 flex items-center justify-center gap-2"
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <span className="material-symbols-outlined animate-spin text-sm">
-                          sync
-                        </span>{" "}
-                        {t("saving")}
-                      </>
-                    ) : (
-                      editingTx ? t("btnEdit") : t("saveTransaction")
-                    )}
-                  </button>
-                )}
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Delete Transaction Confirmation Modal */}
-      {showDeleteTxModal && (
+      {showDeleteTxModal && createPortal(
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-surface p-8 rounded-3xl shadow-2xl flex flex-col items-center max-w-sm w-full border border-error/20 animate-in fade-in zoom-in duration-300">
             <div className="w-16 h-16 rounded-full bg-error/10 flex items-center justify-center mb-6 relative">
-              <span className="material-symbols-outlined text-error text-4xl">
-                warning
-              </span>
+              <span className="material-symbols-outlined text-error text-4xl">warning</span>
             </div>
             <h3 className="font-headline font-bold text-xl text-on-surface mb-2 text-center">
               {deleteQueue.length > 1 ? t("confirmDeleteSelectedTitle") : t("confirmDeleteTransactionTitle")}
@@ -1656,11 +879,7 @@ export default function DashboardPage() {
                 disabled={isDeletingRows}
                 className="w-full bg-error hover:bg-red-600 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-sm active:scale-95 flex items-center justify-center gap-2"
               >
-                {isDeletingRows ? (
-                  <span className="material-symbols-outlined animate-spin text-sm">
-                    sync
-                  </span>
-                ) : null}
+                {isDeletingRows ? <span className="material-symbols-outlined animate-spin text-sm">sync</span> : null}
                 {isDeletingRows ? t("deleting") : t("btnDelete")}
               </button>
               <button
@@ -1672,12 +891,11 @@ export default function DashboardPage() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
-
-
-      {scanSuccess && (
+      {scanSuccess && createPortal(
         <div className="fixed inset-0 z-[100] flex items-start sm:items-center justify-center bg-black/60 backdrop-blur-sm p-4 pt-20 sm:pt-4">
           <div className="bg-surface p-8 rounded-3xl shadow-2xl flex flex-col items-center max-w-sm w-full border border-primary/20 animate-in fade-in zoom-in duration-300">
             <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-6 relative">
@@ -1715,7 +933,8 @@ export default function DashboardPage() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       <main className="max-w-7xl mx-auto w-full px-4 sm:px-6 md:px-8 py-6 md:py-10 space-y-8 md:space-y-10 pb-32 md:pb-12">
@@ -1733,16 +952,6 @@ export default function DashboardPage() {
             <button
               onClick={() => {
                 setEditingTx(null);
-                setManualForm({
-                  date: new Date().toISOString().split("T")[0],
-                  category: "GENERAL",
-                  description: "",
-                  type: "Expense",
-                  currency,
-                  amount: "",
-                  source: "",
-                  linked_asset_id: "",
-                });
                 setShowManualEntry(true);
               }}
               className="flex sm:hidden px-5 py-3 rounded-xl border border-outline-variant text-on-surface font-bold text-sm hover:bg-surface-container-low transition-all active:scale-[0.98] items-center justify-center gap-2 cursor-pointer"
@@ -1753,16 +962,6 @@ export default function DashboardPage() {
             <button
               onClick={() => {
                 setEditingTx(null);
-                setManualForm({
-                  date: new Date().toISOString().split("T")[0],
-                  category: "GENERAL",
-                  description: "",
-                  type: "Expense",
-                  currency,
-                  amount: "",
-                  source: "",
-                  linked_asset_id: "",
-                });
                 setShowManualEntry(true);
               }}
               className="hidden sm:flex md:flex px-5 py-2.5 rounded-lg border border-outline-variant text-on-surface font-semibold text-sm hover:bg-surface-container-low transition-all active:opacity-80 items-center gap-2 cursor-pointer"
@@ -2278,8 +1477,12 @@ export default function DashboardPage() {
                             <span className="tabular-nums">
                               {tx.type === "Income" || tx.type === "Credit" ? "+" : "-"}
                               {formatValue(
-                                Math.abs(Number(tx.amount) || 0),
-                                (tx.currency || currency) as SupportedCurrency
+                                convert(
+                                  Math.abs(Number(tx.amount) || 0),
+                                  (tx.currency || "USD") as SupportedCurrency,
+                                  currency as SupportedCurrency
+                                ),
+                                currency as SupportedCurrency
                               )}
                             </span>
                           </div>
@@ -2455,15 +1658,6 @@ export default function DashboardPage() {
 
 
 
-      {/* Hidden processing elements */}
-      <canvas ref={canvasRef} className="hidden" />
-      <input
-        type="file"
-        accept="image/*"
-        ref={fileInputRef}
-        onChange={handleScan}
-        className="hidden"
-      />
     </>
   );
 }

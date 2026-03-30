@@ -23,7 +23,10 @@ export default function CookieBanner() {
   if (!isVisible) return null;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-[100] p-4 sm:p-6 pb-6 animate-in slide-in-from-bottom duration-500 drop-shadow-2xl">
+    <div 
+      className="fixed bottom-0 left-0 right-0 z-[100] p-4 sm:p-6 pb-6 animate-in slide-in-from-bottom duration-500 drop-shadow-2xl"
+      style={{ paddingRight: 'var(--scrollbar-padding)' } as React.CSSProperties}
+    >
       <div className="max-w-4xl mx-auto bg-surface-container-low dark:bg-gray-900 border border-outline-variant/30 shadow-2xl rounded-2xl p-6 md:px-8 py-5 flex flex-col md:flex-row shadow-[0_-10px_40px_rgba(0,0,0,0.1)] items-center gap-6">
         <div className="flex-1 text-[13px] md:text-sm text-on-surface-variant font-medium leading-relaxed">
           <p>

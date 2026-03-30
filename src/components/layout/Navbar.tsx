@@ -78,7 +78,10 @@ export default function Navbar({ userName, userEmail, userAvatar, onDeleteAccoun
   ];
 
   return (
-    <nav className="sticky top-0 w-full z-50 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md border-b border-outline-variant/30">
+    <nav 
+      className="sticky top-0 w-full z-50 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md border-b border-outline-variant/30"
+      style={{ paddingRight: 'var(--scrollbar-padding)' } as React.CSSProperties}
+    >
       <div className="flex justify-between items-center w-full px-4 sm:px-6 py-2 md:py-3 max-w-7xl mx-auto">
         <div className="flex items-center gap-4 md:gap-8">
           <Link href="/" className="flex items-center gap-2 cursor-pointer group">

@@ -69,28 +69,39 @@ export function convert(amount: number, from: SupportedCurrency, to: SupportedCu
 
 /**
  * Formats a numeric value as a localized currency string.
- * Decouples formatting from UI language: IDR uses id-ID, all others use en-US.
+ * Strictly follows user rules for decimals and symbols.
  */
 export function formatValue(amount: number, currency: SupportedCurrency): string {
-  const locale = currency === 'IDR' ? 'id-ID' : 'en-US';
   const safeAmount = isNaN(amount) ? 0 : amount;
+  const symbol = currencySymbols[currency] || '$';
   
-  // Custom Rupiah format: Rp1.000.000 (no space, dots for thousands, commas for decimals)
+  // IDR: Rp30.879 (dots for thousands, no decimals default)
   if (currency === 'IDR') {
-    const formatter = new Intl.NumberFormat('id-ID', {
-      minimumFractionDigits: amount % 1 === 0 ? 0 : 2,
-      maximumFractionDigits: 2,
-    });
-    return 'Rp' + formatter.format(safeAmount);
+    const intPart = Math.round(safeAmount);
+    const formatted = new Intl.NumberFormat('id-ID', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(intPart);
+    return `Rp${formatted}`;
   }
 
-  // Other currencies: $1,000,000.00 (Standard International / US style)
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: currency,
-    maximumFractionDigits: 2,
+  // JPY / KRW: 0 decimals default, commas for thousands
+  if (currency === 'JPY' || currency === 'KRW') {
+    const intPart = Math.round(safeAmount);
+    const formatted = new Intl.NumberFormat('en-US', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(intPart);
+    return `${symbol}${formatted}`;
+  }
+
+  // Others: 2 decimals default, commas for thousands, dots for decimals
+  const formatted = new Intl.NumberFormat('en-US', {
     minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   }).format(safeAmount);
+
+  return `${symbol}${formatted}`;
 }
 
 /**
@@ -104,10 +115,10 @@ export function normalizeCurrency(c: string): SupportedCurrency {
   if (upper === 'GBP' || upper === '£') return 'GBP';
   if (upper === 'JPY' || upper === '¥') return 'JPY';
   if (upper === 'CNY') return 'CNY';
-  if (upper === 'SGD') return 'SGD';
-  if (upper === 'AUD') return 'AUD';
-  if (upper === 'BND') return 'BND';
-  if (upper === 'MYR') return 'MYR';
-  if (upper === 'KRW') return 'KRW';
+  if (upper === 'SGD' || upper === 'S$') return 'SGD';
+  if (upper === 'AUD' || upper === 'A$') return 'AUD';
+  if (upper === 'BND' || upper === 'B$') return 'BND';
+  if (upper === 'MYR' || upper === 'RM') return 'MYR';
+  if (upper === 'KRW' || upper === '₩') return 'KRW';
   return 'USD'; // default
 }
