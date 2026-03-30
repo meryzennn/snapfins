@@ -545,6 +545,7 @@ export default function LandingPage() {
       </main>
 
       <Footer />
+      {showSupportModal && <SupportModal onClose={() => setShowSupportModal(false)} />}
     </div>
   );
 }
