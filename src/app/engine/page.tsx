@@ -50,7 +50,7 @@ export default function EnginePage() {
   };
 
   return (
-    <div className="min-h-screen bg-white dark:bg-slate-950 selection:bg-primary/20 transition-colors duration-500 font-serif">
+    <div className="min-h-screen bg-white dark:bg-slate-950 selection:bg-primary/20 transition-colors duration-500">
       {/* Background Orbs */}
       <div className="fixed inset-0 overflow-hidden -z-10 pointer-events-none">
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/5 blur-[120px] rounded-full animate-pulse"></div>
@@ -218,16 +218,16 @@ export default function EnginePage() {
             {/* Real Data Source Nodes */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 my-12 font-sans">
               <a 
-                href="https://www.binance.com/en/binance-api" 
+                href="https://www.coingecko.com/en/api" 
                 target="_blank" 
                 rel="noopener noreferrer" 
                 className="group flex flex-col items-center p-8 rounded-2xl border border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-white/[0.02] hover:bg-black/[0.04] dark:hover:bg-white/[0.04] transition-all"
               >
-                <div className="w-12 h-12 bg-[#F3BA2F]/10 rounded-full flex items-center justify-center mb-4 overflow-hidden p-2">
-                  <img src="/binance.webp" alt="Binance Logo" className="w-full h-full object-contain" />
+                <div className="w-12 h-12 bg-[#8DC63F]/10 rounded-full flex items-center justify-center mb-4 overflow-hidden p-2">
+                  <img src="/CoinGecko_logo.png" alt="CoinGecko Logo" className="w-full h-full object-contain" />
                 </div>
-                <span className="text-[10px] font-black tracking-[0.2em] mb-1">BINANCE API</span>
-                <span className="text-[8px] opacity-40">{t('whitepaperSourceLabel')}: BINANCE.COM</span>
+                <span className="text-[10px] font-black tracking-[0.2em] mb-1">COINGECKO TERMINAL</span>
+                <span className="text-[8px] opacity-40">{t('whitepaperSourceLabel')}: COINGECKO.COM</span>
               </a>
 
               <a 
@@ -277,7 +277,7 @@ export default function EnginePage() {
         </div>
       </main>
 
-      <Footer containerClassName="max-w-5xl" />
+      <Footer />
     </div>
   );
 }

@@ -540,7 +540,7 @@ export default function AssetsPage() {
                                                         <span className="text-[8px] sm:text-[9px] uppercase tracking-widest text-secondary font-black">MARKET</span>
                                                     </div>
                                                     <span className="text-[7px] sm:text-[8px] uppercase tracking-widest text-on-surface-variant font-bold opacity-70 mt-0.5">
-                                                        {asset.exchange === 'CRYPTO' ? 'BINANCE' : asset.exchange && asset.exchange !== 'US' ? asset.exchange : 'YAHOO FIN'}
+                                                        {asset.exchange === 'COINGECKO' || asset.exchange === 'CRYPTO' ? 'COINGECKO' : asset.exchange && asset.exchange !== 'US' ? asset.exchange : 'YAHOO FIN'}
                                                     </span>
                                                   </div>
                                               ) : null}

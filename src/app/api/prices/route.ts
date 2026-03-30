@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server";
 
 // We use a small memory cache to avoid spamming the exchange for identical requests within a 5-min window.
-const CACHE_TTL_SECONDS = 300; 
+const CACHE_TTL_SECONDS = 300;
 const priceCache = new Map<string, { price: number; timestamp: number }>();
+
+// Separate cache for CoinGecko symbol → coin ID lookups (longer TTL: 1 hour)
+const COINGECKO_ID_TTL_MS = 60 * 60 * 1000;
+const coinIdCache = new Map<string, { id: string; timestamp: number }>();
 
 export interface PriceRequestItem {
   symbol: string;
@@ -90,19 +94,61 @@ async function fetchQuote(symbol: string, type: string): Promise<PriceResponseIt
 
     try {
         if (type === "crypto" || type === "Crypto") {
-            // Check if symbol already has USDT or is raw
             base_symbol = symbol;
-            exchange = "CRYPTO";
-            provider_symbol = `${symbol}USDT`;
+            exchange = "COINGECKO";
             quote_currency = "USD";
-            
-            const res = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${provider_symbol}`, { cache: "no-store", next: { revalidate: 0 } });
-            
-            if (res.ok) {
-                const data = await res.json();
-                price = parseFloat(data.price);
+
+            // Step 1: Resolve symbol → CoinGecko coin ID (with its own cache)
+            const idCacheKey = symbol.toUpperCase();
+            const cachedId = coinIdCache.get(idCacheKey);
+            let coinId: string | null = null;
+
+            if (cachedId && Date.now() - cachedId.timestamp < COINGECKO_ID_TTL_MS) {
+                coinId = cachedId.id;
             } else {
-                errorMsg = `Could not fetch crypto price from Binance for ${provider_symbol}`;
+                const searchRes = await fetch(
+                    `https://api.coingecko.com/api/v3/search?query=${encodeURIComponent(symbol)}`,
+                    { cache: "no-store", next: { revalidate: 0 } }
+                );
+
+                if (!searchRes.ok) {
+                    errorMsg = `Could not search CoinGecko for symbol: ${symbol}`;
+                } else {
+                    const searchData = await searchRes.json();
+                    const coins: Array<{ id: string; symbol: string }> = searchData.coins || [];
+
+                    // Prefer an exact symbol match; fall back to the first result
+                    const match =
+                        coins.find((c) => c.symbol.toUpperCase() === symbol.toUpperCase()) ||
+                        coins[0];
+
+                    if (!match) {
+                        errorMsg = `No CoinGecko listing found for symbol: ${symbol}`;
+                    } else {
+                        coinId = match.id;
+                        coinIdCache.set(idCacheKey, { id: coinId, timestamp: Date.now() });
+                    }
+                }
+            }
+
+            if (coinId) {
+                provider_symbol = coinId;
+
+                // Step 2: Fetch USD price by coin ID
+                const priceRes = await fetch(
+                    `https://api.coingecko.com/api/v3/simple/price?ids=${encodeURIComponent(coinId)}&vs_currencies=usd`,
+                    { cache: "no-store", next: { revalidate: 0 } }
+                );
+
+                if (priceRes.ok) {
+                    const priceData = await priceRes.json();
+                    price = priceData[coinId]?.usd ?? null;
+                    if (price === null) {
+                        errorMsg = `Price not available from CoinGecko for ${symbol} (id: ${coinId})`;
+                    }
+                } else {
+                    errorMsg = `Could not fetch price from CoinGecko for ${symbol} (id: ${coinId})`;
+                }
             }
         } else if (type === "stock" || type === "Stock / ETF") {
             // Parse TradingView format: EXCHANGE:SYMBOL
