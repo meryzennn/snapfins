@@ -203,10 +203,10 @@ export default function ScanReceiptModal({
 
   return createPortal(
     (
-      <div className="fixed inset-0 z-[100] flex items-start sm:items-center justify-center bg-black/70 backdrop-blur-md px-3 pt-6 pb-32 sm:p-6 animate-in fade-in duration-300 overflow-y-auto">
+    <div className="fixed inset-0 z-[100] flex items-start sm:items-center justify-center bg-black/80 backdrop-blur-md px-2 pt-2 pb-20 sm:p-6 animate-in fade-in duration-300 overflow-y-auto">
         <canvas ref={canvasRef} className="hidden" />
         <div 
-          className="bg-surface dark:bg-slate-900 p-4 sm:p-10 rounded-3xl shadow-2xl flex flex-col w-full sm:max-w-xl max-h-[calc(100svh-180px)] sm:max-h-[85svh] border border-white/10 relative overflow-hidden"
+          className="bg-surface dark:bg-slate-900 p-3 sm:p-10 rounded-3xl shadow-2xl flex flex-col w-full sm:max-w-xl max-h-[calc(100svh-40px)] sm:max-h-[85svh] border border-white/10 relative overflow-hidden"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Glow effect */}
@@ -271,8 +271,8 @@ export default function ScanReceiptModal({
             )}
 
             {scanStep === 'camera' && (
-              <div className="relative rounded-2xl overflow-hidden aspect-[9/16] max-h-[60svh] sm:max-h-[65svh] mx-auto bg-slate-950 border-2 border-primary/30 shadow-2xl animate-in zoom-in duration-300">
-                <video ref={videoRef} autoPlay playsInline className="w-full h-full object-contain" />
+              <div className="relative rounded-2xl overflow-hidden aspect-[9/16] max-h-[75svh] sm:max-h-[65svh] mx-auto bg-slate-950 border-2 border-primary/30 shadow-2xl animate-in zoom-in duration-300">
+                <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
                 <div className="absolute inset-0 scanner-overlay-gradient pointer-events-none">
                   <div className="scanner-corner top-4 left-4 border-t-4 border-l-4"></div>
                   <div className="scanner-corner top-4 right-4 border-t-4 border-r-4"></div>
