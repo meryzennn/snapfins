@@ -533,14 +533,21 @@ button:active,
 }
 
 /* ── Page Entrance Animation ─────────────────────────────────────────────── */
+/* NOTE: The 'to' keyframe intentionally omits transform so that after fill:both,
+   main has no computed transform. A transform on main would create a new containing
+   block for position:fixed children, breaking context menu positioning. */
 @keyframes page-enter {
   from {
     opacity: 0;
     transform: translateY(14px);
   }
-  to {
+  99.9% {
     opacity: 1;
     transform: translateY(0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
   }
 }
 
@@ -549,9 +556,13 @@ button:active,
     opacity: 0;
     transform: translateY(8px);
   }
-  to {
+  99.9% {
     opacity: 1;
     transform: translateY(0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
   }
 }
 

@@ -28,7 +28,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+    <div className="fixed inset-0 z-[100] flex items-start sm:items-center justify-center bg-black/60 backdrop-blur-sm p-4 pt-20 sm:pt-4">
       <div className="bg-surface dark:bg-slate-900 p-8 rounded-3xl shadow-2xl flex flex-col max-w-sm w-full border border-outline-variant/20 dark:border-white/10 animate-in fade-in zoom-in duration-200">
         <div className="flex justify-between items-center mb-6">
           <h3 className="font-headline font-bold text-2xl text-on-surface dark:text-white">{t('signIn')}</h3>

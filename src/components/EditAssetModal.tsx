@@ -120,21 +120,21 @@ export default function EditAssetModal({ initialData, onClose, onSubmit }: EditA
   };
 
   return (
-    <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-300">
-      <div className="bg-surface dark:bg-slate-900 p-6 sm:p-10 rounded-3xl shadow-2xl flex flex-col w-full max-w-xl border border-white/10 relative overflow-hidden">
+    <div className="fixed inset-0 z-[100] flex items-start sm:items-center justify-center bg-black/70 backdrop-blur-md px-3 pt-20 pb-0 sm:p-6 animate-in fade-in duration-300">
+      <div className="bg-surface dark:bg-slate-900 p-4 sm:p-8 rounded-3xl shadow-2xl flex flex-col w-full sm:max-w-xl max-h-[calc(100svh-180px)] sm:max-h-[85svh] border border-white/10 relative overflow-hidden">
         {/* Glow effect */}
         <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -z-10 pointer-events-none" />
 
         {/* Modal Header */}
-        <div className="flex justify-between items-center mb-8 relative z-10">
+        <div className="flex justify-between items-center mb-3 sm:mb-6 relative z-10">
           <div>
-             <div className="flex items-center gap-3 mb-1">
-                <span className="material-symbols-outlined text-primary bg-primary/10 p-2 rounded-xl">edit</span>
-                <h3 className="font-headline font-bold text-3xl text-on-surface dark:text-white">
+             <div className="flex items-center gap-2 sm:gap-3 mb-0.5 sm:mb-1">
+                <span className="material-symbols-outlined text-primary bg-primary/10 p-1 sm:p-2 rounded-xl text-lg sm:text-2xl">edit</span>
+                <h3 className="font-headline font-bold text-lg sm:text-2xl text-on-surface dark:text-white">
                 {lang === "id" ? "Edit Aset" : "Edit Asset"}
                 </h3>
              </div>
-            <p className="text-sm text-on-surface-variant dark:text-gray-400 font-medium italic opacity-70">
+            <p className="text-[10px] sm:text-sm text-on-surface-variant dark:text-gray-400 font-medium italic opacity-70">
               {step === 1 ? (lang === "id" ? "Pilih tipe aset Anda" : "Choose your asset type") : 
                step === 2 ? (lang === "id" ? "Bagaimana kami akan menilai ini?" : "How should we value this?") : 
                (lang === "id" ? "Ubah detail aset" : "Modify asset details")}
@@ -306,8 +306,8 @@ export default function EditAssetModal({ initialData, onClose, onSubmit }: EditA
                     )}
 
                     {valuationMode === "manual" && (
-                         <div className="flex flex-col gap-2">
-                            <label className="block text-xs font-black uppercase tracking-widest text-on-surface-variant">
+                         <div className="flex flex-col gap-1.5 pt-1">
+                            <label className="block text-[10px] font-black uppercase tracking-widest text-on-surface-variant">
                                 {lang === "id" ? "Nilai Saat Ini" : "Current Value"} <span className="text-error">*</span>
                             </label>
                             <div className="flex bg-surface-container-low dark:bg-slate-800 border-2 border-outline-variant/20 focus-within:border-primary rounded-xl overflow-hidden transition-colors">
@@ -327,7 +327,7 @@ export default function EditAssetModal({ initialData, onClose, onSubmit }: EditA
                                                 setCurrency(newCurrency);
                                             }
                                         }}
-                                        className="bg-transparent text-on-surface text-[11px] font-black pl-4 pr-8 py-3 focus:outline-none cursor-pointer w-24 shrink-0 appearance-none h-full"
+                                        className="bg-transparent text-on-surface text-[10px] font-black pl-3 pr-6 py-2.5 focus:outline-none cursor-pointer w-20 shrink-0 appearance-none h-full"
                                     >
                                         {Object.keys(currencySymbols).map((c) => (
                                             <option key={c} value={c} className="bg-surface dark:bg-slate-900 text-on-surface">
@@ -335,7 +335,7 @@ export default function EditAssetModal({ initialData, onClose, onSubmit }: EditA
                                             </option>
                                         ))}
                                     </select>
-                                    <span className="material-symbols-outlined absolute right-2 pointer-events-none text-xs text-on-surface-variant opacity-50">
+                                    <span className="material-symbols-outlined absolute right-1.5 pointer-events-none text-[10px] text-on-surface-variant opacity-50">
                                         expand_more
                                     </span>
                                 </div>
@@ -358,14 +358,14 @@ export default function EditAssetModal({ initialData, onClose, onSubmit }: EditA
                                     placeholder={currency === "IDR" ? "50.000" : "50,000"}
                                 />
                             </div>
-                        </div>
+                         </div>
                     )}
                 </div>
             </div>
         )}
 
         {/* Footer Navigation */}
-        <div className="mt-10 flex justify-end items-center border-t border-outline-variant/10 pt-6">
+        <div className="mt-6 sm:mt-10 flex justify-end items-center border-t border-outline-variant/10 pt-4 sm:pt-6">
                 <button
                     onClick={handleSubmit}
                     disabled={isSubmitting}

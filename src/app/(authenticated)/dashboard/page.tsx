@@ -13,12 +13,14 @@ import {
   type SupportedCurrency,
 } from "@/lib/currency";
 import { useEffect, useState, useRef } from "react";
+import { createPortal } from "react-dom";
 import { createClient } from "@/utils/supabase/client";
 import { deleteUserAccountAction } from "@/app/actions/user";
 import { useScrollLock } from "@/hooks/useScrollLock";
 import Link from "next/link";
 import SelectionToggle from "@/components/SelectionToggle";
 import { DashboardSkeleton } from "@/components/Skeleton";
+import RowActionMenu from "@/components/RowActionMenu";
 const assignColor = (category: string) => {
   const map: Record<string, string> = {
     DINING: "purple",
@@ -172,8 +174,6 @@ export default function DashboardPage() {
   const [scanningLogs, setScanningLogs] = useState<string[]>([]);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [tempScanData, setTempScanData] = useState<any>(null);
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
-  const [menuPosition, setMenuPosition] = useState<{ top: number; right: number } | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -222,35 +222,22 @@ export default function DashboardPage() {
     initRates();
   }, []);
 
-  // Outside Click Listener
+  // Handle Outside Click & Scroll for Dropdowns
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      
       // Category Filter Dropdown
-      if (
-        filterDropdownRef.current &&
-        !filterDropdownRef.current.contains(event.target as Node)
-      ) {
+      if (filterDropdownRef.current && !filterDropdownRef.current.contains(target)) {
         setShowFilterDropdown(false);
       }
       // Year Dropdown
-      if (
-        yearDropdownRef.current &&
-        !yearDropdownRef.current.contains(event.target as Node)
-      ) {
+      if (yearDropdownRef.current && !yearDropdownRef.current.contains(target)) {
         setShowYearDropdown(false);
       }
       // Month Dropdown
-      if (
-        monthDropdownRef.current &&
-        !monthDropdownRef.current.contains(event.target as Node)
-      ) {
+      if (monthDropdownRef.current && !monthDropdownRef.current.contains(target)) {
         setShowMonthDropdown(false);
-      }
-      
-      // Kebab Menu Close on Outside Click
-      if (!(event.target as Element).closest(".kebab-menu-container")) {
-        setOpenMenuId(null);
-        setMenuPosition(null);
       }
     };
 
@@ -259,12 +246,12 @@ export default function DashboardPage() {
         setShowFilterDropdown(false);
         setShowYearDropdown(false);
         setShowMonthDropdown(false);
-        setOpenMenuId(null);
       }
     };
 
     document.addEventListener("mousedown", handleClickOutside);
     document.addEventListener("keydown", handleKeyDown);
+
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
       document.removeEventListener("keydown", handleKeyDown);
@@ -1165,18 +1152,18 @@ export default function DashboardPage() {
     <>
       {/* Immersive Scan Modal */}
       {showScanModal && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-300">
-          <div className="bg-surface dark:bg-slate-900 p-6 sm:p-10 rounded-3xl shadow-2xl flex flex-col w-full max-w-xl border border-white/10 relative overflow-hidden">
+        <div className="fixed inset-0 z-[100] flex items-start sm:items-center justify-center bg-black/70 backdrop-blur-md px-3 pt-20 pb-0 sm:p-6 animate-in fade-in duration-300">
+          <div className="bg-surface dark:bg-slate-900 p-4 sm:p-8 rounded-3xl shadow-2xl flex flex-col w-full sm:max-w-xl max-h-[calc(100svh-180px)] sm:max-h-[85svh] border border-white/10 relative overflow-hidden">
             {/* Modal Header */}
-            <div className="flex justify-between items-center mb-8 relative z-10">
+            <div className="flex justify-between items-center mb-3 sm:mb-8 relative z-10">
               <div>
-                <h3 className="font-headline font-bold text-3xl text-on-surface dark:text-white mb-1">
+                <h3 className="font-headline font-bold text-lg sm:text-3xl text-on-surface dark:text-white mb-0.5 sm:mb-1">
                   {scanStep === 'select' ? t("scanReceipt") : 
                    scanStep === 'camera' ? t("cameraCapture") || "Camera Scan" : 
                    scanStep === 'analyzing' ? t("analyzing") || "Analyzing..." : 
                    t("confirmEntry")}
                 </h3>
-                <p className="text-sm text-on-surface-variant dark:text-gray-400 font-medium italic opacity-70">
+                <p className="text-[10px] sm:text-sm text-on-surface-variant dark:text-gray-400 font-medium italic opacity-70">
                   {scanStep === 'select' ? "Choose your input source" : 
                    scanStep === 'camera' ? "Align receipt within the frame" : 
                    scanStep === "analyzing" ? "Gemini AI is processing your image" : 
@@ -1194,34 +1181,46 @@ export default function DashboardPage() {
                 <span className="material-symbols-outlined">close</span>
               </button>
             </div>
+            {/* Step Selection Wrapper */}
+            <div className="flex-1 overflow-y-auto pr-1 -mr-1 scrollbar-thin">
+              {scanStep === "select" && (
+                <div className="grid grid-cols-2 gap-3 animate-in slide-in-from-bottom-4 duration-500">
+                  <button
+                    onClick={() => {
+                        setScanStep("camera");
+                        startCamera();
+                    }}
+                    className="flex flex-col items-center justify-center p-4 sm:p-8 rounded-2xl border-2 border-outline-variant/20 bg-surface-container-low dark:bg-slate-800/50 hover:border-primary hover:bg-primary/5 transition-all group cursor-pointer"
+                  >
+                    <div className="w-10 h-10 sm:w-16 sm:h-16 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                      <span className="material-symbols-outlined text-xl sm:text-3xl">photo_camera</span>
+                    </div>
+                    <span className="font-bold text-sm sm:text-lg">{lang === 'id' ? 'Gunakan Kamera' : 'Use Camera'}</span>
+                    <span className="text-[10px] text-on-surface-variant mt-1 hidden sm:block">{lang === 'id' ? 'Scan struk fisik' : 'Scan physical receipt'}</span>
+                  </button>
 
-            {/* Step 1: Selection */}
-            {scanStep === 'select' && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 animate-in slide-in-from-bottom-4 duration-500">
-                <button 
-                  onClick={startCamera}
-                  className="group relative flex flex-col items-center justify-center p-12 bg-surface-container-low dark:bg-slate-800/50 rounded-3xl border-2 border-dashed border-outline-variant/30 hover:border-primary hover:bg-primary/5 transition-all duration-300 cursor-pointer"
-                >
-                  <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                    <span className="material-symbols-outlined text-primary text-4xl">photo_camera</span>
-                  </div>
-                  <span className="font-bold text-on-surface dark:text-white">Camera View</span>
-                </button>
-                <button 
-                  onClick={() => fileInputRef.current?.click()}
-                  className="group relative flex flex-col items-center justify-center p-12 bg-surface-container-low dark:bg-slate-800/50 rounded-3xl border-2 border-dashed border-outline-variant/30 hover:border-secondary hover:bg-secondary/5 transition-all duration-300 cursor-pointer"
-                >
-                  <div className="w-16 h-16 bg-secondary/10 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                    <span className="material-symbols-outlined text-secondary text-4xl">image</span>
-                  </div>
-                  <span className="font-bold text-on-surface dark:text-white">Gallery Upload</span>
-                </button>
-              </div>
-            )}
+                  <label className="flex flex-col items-center justify-center p-4 sm:p-8 rounded-2xl border-2 border-outline-variant/20 bg-surface-container-low dark:bg-slate-800/50 hover:border-secondary hover:bg-secondary/5 transition-all group cursor-pointer">
+                    <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) processScanData(file);
+                        }}
+                    />
+                    <div className="w-10 h-10 sm:w-16 sm:h-16 rounded-2xl bg-secondary/10 text-secondary flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                      <span className="material-symbols-outlined text-xl sm:text-3xl">upload_file</span>
+                    </div>
+                    <span className="font-bold text-sm sm:text-lg">{lang === 'id' ? 'Upload Struk' : 'Upload Receipt'}</span>
+                    <span className="text-[10px] text-on-surface-variant mt-1 hidden sm:block">{lang === 'id' ? 'Pilih dari galeri' : 'Select from gallery'}</span>
+                  </label>
+                </div>
+              )}
 
             {/* Step 2: Camera Live */}
             {scanStep === 'camera' && (
-              <div className="relative rounded-2xl overflow-hidden aspect-[3/4] bg-black border-2 border-primary/30 shadow-2xl animate-in zoom-in duration-300">
+              <div className="relative rounded-2xl overflow-hidden h-[45svh] sm:h-[55svh] bg-black border-2 border-primary/30 shadow-2xl animate-in zoom-in duration-300">
                 <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
                 
                 {/* Scanner Overlay UI */}
@@ -1231,28 +1230,20 @@ export default function DashboardPage() {
                   <div className="scanner-corner top-4 right-4 border-t-4 border-r-4"></div>
                   <div className="scanner-corner bottom-4 left-4 border-b-4 border-l-4"></div>
                   <div className="scanner-corner bottom-4 right-4 border-b-4 border-r-4"></div>
-                  
                   {/* Scan Line */}
                   <div className="animate-scan-line"></div>
                 </div>
 
-                {/* Capture Button */}
-                <div className="absolute bottom-10 inset-x-0 flex justify-center items-center gap-6">
-                  <button 
-                    onClick={() => { stopCamera(); setScanStep('select'); }}
-                    className="w-12 h-12 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white hover:bg-white/20 transition-all cursor-pointer"
-                  >
-                    <span className="material-symbols-outlined">restart_alt</span>
-                  </button>
+                {/* Capture Button only — use X above to exit */}
+                <div className="absolute bottom-8 inset-x-0 flex justify-center items-center">
                   <button 
                     onClick={capturePhoto}
-                    className="w-20 h-20 rounded-full border-4 border-primary p-1 bg-white/20 backdrop-blur-sm group hover:scale-110 transition-all cursor-pointer"
+                    className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-4 border-primary p-1 bg-white/20 backdrop-blur-sm group hover:scale-110 transition-all cursor-pointer"
                   >
                     <div className="w-full h-full rounded-full bg-primary flex items-center justify-center shadow-lg group-hover:bg-primary-container">
-                      <span className="material-symbols-outlined text-white text-3xl">camera_alt</span>
+                      <span className="material-symbols-outlined text-white text-2xl sm:text-3xl">camera_alt</span>
                     </div>
                   </button>
-                  <div className="w-12 h-12"></div>
                 </div>
               </div>
             )}
@@ -1284,23 +1275,23 @@ export default function DashboardPage() {
               </div>
             )}
 
-            {/* Step 4: Confirm Entry */}
+            {/* Step 4: Confirm Entry — scrollable summary only */}
             {scanStep === 'confirm' && tempScanData && (
               <div className="animate-in slide-in-from-right-4 duration-500">
-                <div className="bg-surface-container-low dark:bg-slate-800/80 rounded-2xl p-6 border border-outline-variant/30 mb-8">
-                  <div className="grid grid-cols-2 gap-y-6">
-                    <div className="col-span-2 flex items-center gap-4 mb-2">
-                       <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                          <span className="material-symbols-outlined text-primary text-2xl">receipt_long</span>
+                <div className="bg-surface-container-low dark:bg-slate-800/80 rounded-2xl p-4 sm:p-6 border border-outline-variant/30">
+                  <div className="grid grid-cols-2 gap-y-4">
+                    <div className="col-span-2 flex items-center gap-3 mb-1">
+                       <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                          <span className="material-symbols-outlined text-primary text-xl">receipt_long</span>
                        </div>
                        <div>
                           <p className="text-[10px] uppercase tracking-widest font-black text-on-surface-variant opacity-60">Merchant</p>
-                          <p className="font-bold text-xl text-on-surface dark:text-white capitalize">{tempScanData.description}</p>
+                          <p className="font-bold text-base sm:text-xl text-on-surface dark:text-white capitalize">{tempScanData.description}</p>
                        </div>
                     </div>
                     <div>
                       <p className="text-[10px] uppercase tracking-widest font-black text-on-surface-variant opacity-60">Date</p>
-                      <p className="font-bold text-on-surface dark:text-white">{tempScanData.date}</p>
+                      <p className="font-bold text-sm text-on-surface dark:text-white">{tempScanData.date}</p>
                     </div>
                     <div>
                       <p className="text-[10px] uppercase tracking-widest font-black text-on-surface-variant opacity-60">Category</p>
@@ -1308,67 +1299,66 @@ export default function DashboardPage() {
                         {tempScanData.category}
                       </span>
                     </div>
-                    <div className="col-span-2 pt-4 border-t border-outline-variant/10 flex justify-between items-end">
-                      <div>
-                        <p className="text-[10px] uppercase tracking-widest font-black text-secondary">Total Amount</p>
-                        <p className="font-black text-3xl text-on-surface dark:text-white tracking-tighter">
-                          {formatValue(Number(tempScanData.amount), (tempScanData.currency || currency) as SupportedCurrency)}
-                        </p>
-                      </div>
+                    <div className="col-span-2 pt-3 border-t border-outline-variant/10">
+                      <p className="text-[10px] uppercase tracking-widest font-black text-secondary">Total Amount</p>
+                      <p className="font-black text-2xl sm:text-3xl text-on-surface dark:text-white tracking-tighter">
+                        {formatValue(Number(tempScanData.amount), (tempScanData.currency || currency) as SupportedCurrency)}
+                      </p>
                     </div>
                   </div>
                 </div>
+              </div>
+            )}
+            </div>
 
-                <div className="mb-6 space-y-3">
-                    <label className="block text-xs font-black uppercase tracking-widest text-on-surface-variant opacity-70">
-                      {lang === 'id' ? 'Bayar dari Akun' : 'Paid from Account'} <span className="text-error font-black">*</span>
-                    </label>
-                    <div className="relative">
-                        <select
-                          value={tempScanData.linkedAssetId || ""}
-                          onChange={(e) => setTempScanData({ ...tempScanData, linkedAssetId: e.target.value })}
-                          className="w-full bg-surface-container-low dark:bg-slate-800 border-2 border-outline-variant/20 focus:border-secondary rounded-xl px-4 py-3.5 text-on-surface font-bold text-sm transition-colors outline-none cursor-pointer appearance-none pr-10"
-                        >
-                          <option value="">{lang === 'id' ? "— Pilih Akun Pembayar —" : "— Select Paying Account —"}</option>
-                          {cashAssets.map((a: any) => (
-                            <option key={a.id} value={a.id}>
-                              {a.name} ({a.currency})
-                            </option>
-                          ))}
-                        </select>
-                        <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-on-surface-variant opacity-50">
-                          expand_more
-                        </span>
-                    </div>
-                    <p className="text-[10px] text-on-surface-variant font-medium leading-relaxed italic border-l-2 border-secondary/30 pl-3">
-                      {lang === 'id' 
-                        ? "Gemini membaca struk, tapi Anda yang menentukan akun mana yang terdebit." 
-                        : "Gemini reads the receipt, but you choose which account paid for it."}
-                    </p>
+            {/* Confirm step sticky footer — account selector + actions outside scroll area */}
+            {scanStep === 'confirm' && tempScanData && (
+              <div className="shrink-0 pt-4 mt-2 border-t border-outline-variant/10 space-y-3">
+                <div>
+                  <label className="block text-xs font-black uppercase tracking-widest text-on-surface-variant opacity-70 mb-1.5">
+                    {lang === 'id' ? 'Bayar dari Akun' : 'Paid from Account'} <span className="text-error font-black">*</span>
+                  </label>
+                  <div className="relative">
+                    <select
+                      value={tempScanData.linkedAssetId || ""}
+                      onChange={(e) => setTempScanData({ ...tempScanData, linkedAssetId: e.target.value })}
+                      className="w-full bg-surface-container-low dark:bg-slate-800 border-2 border-outline-variant/20 focus:border-secondary rounded-xl px-4 py-3 text-on-surface font-bold text-sm transition-colors outline-none cursor-pointer appearance-none pr-10"
+                    >
+                      <option value="">{lang === 'id' ? "— Pilih Akun Pembayar —" : "— Select Paying Account —"}</option>
+                      {cashAssets.map((a: any) => (
+                        <option key={a.id} value={a.id}>
+                          {a.name} ({a.currency})
+                        </option>
+                      ))}
+                    </select>
+                    <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-on-surface-variant opacity-50">
+                      expand_more
+                    </span>
+                  </div>
                 </div>
 
-                <div className="flex gap-4">
-                  <button 
+                <div className="flex gap-3">
+                  <button
                     onClick={() => setScanStep('select')}
-                    className="flex-1 py-4 rounded-2xl bg-surface-container-high dark:bg-slate-800 text-on-surface dark:text-white font-bold hover:bg-surface-variant transition-all cursor-pointer"
+                    className="flex-1 py-3 rounded-2xl bg-surface-container-high dark:bg-slate-800 text-on-surface dark:text-white font-bold hover:bg-surface-variant transition-all cursor-pointer text-sm"
                   >
-                    Try Again
+                    {lang === 'id' ? 'Coba Lagi' : 'Try Again'}
                   </button>
                   {cashAssets.length > 0 ? (
-                    <button 
+                    <button
                       onClick={finalizeScan}
                       disabled={isScanning || !tempScanData?.linkedAssetId}
-                      className="flex-1 py-4 rounded-2xl bg-secondary text-white font-black hover:brightness-110 active:scale-95 transition-all shadow-lg shadow-secondary/20 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                      className="flex-1 py-3 rounded-2xl bg-secondary text-white font-black hover:brightness-110 active:scale-95 transition-all shadow-lg shadow-secondary/20 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 text-sm"
                     >
-                      {isScanning ? <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin"></div> : "Confirm Entry"}
+                      {isScanning ? <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></div> : (lang === 'id' ? 'Konfirmasi' : 'Confirm Entry')}
                     </button>
                   ) : (
                     <a
                       href="/assets"
-                      className="flex-1 py-4 rounded-2xl bg-primary text-white font-black hover:brightness-110 active:scale-95 transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2 cursor-pointer"
+                      className="flex-1 py-3 rounded-2xl bg-primary text-white font-black hover:brightness-110 active:scale-95 transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2 cursor-pointer text-sm"
                     >
                       <span className="material-symbols-outlined text-sm">add</span>
-                      {lang === "id" ? "Tambah Akun Dulu" : "Add Account First"}
+                      {lang === 'id' ? 'Tambah Akun' : 'Add Account'}
                     </a>
                   )}
                 </div>
@@ -1376,9 +1366,9 @@ export default function DashboardPage() {
             )}
 
             {scanError && (
-              <div className="mt-6 p-4 rounded-xl bg-error/10 border border-error/20 flex items-start gap-3 animate-in fade-in zoom-in duration-300">
-                <span className="material-symbols-outlined text-error">error</span>
-                <p className="text-xs font-semibold text-error-container">{scanError}</p>
+              <div className="shrink-0 mt-2 p-3 rounded-xl bg-error/10 border border-error/20 flex items-start gap-2 animate-in fade-in zoom-in duration-300">
+                <span className="material-symbols-outlined text-error text-lg">error</span>
+                <p className="text-[10px] sm:text-xs font-semibold text-error-container line-clamp-2">{scanError}</p>
               </div>
             )}
           </div>
@@ -1387,18 +1377,18 @@ export default function DashboardPage() {
 
       {/* Manual Entry Modal */}
       {showManualEntry && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-[100] flex items-start sm:items-center justify-center bg-black/60 backdrop-blur-sm px-3 pt-20 pb-0 sm:p-6">
           <div
-            className="bg-surface p-6 sm:p-8 rounded-3xl shadow-2xl flex flex-col w-full max-w-lg border border-outline-variant/20 animate-in fade-in zoom-in duration-200"
+            className="bg-surface p-4 sm:p-8 rounded-3xl shadow-2xl flex flex-col w-full sm:max-w-lg max-h-[calc(100svh-180px)] sm:max-h-[85svh] border border-outline-variant/20 animate-in fade-in zoom-in duration-200"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex justify-between items-center mb-6">
+            <div className="flex justify-between items-center mb-3 sm:mb-6">
               <div>
-                <h3 className="font-headline font-bold text-2xl text-on-surface">
+                <h3 className="font-headline font-bold text-lg sm:text-2xl text-on-surface">
                   {editingTx ? t("editTransaction") : t("manualEntryTitle")}
                 </h3>
                 {!editingTx && (
-                  <p className="text-xs text-on-surface-variant/60 font-medium mt-0.5">
+                  <p className="text-[10px] text-on-surface-variant/60 font-medium mt-0.5">
                     {lang === "id"
                       ? "Catat peristiwa arus kas — pendapatan atau pengeluaran"
                       : "Record a cashflow event — income or expense"}
@@ -1413,7 +1403,7 @@ export default function DashboardPage() {
               </button>
             </div>
 
-            <form onSubmit={handleManualSubmit} className="space-y-4">
+            <form onSubmit={handleManualSubmit} className="space-y-3 sm:space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">
@@ -1426,7 +1416,7 @@ export default function DashboardPage() {
                     onChange={(e) =>
                       setManualForm({ ...manualForm, date: e.target.value })
                     }
-                    className="w-full bg-surface-container-low border border-outline-variant/30 rounded-xl px-4 py-3 text-on-surface text-sm focus:outline-none focus:border-primary transition-colors"
+                    className="w-full bg-surface-container-low border border-outline-variant/30 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 text-on-surface text-sm focus:outline-none focus:border-primary transition-colors"
                   />
                 </div>
                 <div>
@@ -1646,7 +1636,7 @@ export default function DashboardPage() {
 
       {/* Delete Transaction Confirmation Modal */}
       {showDeleteTxModal && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-surface p-8 rounded-3xl shadow-2xl flex flex-col items-center max-w-sm w-full border border-error/20 animate-in fade-in zoom-in duration-300">
             <div className="w-16 h-16 rounded-full bg-error/10 flex items-center justify-center mb-6 relative">
               <span className="material-symbols-outlined text-error text-4xl">
@@ -1687,9 +1677,8 @@ export default function DashboardPage() {
 
 
 
-      {/* Scan Success Modal (Jump to Date) */}
       {scanSuccess && (
-        <div className="fixed inset-0 z-[101] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-[100] flex items-start sm:items-center justify-center bg-black/60 backdrop-blur-sm p-4 pt-20 sm:pt-4">
           <div className="bg-surface p-8 rounded-3xl shadow-2xl flex flex-col items-center max-w-sm w-full border border-primary/20 animate-in fade-in zoom-in duration-300">
             <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-6 relative">
               <span className="material-symbols-outlined text-primary text-4xl">
@@ -1729,7 +1718,7 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <main className="max-w-7xl mx-auto w-full px-4 sm:px-6 md:px-8 py-6 md:py-10 space-y-8 md:space-y-10 pb-32 md:pb-8">
+      <main className="max-w-7xl mx-auto w-full px-4 sm:px-6 md:px-8 py-6 md:py-10 space-y-8 md:space-y-10 pb-32 md:pb-12">
         {/* Header Section */}
         <header className="flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-6">
           <div className="space-y-1">
@@ -2196,39 +2185,41 @@ export default function DashboardPage() {
               </div>
             )}
           </div>
-          <div className="overflow-x-auto flex flex-col custom-scrollbar rounded-lg shadow-sm border border-outline-variant/20">
-            <table className="w-full min-w-[900px] excel-grid bg-surface-container-lowest dark:bg-slate-900/50 text-xs font-body tracking-tight">
-              <thead className="bg-slate-50 dark:bg-slate-900 text-on-surface-variant uppercase font-bold text-[10px] tracking-widest border-b border-outline-variant/10 sticky top-0 z-20 shadow-[0_1px_3px_rgba(0,0,0,0.05)]">
+          <div className="overflow-x-auto select-none flex flex-col custom-scrollbar rounded-xl border border-outline-variant/10 bg-surface-container-lowest/50 dark:bg-slate-900/50 shadow-sm">
+            <table className="w-full min-w-[650px] text-left excel-grid bg-surface-container-lowest dark:bg-slate-900/50 text-xs font-body tracking-tight">
+              <thead>
                 {viewMode === "grid" ? (
-                  <tr>
-                    <th className="p-2.5 sm:p-4 text-center w-[3%]"><SelectionToggle
+                  <tr className="bg-slate-50 dark:bg-slate-900 text-on-surface-variant uppercase font-black text-[10px] tracking-widest border-b border-outline-variant/10 sticky top-0 z-20 shadow-[0_1px_3px_rgba(0,0,0,0.05)]">
+                    <th className="p-2.5 sm:p-4 pl-6 text-center w-12 hidden sm:table-cell">
+                      <SelectionToggle
                         checked={selectedIds.length > 0 && selectedIds.length === paginatedTransactions.length}
                         indeterminate={selectedIds.length > 0 && selectedIds.length < paginatedTransactions.length}
                         onChange={() => handleSelectAll(paginatedTransactions.map(tx => tx.id))}
-                      /></th>
-                    <th className="p-2.5 sm:p-4 text-left w-[10%]">{t("colDate")}</th>
-                    <th className="p-2.5 sm:p-4 text-left w-[15%]">{t("colCategory")}</th>
-                    <th className="p-2.5 sm:p-4 text-left w-[30%]">{t("colDescription")}</th>
-                    <th className="p-2.5 sm:p-4 text-left w-[10%]">{t("colType")}</th>
-                    <th className="p-2.5 sm:p-4 text-right w-[16%]">{t("colAmount")}</th>
-                    <th className="p-2.5 sm:p-4 text-left w-[14%]">{t("colLinkedAssets")}</th>
-                    <th className="p-2 text-center w-[5%] bg-slate-50 dark:bg-slate-900 border-l border-outline-variant/10"></th>
+                      />
+                    </th>
+                    <th className="p-2.5 sm:p-4 whitespace-nowrap">{t("colDate")}</th>
+                    <th className="p-2.5 sm:p-4 whitespace-nowrap hidden sm:table-cell">{t("colCategory")}</th>
+                    <th className="p-2.5 sm:p-4 whitespace-nowrap">{t("colDescription")}</th>
+                    <th className="p-2.5 sm:p-4 text-left whitespace-nowrap w-[15%]">{t("colType")}</th>
+                    <th className="p-2.5 sm:p-4 text-right whitespace-nowrap w-[20%]">{t("colAmount")}</th>
+                    <th className="p-2.5 sm:p-4 whitespace-nowrap hidden sm:table-cell">{t("colLinkedAssets")}</th>
+                    <th className="p-2 text-center w-12 bg-slate-50 dark:bg-slate-900 border-l border-outline-variant/10"></th>
                   </tr>
                 ) : (
-                  <tr>
-                    <th className="p-4 text-left w-40">
+                  <tr className="bg-slate-50 dark:bg-slate-900 text-on-surface-variant uppercase font-black text-[10px] tracking-widest border-b border-outline-variant/10 sticky top-0 z-20 shadow-[0_1px_3px_rgba(0,0,0,0.05)]">
+                    <th className="p-2.5 sm:p-4 pl-6 text-left w-40">
                       {t("colCategory")}
                     </th>
-                    <th className="p-4 text-right w-32">
+                    <th className="p-2.5 sm:p-4 text-right w-32">
                       {t("colIncome")}
                     </th>
-                    <th className="p-4 text-right w-32">
+                    <th className="p-2.5 sm:p-4 text-right w-32">
                       {t("colExpense")}
                     </th>
-                    <th className="p-4 text-right w-32">
+                    <th className="p-2.5 sm:p-4 text-right w-32">
                       {t("colInvested")}
                     </th>
-                    <th className="p-4 text-right w-32">
+                    <th className="p-2.5 sm:p-4 text-right w-32">
                       {t("colNetBalance")}
                     </th>
                   </tr>
@@ -2242,20 +2233,20 @@ export default function DashboardPage() {
                         key={tx.id}
                         className={`hover:bg-grid-row-hover dark:hover:bg-slate-800/50 transition-colors group border-b border-outline-variant/5 text-sm font-semibold ${selectedIds.includes(tx.id) ? "bg-primary/[0.08]" : ""}`}
                       >
-                        <td className="p-2.5 sm:p-4 text-center">
+                        <td className="p-2.5 sm:p-4 pl-6 text-center hidden sm:table-cell">
                           <SelectionToggle
                             checked={selectedIds.includes(tx.id)}
                             onChange={() => handleSelectRow(tx.id)}
                           />
                         </td>
-                        <td className="p-2.5 sm:p-4 font-mono text-slate-500 whitespace-nowrap text-[12px] sm:text-sm">
+                        <td className="p-2.5 sm:p-4 font-mono text-slate-500 whitespace-nowrap text-[11px] sm:text-sm">
                           {(() => {
                             if (!tx.date) return "—";
                             const [y, m, d] = tx.date.split("-");
                             return `${d}/${m}/${y}`;
                           })()}
                         </td>
-                        <td className="p-2.5 sm:p-4 text-[12px] sm:text-sm">
+                        <td className="p-2.5 sm:p-4 text-[12px] sm:text-sm hidden sm:table-cell">
                           <span
                             className={`px-1.5 py-0.5 rounded font-bold uppercase text-[9px] ${getCategoryStyle(tx.color)}`}
                           >
@@ -2276,7 +2267,7 @@ export default function DashboardPage() {
                           </div>
                         </td>
                         <td
-                          className={`px-2.5 sm:px-3 py-2 font-bold text-[12px] sm:text-sm ${tx.type === "Credit" || tx.type === "Income" ? "text-secondary" : tx.type === "Investment" ? "text-indigo-500" : "text-error"}`}
+                          className={`p-2.5 sm:p-4 font-bold text-[12px] sm:text-sm ${tx.type === "Credit" || tx.type === "Income" ? "text-secondary" : tx.type === "Investment" ? "text-indigo-500" : "text-error"}`}
                         >
                           {tx.type === "Credit" || tx.type === "Income" ? t("typeIncome") : tx.type === "Debit" || tx.type === "Expense" ? t("typeExpense") : t("typeInvestment")}
                         </td>
@@ -2293,7 +2284,7 @@ export default function DashboardPage() {
                             </span>
                           </div>
                         </td>
-                        <td className="p-2.5 sm:p-4 text-on-surface-variant font-black text-[10px] sm:text-[11px] uppercase tracking-widest whitespace-nowrap">
+                        <td className="p-2.5 sm:p-4 text-on-surface-variant font-black text-[10px] sm:text-[11px] uppercase tracking-widest whitespace-nowrap hidden sm:table-cell">
                           {(() => {
                             let content: React.ReactNode = "—";
                             let isLinked = false;
@@ -2318,55 +2309,13 @@ export default function DashboardPage() {
                             );
                           })()}
                         </td>
-                        <td className="p-2.5 sm:p-4 text-center kebab-menu-container bg-white dark:bg-slate-950 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 transition-all z-20">
-                          <div className="relative flex items-center justify-center text-left w-full h-full">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (openMenuId === tx.id) {
-                                  setOpenMenuId(null);
-                                  setMenuPosition(null);
-                                } else {
-                                  const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                                  setMenuPosition({ top: rect.top, right: window.innerWidth - rect.right });
-                                  setOpenMenuId(tx.id);
-                                }
-                              }}
-                              className="w-7 h-7 rounded-lg flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-slate-200 dark:hover:bg-slate-800 transition-all cursor-pointer group/btn"
-                            >
-                              <span className="material-symbols-outlined text-[18px] group-hover/btn:scale-110 transition-transform">menu</span>
-                            </button>
-
-                            {openMenuId === tx.id && menuPosition && (
-                              <div
-                                className="fixed w-36 bg-slate-900/95 dark:bg-slate-900/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-[0_10px_30px_rgba(0,0,0,0.4)] z-[200] py-1.5 animate-in fade-in zoom-in-95 duration-200 divide-y divide-white/5"
-                                style={{ top: menuPosition.top, right: menuPosition.right, transform: 'translateY(-100%) translateY(-4px)' }}
-                              >
-                                <button 
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleEdit(tx);
-                                    setOpenMenuId(null);
-                                  }}
-                                  className="w-full text-left px-4 py-2.5 hover:bg-white/5 transition-colors flex items-center justify-between group/item cursor-pointer"
-                                >
-                                  <span className="text-[11px] font-black uppercase tracking-wider text-white/90 group-hover/item:text-primary-container transition-colors">{t("btnEdit")}</span>
-                                  <span className="material-symbols-outlined text-[16px] text-primary-container group-hover/item:scale-110 transition-all">edit</span>
-                                </button>
-                                <button 
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDeleteClick([tx.id]);
-                                    setOpenMenuId(null);
-                                  }}
-                                  className="w-full text-left px-4 py-2.5 hover:bg-white/5 transition-colors flex items-center justify-between group/item cursor-pointer"
-                                >
-                                  <span className="text-[11px] font-black uppercase tracking-wider text-rose-400 group-hover/item:text-rose-300 transition-colors">{t("btnDelete")}</span>
-                                  <span className="material-symbols-outlined text-[16px] text-rose-400 group-hover/item:scale-110 transition-all">delete</span>
-                                </button>
-                              </div>
-                            )}
-                          </div>
+                        <td className="p-1 px-2 text-center kebab-menu-container bg-white dark:bg-slate-950 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 transition-all z-20">
+                          <RowActionMenu 
+                            actions={[
+                              { label: t("btnEdit"), icon: "edit", onClick: () => handleEdit(tx) },
+                              { label: t("btnDelete"), icon: "delete", onClick: () => handleDeleteClick([tx.id]), variant: "danger" }
+                            ]}
+                          />
                         </td>
                       </tr>
                     ))

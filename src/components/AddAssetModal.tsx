@@ -144,18 +144,21 @@ export default function AddAssetModal({ onClose, onSubmit, cashAssets = [] }: Ad
   };
 
   return (
-    <div className="fixed inset-0 z-[110] flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-300">
-      <div className="bg-surface dark:bg-slate-900 p-6 sm:p-10 rounded-t-[32px] sm:rounded-[32px] shadow-2xl flex flex-col w-full max-w-xl max-h-[calc(100svh-2rem)] border border-white/10 relative overflow-hidden">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-md px-3 pb-[100px] sm:pb-0 sm:p-6 animate-in fade-in duration-300">
+      <div
+        className="bg-surface p-5 sm:p-10 rounded-3xl shadow-2xl flex flex-col w-full sm:max-w-xl max-h-[75svh] sm:max-h-[85svh] border border-outline-variant/20 relative overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Glow effect */}
         <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -z-10 pointer-events-none" />
 
         {/* Modal Header */}
-        <div className="flex justify-between items-center mb-6 sm:mb-8 relative z-10 shrink-0">
+        <div className="flex justify-between items-center mb-3 sm:mb-8 relative z-10 shrink-0">
           <div>
-            <h3 className="font-headline font-bold text-2xl sm:text-3xl text-on-surface dark:text-white mb-1">
+            <h3 className="font-headline font-bold text-lg sm:text-3xl text-on-surface dark:text-white mb-0.5 sm:mb-1">
               {lang === "id" ? "Tambah Aset" : "Add Asset"}
             </h3>
-            <p className="text-xs sm:text-sm text-on-surface-variant dark:text-gray-400 font-medium italic opacity-70">
+            <p className="text-[10px] sm:text-sm text-on-surface-variant dark:text-gray-400 font-medium italic opacity-70">
               {stepLabel()}
             </p>
           </div>
@@ -168,7 +171,7 @@ export default function AddAssetModal({ onClose, onSubmit, cashAssets = [] }: Ad
         </div>
 
         {/* Scrollable Content Area */}
-        <div className="flex-1 overflow-y-auto pr-2 -mr-2 scrollbar-thin scrollbar-thumb-outline-variant/30 scrollbar-track-transparent">
+        <div className="flex-1 overflow-y-auto pr-1 -mr-1 scrollbar-thin scrollbar-thumb-outline-variant/30 scrollbar-track-transparent">
           {error && (
             <div className="mb-6 p-4 rounded-xl bg-error/10 text-error text-sm font-bold border border-error/20 flex items-center gap-3">
               <span className="material-symbols-outlined">error</span>
@@ -180,7 +183,7 @@ export default function AddAssetModal({ onClose, onSubmit, cashAssets = [] }: Ad
           <div className="flex flex-col gap-4 animate-in slide-in-from-bottom-4 duration-500">
 
             {/* Decision guide */}
-            <div className="text-[11px] text-on-surface-variant/60 bg-surface-container-low/60 rounded-xl px-4 py-3 leading-relaxed border border-outline-variant/10">
+            <div className="text-[11px] text-on-surface-variant/60 bg-surface-container-low/60 rounded-xl px-3 py-2.5 leading-relaxed border border-outline-variant/10">
               {lang === "id" ? (
                 <>
                   <span className="font-bold text-on-surface-variant">Panduan cepat: </span>
@@ -197,13 +200,13 @@ export default function AddAssetModal({ onClose, onSubmit, cashAssets = [] }: Ad
             {/* Option A: Add Existing Balance */}
             <button
               onClick={() => setAcquisitionMode("opening_balance")}
-              className={`flex items-start gap-4 p-5 rounded-2xl border-2 transition-all duration-300 cursor-pointer text-left ${
+              className={`flex items-start gap-3 sm:gap-4 p-3 sm:p-5 rounded-2xl border-2 transition-all duration-300 cursor-pointer text-left ${
                 acquisitionMode === "opening_balance"
                   ? "border-primary bg-primary/5 shadow-[0_0_15px_rgba(53,37,205,0.15)]"
                   : "border-outline-variant/20 bg-surface-container-low dark:bg-slate-800/50 hover:border-outline-variant/50"
               }`}
             >
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${acquisitionMode === "opening_balance" ? "bg-primary text-white" : "bg-outline-variant/20 text-on-surface"}`}>
+              <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${acquisitionMode === "opening_balance" ? "bg-primary text-white" : "bg-outline-variant/20 text-on-surface"}`}>
                 <span className="material-symbols-outlined text-lg">account_balance</span>
               </div>
               <div>
@@ -232,13 +235,13 @@ export default function AddAssetModal({ onClose, onSubmit, cashAssets = [] }: Ad
             {/* Option B: Buy / Move Into Asset */}
             <button
               onClick={() => setAcquisitionMode("via_transaction")}
-              className={`flex items-start gap-4 p-5 rounded-2xl border-2 transition-all duration-300 cursor-pointer text-left ${
+              className={`flex items-start gap-3 sm:gap-4 p-3 sm:p-5 rounded-2xl border-2 transition-all duration-300 cursor-pointer text-left ${
                 acquisitionMode === "via_transaction"
                   ? "border-secondary bg-secondary/5 shadow-[0_0_15px_rgba(16,185,129,0.15)]"
                   : "border-outline-variant/20 bg-surface-container-low dark:bg-slate-800/50 hover:border-outline-variant/50"
               }`}
             >
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${acquisitionMode === "via_transaction" ? "bg-secondary text-white" : "bg-outline-variant/20 text-on-surface"}`}>
+              <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${acquisitionMode === "via_transaction" ? "bg-secondary text-white" : "bg-outline-variant/20 text-on-surface"}`}>
                 <span className="material-symbols-outlined text-lg">swap_horiz</span>
               </div>
               <div>
@@ -537,7 +540,7 @@ export default function AddAssetModal({ onClose, onSubmit, cashAssets = [] }: Ad
         </div>
 
         {/* Footer Navigation */}
-        <div className="mt-6 sm:mt-10 flex justify-between items-center border-t border-outline-variant/10 pt-6 shrink-0 relative z-10">
+        <div className="mt-4 sm:mt-10 flex justify-between items-center border-t border-outline-variant/10 pt-4 sm:pt-6 shrink-0 relative z-10">
           {step > 0 ? (
             <button
               onClick={handlePrev}
