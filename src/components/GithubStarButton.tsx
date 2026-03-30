@@ -95,7 +95,7 @@ const GithubStarButton = () => {
           />
         </span>
         <span className="bg-gradient-to-b ml-1.5 dark:from-white dark:to-white/50 from-neutral-950 to-neutral-950/50 bg-clip-text text-[10px] sm:text-xs text-transparent font-bold group-hover:scale-105 transition transform-gpu">
-          Star meryzennn on Github
+          Star Snapfins on Github
         </span>
       </span>
     </a>

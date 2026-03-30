@@ -302,6 +302,46 @@ export const translations = {
     globalMarketTitle: "Global Connectivity",
     globalMarketDesc:
       "Standardized market integration with CoinGecko Terminal (Crypto), Yahoo Finance (Stocks), and Open Exchange Rates (Forex). Synchronized in 300s intervals.",
+
+    // ---- PRIVACY POLICY PAGE ----
+    privacyHeader: "Privacy Policy",
+    privacyEffective: "Effective Date: March 2026",
+    privacyIntroTitle: "1. Introduction",
+    privacyIntroText:
+      "Welcome to SnapFins, developed by 0x5zen. We respect your privacy and are committed to protecting the integrity of your financial and personal data. This Privacy Policy outlines what information we collect, how it gets processed, and the measures we employ to secure it.",
+    privacyDataTitle: "2. Data We Collect",
+    privacyDataList1:
+      "Authentication Data: Profile schemas accessed via third-party OAuth providers (Google, GitHub) securely mediated via Supabase infrastructure.",
+    privacyDataList2:
+      "Financial Ledger Data: Transactions, budgets, receipts, and custom categories inputted manually or synced.",
+    privacyDataList3:
+      "Receipt Image Metadata: Images uploaded for Optical Character Recognition via Gemini Vision AI. Image data is temporarily processed and not retained for unauthorized AI training.",
+    privacyAiTitle: "3. AI Data Processing (Gemini Flash)",
+    privacyAiText:
+      "The 'Scan Receipt' feature relies on the external Google Generative AI (Gemini 2.5 Flash) API. When you upload a receipt, the image is passed directly in binary format to Google's secured endpoint solely to extract chronological transaction logic (merchant, total amount, and taxonomy). 0x5zen ensures these requests strictly obey data constraints ensuring it will not be saved as public datasets.",
+    privacyContact:
+      "If you have any specific concerns about your data lifecycle, please reach out to",
+
+    // ---- TERMS OF SERVICE PAGE ----
+    termsHeader: "Terms of Service",
+    termsLastUpdated: "Last Updated: March 2026",
+    termsAcceptanceTitle: "1. Acceptance of Terms",
+    termsAcceptanceText:
+      "By accessing or using the SnapFins application ('Service') developed by 0x5zen, you agree to comply with and be bound by these Terms. If you do not agree to these Terms, please do not use our Service.",
+    termsProvidedTitle: "2. Provided Services",
+    termsProvidedText:
+      "SnapFins is a personal financial ledger platform enabling AI-guided receipt tracking and monetary analytics. You understand that SnapFins is an organizational instrument and does not offer verified financial, legal, or tax advisory.",
+    termsProhibitedTitle: "3. Prohibited Activities",
+    termsProhibitedText: "You agree not to engage in any activity that:",
+    termsProhibitedList1:
+      "Interferes with or disrupts the Service, servers, or underlying Supabase infrastructure.",
+    termsProhibitedList2:
+      "Attempts to reverse-engineer our Gemini AI prompts or exploit the image processing API excessively.",
+    termsProhibitedList3:
+      "Involves the transmission of unlawful, offensive, or otherwise inappropriate content onto our ledgers.",
+    termsLiabilityTitle: "4. Limitation of Liability",
+    termsLiabilityText:
+      "0x5zen and the SnapFins administrators shall not be held liable for any indirect, incidental, special, or consequential damages resulting from your use of the Service, including but not limited to loss of data, loss of anticipated savings, or monetary discrepancies.",
   },
 
   id: {
@@ -604,6 +644,47 @@ export const translations = {
     globalMarketTitle: "Konektivitas Global",
     globalMarketDesc:
       "Integrasi pasar standar dengan CoinGecko Terminal (Kripto), Yahoo Finance (Saham), dan OpenER. Sinkronisasi 300 detik.",
+
+    // ---- HALAMAN KEBIJAKAN PRIVASI ----
+    privacyHeader: "Kebijakan Privasi",
+    privacyEffective: "Tanggal Efektif: Maret 2026",
+    privacyIntroTitle: "1. Pendahuluan",
+    privacyIntroText:
+      "Selamat datang di SnapFins, yang dikembangkan oleh 0x5zen. Kami menghormati privasi Anda dan berkomitmen untuk melindungi integritas data finansial dan personal Anda. Kebijakan Privasi ini menguraikan informasi apa yang kami kumpulkan, bagaimana informasi tersebut diproses, dan langkah-langkah yang kami terapkan untuk mengamankannya.",
+    privacyDataTitle: "2. Data yang Kami Kumpulkan",
+    privacyDataList1:
+      "Data Autentikasi: Skema profil yang diakses melalui penyedia OAuth pihak ketiga (Google, GitHub) yang dimediasi secara aman melalui infrastruktur Supabase.",
+    privacyDataList2:
+      "Data Buku Besar Keuangan: Transaksi, anggaran, struk, dan kategori khusus yang dimasukkan secara manual atau disinkronkan.",
+    privacyDataList3:
+      "Metadata Gambar Struk: Gambar yang diunggah untuk Pengenalan Karakter Optik (OCR) melalui Gemini Vision AI. Data gambar diproses secara sementara dan tidak disimpan untuk pelatihan AI tanpa izin.",
+    privacyAiTitle: "3. Pemrosesan Data AI (Gemini Flash)",
+    privacyAiText:
+      "Fitur 'Scan Struk' bergantung pada API eksternal Google Generative AI (Gemini 2.5 Flash). Saat Anda mengunggah struk, gambar dikirim langsung dalam format biner ke endpoint aman Google semata-mata untuk mengekstrak logika transaksi kronologis (merchant, jumlah total, dan taksonomi). 0x5zen memastikan permintaan ini secara ketat mematuhi batasan data yang memastikan data tidak akan disimpan sebagai dataset publik.",
+    privacyContact:
+      "Jika Anda memiliki kekhawatiran khusus tentang siklus hidup data Anda, silakan hubungi",
+
+    // ---- HALAMAN KETENTUAN LAYANAN ----
+    termsHeader: "Ketentuan Layanan",
+    termsLastUpdated: "Pembaruan Terakhir: Maret 2026",
+    termsAcceptanceTitle: "1. Penerimaan Ketentuan",
+    termsAcceptanceText:
+      "Dengan mengakses atau menggunakan aplikasi SnapFins ('Layanan') yang dikembangkan oleh 0x5zen, Anda setuju untuk mematuhi dan terikat oleh Syarat-syarat ini. Jika Anda tidak setuju dengan Syarat-syarat ini, mohon untuk tidak menggunakan Layanan kami.",
+    termsProvidedTitle: "2. Layanan yang Disediakan",
+    termsProvidedText:
+      "SnapFins adalah platform buku besar keuangan pribadi yang memungkinkan pelacakan struk berbasis AI dan analitik moneter. Anda memahami bahwa SnapFins adalah instrumen organisasional dan tidak menawarkan nasihat keuangan, hukum, atau pajak yang terverifikasi.",
+    termsProhibitedTitle: "3. Aktivitas yang Dilarang",
+    termsProhibitedText:
+      "Anda setuju untuk tidak terlibat dalam aktivitas apa pun yang:",
+    termsProhibitedList1:
+      "Mengganggu atau mengacaukan Layanan, server, atau infrastruktur Supabase yang mendasarinya.",
+    termsProhibitedList2:
+      "Mencoba merekayasa balik (reverse-engineer) prompt AI Gemini kami atau mengeksploitasi API pemrosesan gambar secara berlebihan.",
+    termsProhibitedList3:
+      "Melibatkan transmisi konten yang melanggar hukum, ofensif, atau tidak pantas ke dalam buku besar kami.",
+    termsLiabilityTitle: "4. Batasan Tanggung Jawab",
+    termsLiabilityText:
+      "0x5zen dan administrator SnapFins tidak bertanggung jawab atas kerusakan tidak langsung, insidental, khusus, atau konsekuensial yang dihasilkan dari penggunaan Layanan oleh Anda, termasuk namun tidak terbatas pada kehilangan data, kehilangan tabungan yang diantisipasi, atau ketidaksesuaian moneter.",
   },
 } as const;
 
