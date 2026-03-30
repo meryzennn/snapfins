@@ -37,6 +37,7 @@ export default function ScanReceiptModal({
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useScrollLock(isOpen);
 
@@ -54,6 +55,7 @@ export default function ScanReceiptModal({
 
   const handleFullReset = () => {
     stopCamera();
+    clearTimeout(inactivityTimerRef.current as any);
     setScanStep("select");
     setScanError(null);
     setScanningLogs([]);
@@ -68,7 +70,12 @@ export default function ScanReceiptModal({
     setScanError(null);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment" },
+        video: { 
+          facingMode: "environment",
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+          aspectRatio: { ideal: 9/16 }
+        },
         audio: false,
       });
       streamRef.current = stream;
@@ -82,6 +89,24 @@ export default function ScanReceiptModal({
     }
   };
 
+  // Inactivity timeout handler
+  useEffect(() => {
+    if (scanStep === 'camera') {
+      inactivityTimerRef.current = setTimeout(() => {
+        stopCamera();
+        setScanError(lang === 'id' ? "Anda terlalu lama membuka kamera tanpa aktivitas." : "You too long open the camera without interaction.");
+        setScanStep("select");
+      }, 60000); // 60 seconds
+    } else {
+       if (inactivityTimerRef.current) {
+         clearTimeout(inactivityTimerRef.current);
+       }
+    }
+    return () => {
+      if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
+    };
+  }, [scanStep, lang]);
+
   const stopCamera = () => {
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((track) => track.stop());
@@ -94,6 +119,7 @@ export default function ScanReceiptModal({
 
   const capturePhoto = () => {
     if (videoRef.current && canvasRef.current) {
+      if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
       const video = videoRef.current;
       const canvas = canvasRef.current;
       canvas.width = video.videoWidth;
@@ -245,8 +271,8 @@ export default function ScanReceiptModal({
             )}
 
             {scanStep === 'camera' && (
-              <div className="relative rounded-2xl overflow-hidden h-[45svh] sm:h-[55svh] bg-black border-2 border-primary/30 shadow-2xl animate-in zoom-in duration-300">
-                <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
+              <div className="relative rounded-2xl overflow-hidden aspect-[9/16] max-h-[60svh] sm:max-h-[65svh] mx-auto bg-slate-950 border-2 border-primary/30 shadow-2xl animate-in zoom-in duration-300">
+                <video ref={videoRef} autoPlay playsInline className="w-full h-full object-contain" />
                 <div className="absolute inset-0 scanner-overlay-gradient pointer-events-none">
                   <div className="scanner-corner top-4 left-4 border-t-4 border-l-4"></div>
                   <div className="scanner-corner top-4 right-4 border-t-4 border-r-4"></div>
