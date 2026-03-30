@@ -22,6 +22,7 @@ import { DashboardSkeleton } from "@/components/Skeleton";
 import RowActionMenu from "@/components/RowActionMenu";
 import TransactionModal from "@/components/TransactionModal";
 import ScanReceiptModal from "@/components/ScanReceiptModal";
+import DeleteTransactionModal from "@/components/DeleteTransactionModal";
 const assignColor = (category: string) => {
   const map: Record<string, string> = {
     DINING: "purple",
@@ -860,40 +861,17 @@ export default function DashboardPage() {
         formatValue={formatValue as any}
       />
 
-      {showDeleteTxModal && createPortal(
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-surface p-8 rounded-3xl shadow-2xl flex flex-col items-center max-w-sm w-full border border-error/20 animate-in fade-in zoom-in duration-300">
-            <div className="w-16 h-16 rounded-full bg-error/10 flex items-center justify-center mb-6 relative">
-              <span className="material-symbols-outlined text-error text-4xl">warning</span>
-            </div>
-            <h3 className="font-headline font-bold text-xl text-on-surface mb-2 text-center">
-              {deleteQueue.length > 1 ? t("confirmDeleteSelectedTitle") : t("confirmDeleteTransactionTitle")}
-            </h3>
-            <p className="text-sm text-center text-on-surface-variant leading-relaxed mb-8">
-              {deleteQueue.length > 1 ? t("confirmDeleteSelectedMsg", deleteQueue.length) : t("confirmDeleteTransactionMsg")}
-            </p>
-
-            <div className="flex flex-col gap-3 w-full">
-              <button
-                onClick={confirmDeleteBatch}
-                disabled={isDeletingRows}
-                className="w-full bg-error hover:bg-red-600 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-sm active:scale-95 flex items-center justify-center gap-2"
-              >
-                {isDeletingRows ? <span className="material-symbols-outlined animate-spin text-sm">sync</span> : null}
-                {isDeletingRows ? t("deleting") : t("btnDelete")}
-              </button>
-              <button
-                onClick={() => setShowDeleteTxModal(false)}
-                disabled={isDeletingRows}
-                className="w-full bg-surface-container hover:bg-surface-container-high text-on-surface font-bold py-3 px-4 rounded-xl transition-all active:scale-95"
-              >
-                {t("cancel")}
-              </button>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
+      <DeleteTransactionModal
+        isOpen={showDeleteTxModal}
+        onClose={() => setShowDeleteTxModal(false)}
+        onConfirm={confirmDeleteBatch}
+        transactions={transactions.filter(tx => deleteQueue.includes(tx.id))}
+        isDeleting={isDeletingRows}
+        lang={lang}
+        t={t as any}
+        formatValue={formatValue as any}
+        preferredCurrency={currency}
+      />
 
       {scanSuccess && createPortal(
         <div className="fixed inset-0 z-[100] flex items-start sm:items-center justify-center bg-black/60 backdrop-blur-sm p-4 pt-20 sm:pt-4">

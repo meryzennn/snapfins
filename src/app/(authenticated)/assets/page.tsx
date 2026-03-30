@@ -31,7 +31,7 @@ export default function AssetsPage() {
   const [assets, setAssets] = useState<Asset[]>([]);
   const [showAddAssetModal, setShowAddAssetModal] = useState(false);
   const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
-  const [deletingAsset, setDeletingAsset] = useState<Asset | null>(null);
+  const [assetsToDelete, setAssetsToDelete] = useState<Asset[]>([]);
 
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
@@ -182,23 +182,13 @@ export default function AssetsPage() {
     }
   };
 
-  const handleDeleteAsset = async () => {
-    if (!deletingAsset) return;
+  const confirmDeleteAssets = async () => {
+    if (assetsToDelete.length === 0) return;
     const supabase = createClient();
-    const { error } = await supabase.from("assets").delete().eq("id", deletingAsset.id);
+    const ids = assetsToDelete.map(a => a.id);
+    const { error } = await supabase.from("assets").delete().in("id", ids);
     if (!error) {
-        setDeletingAsset(null);
-        await fetchAssets();
-    } else {
-        alert(error.message);
-    }
-  };
-
-  const handleBulkDelete = async () => {
-    if (selectedIds.length === 0) return;
-    const supabase = createClient();
-    const { error } = await supabase.from("assets").delete().in("id", selectedIds);
-    if (!error) {
+        setAssetsToDelete([]);
         setSelectedIds([]);
         await fetchAssets();
     } else {
@@ -408,7 +398,7 @@ export default function AssetsPage() {
                         {lang === "id" ? "Batal" : "Cancel"}
                       </button>
                       <button
-                        onClick={handleBulkDelete}
+                        onClick={() => setAssetsToDelete(assets.filter(a => selectedIds.includes(a.id)))}
                         className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2 rounded-xl bg-error text-white font-black text-xs shadow-lg shadow-error/20 hover:brightness-110 active:scale-95 transition-all cursor-pointer"
                       >
                         <span className="material-symbols-outlined text-sm">delete</span>
@@ -534,7 +524,7 @@ export default function AssetsPage() {
                                         <RowActionMenu 
                                             actions={[
                                                 { label: t("btnEdit"), icon: "edit", onClick: () => setEditingAsset(asset) },
-                                                { label: t("btnDelete"), icon: "delete", onClick: () => setDeletingAsset(asset), variant: "danger" }
+                                                { label: t("btnDelete"), icon: "delete", onClick: () => setAssetsToDelete([asset]), variant: "danger" }
                                             ]}
                                         />
                                     </td>
@@ -622,11 +612,12 @@ export default function AssetsPage() {
         />
       )}
 
-      {deletingAsset && (
+      {assetsToDelete.length > 0 && (
         <DeleteAssetModal 
-            assetName={deletingAsset.name}
-            onClose={() => setDeletingAsset(null)}
-            onConfirm={handleDeleteAsset}
+            assets={assetsToDelete}
+            onClose={() => setAssetsToDelete([])}
+            onConfirm={confirmDeleteAssets}
+            lang={lang}
         />
       )}
     </>

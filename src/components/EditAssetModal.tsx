@@ -56,6 +56,25 @@ export default function EditAssetModal({ initialData, onClose, onSubmit }: EditA
   const [manualValue, setManualValue] = useState(formattedInitialValue);
   const [currency, setCurrency] = useState<SupportedCurrency>(initialCurrency);
   const [notes, setNotes] = useState(initialData.notes || "");
+  const [gramWeight, setGramWeight] = useState("");
+
+  // Gram to Ounce Converter for Gold
+  useEffect(() => {
+    if (category === "Gold" && gramWeight) {
+      const g = parseFloat(gramWeight);
+      if (!isNaN(g)) {
+        const oz = g * 0.0321507;
+        setQuantity(oz.toFixed(3));
+      }
+    }
+  }, [gramWeight, category]);
+
+  // Auto-set symbol for Gold if shifted to market mode
+  useEffect(() => {
+    if (category === "Gold" && valuationMode === "market" && !symbol) {
+      setSymbol("GC=F");
+    }
+  }, [category, valuationMode, symbol]);
 
   const handleNext = () => {
     if (step === 1 && !category) return;
@@ -277,6 +296,7 @@ export default function EditAssetModal({ initialData, onClose, onSubmit }: EditA
           {step === 3 && (
               <div className="space-y-4 animate-in slide-in-from-right-4 duration-500">
                   <div className="space-y-4">
+                      {/* 1. Asset Name */}
                       <div className="flex flex-col gap-1.5">
                           <label className="block text-[10px] font-black uppercase tracking-widest text-primary ml-1">
                               {lang === "id" ? "Nama Aset" : "Asset Name"} <span className="text-error">*</span>
@@ -291,30 +311,36 @@ export default function EditAssetModal({ initialData, onClose, onSubmit }: EditA
                           />
                       </div>
                       
-                      {valuationMode === "market" && (
-                          <div className="grid grid-cols-2 gap-4">
+                      {/* 2. Valuation-Specific Fields */}
+                      {valuationMode === "market" ? (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                              {/* Symbol/Ticker */}
                               <div className="flex flex-col gap-1.5">
                                   <label className="block text-[10px] font-black uppercase tracking-widest text-primary ml-1">
-                                      Symbol/Ticker <span className="text-error">*</span>
+                                      {category === "Gold" ? "SYMBOL" : "TICKER / SYMBOL"} <span className="text-error">*</span>
                                   </label>
-                                  <input
-                                      type="text"
-                                      required
-                                      value={symbol}
-                                      onChange={e => setSymbol(e.target.value)}
-                                      className="w-full uppercase bg-surface-container-low dark:bg-slate-800 border-2 border-outline-variant/20 focus:border-primary rounded-xl px-4 py-3 text-on-surface font-bold placeholder:text-outline/50 transition-colors outline-none"
-                                      placeholder={category === "Crypto" ? "BTC" : "IDX:BBCA"}
-                                      maxLength={20}
-                                  />
-                                  {category === "Stock / ETF" && (
-                                     <p className="text-[10px] text-on-surface-variant mt-1.5 opacity-80 leading-relaxed">
-                                         Tip: prefix, e.g. <b>IDX:BBCA</b>.
-                                     </p>
+                                  {category === "Gold" ? (
+                                    <div className="w-full bg-surface-container-low dark:bg-slate-800 border-2 border-primary/20 rounded-xl px-4 py-3 text-on-surface font-black flex items-center gap-2">
+                                      <span className="material-symbols-outlined text-sm text-primary">verified</span>
+                                      GC=F (Gold Spot)
+                                    </div>
+                                  ) : (
+                                    <input
+                                        type="text"
+                                        required
+                                        value={symbol}
+                                        onChange={e => setSymbol(e.target.value)}
+                                        className="w-full uppercase bg-surface-container-low dark:bg-slate-800 border-2 border-outline-variant/20 focus:border-primary rounded-xl px-4 py-3 text-on-surface font-bold placeholder:text-outline/50 transition-colors outline-none"
+                                        placeholder={category === "Crypto" ? "BTC" : "NASDAQ:AAPL"}
+                                        maxLength={20}
+                                    />
                                   )}
                               </div>
+
+                              {/* Quantity / Weight */}
                               <div className="flex flex-col gap-1.5">
                                   <label className="block text-[10px] font-black uppercase tracking-widest text-primary ml-1">
-                                      {lang === "id" ? "Kuantitas" : "Quantity"} <span className="text-error">*</span>
+                                      {category === "Gold" ? (lang === "id" ? "BERAT (ONS)" : "WEIGHT (OZ)") : (lang === "id" ? "KUANTITAS" : "QUANTITY")} <span className="text-error">*</span>
                                   </label>
                                   <input
                                       type="number"
@@ -325,14 +351,36 @@ export default function EditAssetModal({ initialData, onClose, onSubmit }: EditA
                                       className="w-full bg-surface-container-low dark:bg-slate-800 border-2 border-outline-variant/20 focus:border-primary rounded-xl px-4 py-3 text-on-surface font-bold tabular-nums placeholder:text-outline/50 transition-colors outline-none"
                                       placeholder="0"
                                   />
+                                  {category === "Gold" && (
+                                    <div className="mt-2 p-3 bg-primary/5 border border-primary/20 rounded-xl">
+                                      <div className="flex items-center justify-between mb-2">
+                                        <span className="text-[9px] font-black uppercase tracking-tighter text-primary">
+                                          {lang === "id" ? "KALKULATOR GRAM KE ONS" : "GRAM TO OUNCE CONVERTER"}
+                                        </span>
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <input
+                                          type="number"
+                                          value={gramWeight}
+                                          onChange={(e) => setGramWeight(e.target.value)}
+                                          className="w-full bg-transparent border-b border-primary/30 text-xs font-bold text-on-surface outline-none focus:border-primary"
+                                          placeholder={lang === "id" ? "Gram (Cth. 10)" : "Grams (e.g. 10)"}
+                                        />
+                                        <span className="text-[10px] font-bold text-on-surface-variant shrink-0">
+                                          → {quantity || "0"} Oz
+                                        </span>
+                                      </div>
+                                    </div>
+                                  )}
                               </div>
                           </div>
-                      )}
-
-                      {valuationMode === "manual" && (
+                      ) : (
+                          /* Manual Entry / Balance */
                            <div className="flex flex-col gap-1.5">
                               <label className="block text-[10px] font-black uppercase tracking-widest text-primary ml-1">
-                                  {lang === "id" ? "Nilai Saat Ini" : "Current Value"} <span className="text-error">*</span>
+                                  {["Cash", "Bank", "E-wallet"].includes(category) 
+                                    ? (lang === "id" ? "SALDO SAAT INI" : "CURRENT BALANCE")
+                                    : (lang === "id" ? "NILAI SAAT INI" : "CURRENT VALUE")} <span className="text-error">*</span>
                               </label>
                               <div className="flex bg-surface-container-low dark:bg-slate-800 border-2 border-outline-variant/20 focus-within:border-primary rounded-xl overflow-hidden transition-colors">
                                   <div className="relative shrink-0 flex items-center bg-surface-container-low dark:bg-slate-800/50">
@@ -385,12 +433,13 @@ export default function EditAssetModal({ initialData, onClose, onSubmit }: EditA
                            </div>
                       )}
 
+                      {/* 3. Notes */}
                       <div className="flex flex-col gap-1.5">
                         <label className="block text-[10px] font-black uppercase tracking-widest text-primary ml-1">
                           {lang === "id" ? "Catatan (Opsional)" : "Notes (Optional)"}
                         </label>
                         <textarea
-                          className="w-full bg-surface-container-low dark:bg-slate-800 border-2 border-outline-variant/20 rounded-xl px-4 py-3 outline-none focus:border-primary transition-colors text-sm font-semibold max-h-24"
+                          className="w-full bg-surface-container-low dark:bg-slate-800 border-2 border-outline-variant/20 rounded-xl px-4 py-3 outline-none focus:border-primary transition-colors text-sm font-semibold max-h-24 scrollbar-thin"
                           placeholder={lang === "id" ? "Contoh: Jangka panjang" : "e.g. Long term hold"}
                           value={notes}
                           onChange={(e) => setNotes(e.target.value)}
