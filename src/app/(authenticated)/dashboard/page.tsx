@@ -1375,7 +1375,7 @@ export default function DashboardPage() {
                       />
                     </th>
                     <th className="p-2.5 sm:p-4 whitespace-nowrap">{t("colDate")}</th>
-                    <th className="p-2.5 sm:p-4 whitespace-nowrap hidden sm:table-cell">{t("colCategory")}</th>
+                    <th className="p-2.5 sm:p-4 whitespace-nowrap">{t("colCategory")}</th>
                     <th className="p-2.5 sm:p-4 whitespace-nowrap">{t("colDescription")}</th>
                     <th className="p-2.5 sm:p-4 text-left whitespace-nowrap w-[15%]">{t("colType")}</th>
                     <th className="p-2.5 sm:p-4 text-right whitespace-nowrap w-[20%]">{t("colAmount")}</th>
@@ -1423,7 +1423,7 @@ export default function DashboardPage() {
                             return `${d}/${m}/${y}`;
                           })()}
                         </td>
-                        <td className="p-2.5 sm:p-4 text-[12px] sm:text-sm hidden sm:table-cell">
+                        <td className="p-2.5 sm:p-4 text-[12px] sm:text-sm">
                           <span
                             className={`px-1.5 py-0.5 rounded font-bold uppercase text-[9px] ${getCategoryStyle(tx.color)}`}
                           >
