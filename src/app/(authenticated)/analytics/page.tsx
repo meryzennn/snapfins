@@ -279,16 +279,16 @@ function SummaryCard({
   icon: string; label: string; value: string; badge?: React.ReactNode; sub?: string; accent?: string;
 }) {
   return (
-    <div className="bg-surface-container-lowest dark:bg-slate-900/60 border border-outline-variant/20 rounded-2xl p-4 flex flex-col gap-2 shadow-sm hover:shadow-md transition-all">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className={`material-symbols-outlined text-[18px] ${accent || "text-primary"}`}>{icon}</span>
-          <span className="text-[10px] uppercase tracking-widest font-black text-on-surface-variant">{label}</span>
+    <div className="bg-surface-container-lowest dark:bg-slate-900/60 border border-outline-variant/20 rounded-2xl p-4 flex flex-col gap-2 shadow-sm hover:shadow-md transition-all min-w-0 overflow-hidden">
+      <div className="flex items-center justify-between gap-1">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <span className={`material-symbols-outlined text-[18px] shrink-0 ${accent || "text-primary"}`}>{icon}</span>
+          <span className="text-[9px] uppercase tracking-widest font-black text-on-surface-variant truncate">{label}</span>
         </div>
-        {badge}
+        <div className="shrink-0">{badge}</div>
       </div>
-      <p className="font-headline font-black text-on-surface text-lg leading-tight tabular-nums">{value}</p>
-      {sub && <p className="text-[10px] text-on-surface-variant/60 font-medium">{sub}</p>}
+      <p className="font-headline font-black text-on-surface leading-tight tabular-nums break-all text-sm sm:text-base">{value}</p>
+      {sub && <p className="text-[10px] text-on-surface-variant/60 font-medium truncate">{sub}</p>}
     </div>
   );
 }
@@ -631,7 +631,7 @@ export default function AnalyticsPage() {
           <SummaryCard
             icon="account_balance"
             label={t.netWorth}
-            value={hasAssets ? fmt(netWorth) : "—"}
+            value={fmt(netWorth)}
             badge={hasAssets ? trendBadge(netWorth, netWorth * 0.97) : undefined}
             sub={t.netWorthSub}
             accent="text-indigo-500"
@@ -639,7 +639,7 @@ export default function AnalyticsPage() {
           <SummaryCard
             icon="trending_up"
             label={t.totalIncome}
-            value={hasTransactions ? fmt(totalIncome) : "—"}
+            value={fmt(totalIncome)}
             badge={hasTransactions ? trendBadge(totalIncome, prevIncome) : undefined}
             sub={selectedMonth === -1 ? t.yearLabel(selectedYear) : t.monthYear(monthsLabels[selectedMonth], selectedYear)}
             accent="text-emerald-500"
@@ -647,7 +647,7 @@ export default function AnalyticsPage() {
           <SummaryCard
             icon="trending_down"
             label={t.totalExpense}
-            value={hasTransactions ? fmt(totalExpense) : "—"}
+            value={fmt(totalExpense)}
             badge={hasTransactions ? trendBadge(totalExpense, prevExpense, true) : undefined}
             sub={selectedMonth === -1 ? t.yearLabel(selectedYear) : t.monthYear(monthsLabels[selectedMonth], selectedYear)}
             accent="text-rose-500"
@@ -655,21 +655,21 @@ export default function AnalyticsPage() {
           <SummaryCard
             icon="savings"
             label={t.netCashflow}
-            value={hasTransactions ? fmt(netCashflow) : "—"}
+            value={fmt(netCashflow)}
             sub={savingsRate !== 0 ? `${savingsRate.toFixed(1)}% ${t.savingsRate}` : ""}
             accent={netCashflow >= 0 ? "text-emerald-500" : "text-rose-500"}
           />
           <SummaryCard
             icon="water_drop"
             label={t.liquidAssets}
-            value={hasAssets ? fmt(liquidAssets) : "—"}
+            value={fmt(liquidAssets)}
             sub={hasAssets && netWorth > 0 ? `${((liquidAssets / netWorth) * 100).toFixed(1)}% ${t.ofNetWorth}` : ""}
             accent="text-blue-500"
           />
           <SummaryCard
             icon="rocket_launch"
             label={t.invested}
-            value={hasAssets ? fmt(investedAssets) : "—"}
+            value={fmt(investedAssets)}
             sub={hasAssets && netWorth > 0 ? `${((investedAssets / netWorth) * 100).toFixed(1)}% ${t.ofNetWorth}` : ""}
             accent="text-violet-500"
           />

@@ -87,13 +87,27 @@ export default function EnginePage() {
         </div>
       </nav>
 
-      {/* Floating Back Button */}
-      <Link 
-        href="/" 
-        className="fixed top-24 right-6 z-[60] flex items-center gap-2 px-4 py-2 rounded-full bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border border-outline-variant/20 shadow-xl hover:shadow-primary/10 hover:-translate-y-0.5 transition-all group/back active:scale-95"
+      {/* Floating Back Arrow — sticky left center */}
+      <Link
+        href="/"
+        aria-label="Back to Home"
+        className="fixed left-4 top-6 z-[60]
+          w-11 h-11 rounded-full
+          flex items-center justify-center
+          bg-white/80 dark:bg-slate-900/80
+          backdrop-blur-md
+          border border-outline-variant/20
+          shadow-lg shadow-black/10
+          hover:shadow-primary/30 hover:shadow-xl
+          hover:border-primary/40
+          hover:scale-110
+          active:scale-90
+          transition-all duration-200 ease-out
+          group/back"
       >
-        <span className="material-symbols-outlined text-sm group-hover/back:-translate-x-1 transition-transform">arrow_back</span>
-        <span className="text-[10px] font-black uppercase tracking-widest">{t('backToHome')}</span>
+        <span className="material-symbols-outlined text-[20px] text-on-surface-variant group-hover/back:text-primary group-hover/back:-translate-x-0.5 transition-all duration-150">
+          arrow_back
+        </span>
       </Link>
 
       {/* Main Document Container */}

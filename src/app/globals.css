@@ -431,3 +431,286 @@ html, body {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   GLOBAL TACTILE & ANIMATION SYSTEM
+   Applies universally to all pages — buttons, cards, links, page load
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Suppress mobile tap flash (blue highlight) on all interactive elements */
+* {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+}
+
+/* ── Tactile Button Press Feel ───────────────────────────────────────────── */
+/* Every button and link-like element gets a springy press response */
+button,
+[role="button"],
+a,
+label[for],
+[type="submit"],
+[type="button"],
+[type="reset"] {
+  cursor: pointer;
+  transition:
+    transform 120ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 120ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    filter 120ms ease,
+    opacity 120ms ease;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+button:active,
+[role="button"]:active,
+[type="submit"]:active,
+[type="button"]:active {
+  transform: scale(0.95);
+  filter: brightness(0.97);
+  transition:
+    transform 60ms cubic-bezier(0.4, 0, 0.6, 1),
+    filter 60ms ease;
+}
+
+/* Tighter press for icon-only / small touch targets */
+.btn-icon:active {
+  transform: scale(0.88) !important;
+}
+
+/* Spring-back class — add to buttons you want extra bounce on release */
+.btn-spring {
+  transition:
+    transform 260ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 260ms cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+}
+
+/* ── Ripple Effect ───────────────────────────────────────────────────────── */
+.btn-ripple {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-ripple::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle, rgba(255,255,255,0.35) 0%, transparent 70%);
+  opacity: 0;
+  transform: scale(0);
+  transition: transform 0ms, opacity 0ms;
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+.btn-ripple:active::after {
+  opacity: 1;
+  transform: scale(2.5);
+  transition: transform 400ms cubic-bezier(0.4, 0, 0.2, 1), opacity 400ms ease;
+}
+
+/* ── Card Lift on Hover ──────────────────────────────────────────────────── */
+.card-lift {
+  transition:
+    transform 220ms cubic-bezier(0.34, 1.2, 0.64, 1),
+    box-shadow 220ms cubic-bezier(0.34, 1.2, 0.64, 1);
+  will-change: transform;
+}
+
+.card-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px -8px rgba(0, 0, 0, 0.18), 0 4px 16px -4px rgba(53, 37, 205, 0.12);
+}
+
+.dark .card-lift:hover {
+  box-shadow: 0 12px 40px -8px rgba(0, 0, 0, 0.5), 0 4px 16px -4px rgba(129, 140, 248, 0.15);
+}
+
+.card-lift:active {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px -4px rgba(0, 0, 0, 0.12);
+  transition-duration: 60ms;
+}
+
+/* ── Page Entrance Animation ─────────────────────────────────────────────── */
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes page-enter-fast {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(16px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes pop-in {
+  0%   { opacity: 0; transform: scale(0.88); }
+  70%  { opacity: 1; transform: scale(1.03); }
+  100% { transform: scale(1); }
+}
+
+/* Auto-apply entrance to main page wrappers */
+main {
+  animation: page-enter 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Utility classes for staggered children */
+.enter-1 { animation: page-enter 0.4s 0.05s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.enter-2 { animation: page-enter 0.4s 0.1s  cubic-bezier(0.22, 1, 0.36, 1) both; }
+.enter-3 { animation: page-enter 0.4s 0.18s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.enter-4 { animation: page-enter 0.4s 0.26s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.enter-5 { animation: page-enter 0.4s 0.34s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+.pop-in   { animation: pop-in   0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+.slide-right { animation: slide-in-right 0.35s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+/* ── Link Hover Underline Sweep ──────────────────────────────────────────── */
+.link-sweep {
+  position: relative;
+  text-decoration: none;
+}
+
+.link-sweep::after {
+  content: "";
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: currentColor;
+  transition: width 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  border-radius: 9999px;
+}
+
+.link-sweep:hover::after {
+  width: 100%;
+}
+
+/* ── Focus Visible Ring (keyboard navigation) ────────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+/* ── Reduced Motion Safety ───────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  main {
+    animation: none;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SCROLL REVEAL SYSTEM — blur + scale + fade (zendrop style)
+   Elements with [data-reveal] start blurred/invisible and smoothly
+   sharpen + scale + fade in when entering the viewport.
+   The .revealed class is added by the useReveal hook.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Default reveal: blur + slide-up + fade ────────────────────────────── */
+[data-reveal] {
+  opacity: 0;
+  transform: translateY(28px) scale(0.97);
+  filter: blur(8px);
+  transition:
+    opacity    0.7s cubic-bezier(0.22, 1, 0.36, 1),
+    transform  0.7s cubic-bezier(0.22, 1, 0.36, 1),
+    filter     0.7s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: opacity, transform, filter;
+}
+
+/* ── Text variant: lighter blur, shorter travel ────────────────────────── */
+[data-reveal="text"] {
+  opacity: 0;
+  transform: translateY(16px);
+  filter: blur(4px);
+  transition:
+    opacity    0.55s cubic-bezier(0.22, 1, 0.36, 1),
+    transform  0.55s cubic-bezier(0.22, 1, 0.36, 1),
+    filter     0.55s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ── Card variant: more dramatic scale + longer blur ───────────────────── */
+[data-reveal="card"] {
+  opacity: 0;
+  transform: translateY(36px) scale(0.94);
+  filter: blur(12px);
+  transition:
+    opacity    0.8s cubic-bezier(0.22, 1, 0.36, 1),
+    transform  0.8s cubic-bezier(0.22, 1, 0.36, 1),
+    filter     0.8s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ── Slide-left variant (from right) ───────────────────────────────────── */
+[data-reveal="left"] {
+  opacity: 0;
+  transform: translateX(-28px) scale(0.97);
+  filter: blur(6px);
+  transition:
+    opacity    0.65s cubic-bezier(0.22, 1, 0.36, 1),
+    transform  0.65s cubic-bezier(0.22, 1, 0.36, 1),
+    filter     0.65s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ── Fade-only variant ─────────────────────────────────────────────────── */
+[data-reveal="fade"] {
+  opacity: 0;
+  transform: none;
+  filter: blur(4px);
+  transition:
+    opacity    0.5s cubic-bezier(0.22, 1, 0.36, 1),
+    filter     0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ── Scale / pop-in variant ────────────────────────────────────────────── */
+[data-reveal="scale"] {
+  opacity: 0;
+  transform: scale(0.90);
+  filter: blur(10px);
+  transition:
+    opacity    0.7s cubic-bezier(0.34, 1.2, 0.64, 1),
+    transform  0.7s cubic-bezier(0.34, 1.2, 0.64, 1),
+    filter     0.7s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ── Revealed state — all variants land here ───────────────────────────── */
+[data-reveal].revealed {
+  opacity: 1;
+  transform: translateY(0) translateX(0) scale(1);
+  filter: blur(0px);
+}
+
+/* Reduced motion: skip entirely */
+@media (prefers-reduced-motion: reduce) {
+  [data-reveal] {
+    opacity: 1 !important;
+    transform: none !important;
+    filter: none !important;
+    transition: none !important;
+  }
+}
+
