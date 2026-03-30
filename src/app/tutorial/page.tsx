@@ -84,17 +84,18 @@ export default function TutorialPage() {
                 )}
               </div>
             </div>
-
-            <Link 
-              href="/" 
-              className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-surface-container-low dark:bg-white/5 border border-outline-variant/20 text-on-surface-variant dark:text-gray-400 text-sm font-bold hover:bg-surface-container transition-all group/back active:scale-95 shadow-sm"
-            >
-              <span className="material-symbols-outlined text-[18px] group-hover/back:-translate-x-1 transition-transform">arrow_back</span>
-              {t('backToHome')}
-            </Link>
           </div>
         </div>
       </nav>
+
+      {/* Floating Back Button */}
+      <Link 
+        href="/" 
+        className="fixed top-24 right-6 z-[60] flex items-center gap-2 px-4 py-2 rounded-full bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border border-outline-variant/20 shadow-xl hover:shadow-primary/10 hover:-translate-y-0.5 transition-all group/back active:scale-95"
+      >
+        <span className="material-symbols-outlined text-sm group-hover/back:-translate-x-1 transition-transform">arrow_back</span>
+        <span className="text-[10px] font-black uppercase tracking-widest">{t('backToHome')}</span>
+      </Link>
 
       <main className="relative">
         {/* Section 1: Introduction Section (Hero) */}
