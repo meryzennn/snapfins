@@ -110,11 +110,23 @@
 
 html {
   scroll-behavior: smooth;
+  /* Hide scrollbar for IE, Edge and Firefox */
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  display: none;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
+  /* Hide scrollbar for IE, Edge and Firefox */
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 .material-symbols-outlined {
@@ -533,14 +545,21 @@ button:active,
 }
 
 /* ── Page Entrance Animation ─────────────────────────────────────────────── */
+/* NOTE: The 'to' keyframe intentionally omits transform so that after fill:both,
+   main has no computed transform. A transform on main would create a new containing
+   block for position:fixed children, breaking context menu positioning. */
 @keyframes page-enter {
   from {
     opacity: 0;
     transform: translateY(14px);
   }
-  to {
+  99.9% {
     opacity: 1;
     transform: translateY(0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
   }
 }
 
@@ -549,9 +568,13 @@ button:active,
     opacity: 0;
     transform: translateY(8px);
   }
-  to {
+  99.9% {
     opacity: 1;
     transform: translateY(0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
   }
 }
 
@@ -714,3 +737,23 @@ main {
   }
 }
 
+/* Custom Scrollbar for Modal/Containers */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.3); /* slate-400 with opacity */
+  border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.5);
+}
+/* Ensure it shows up even if global scrollbar is hidden */
+.custom-scrollbar {
+  scrollbar-width: thin !important;
+  scrollbar-color: rgba(148, 163, 184, 0.3) transparent !important;
+}

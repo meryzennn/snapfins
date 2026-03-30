@@ -59,10 +59,19 @@ export default function EnginePage() {
 
       {/* Header / Nav (Consistent with Landing/Tutorial) */}
       <nav className="sticky top-0 z-50 w-full backdrop-blur-md bg-white/70 dark:bg-slate-950/70 border-b border-outline-variant/10">
-        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 group font-sans">
-             <span className="text-xl font-headline font-extrabold tracking-tighter text-indigo-700 dark:text-indigo-300 group-hover:text-primary transition-colors">SnapFins</span>
-          </Link>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-20 flex items-center justify-between">
+          <div className="flex items-center gap-2 sm:gap-4">
+            <Link 
+              href="/" 
+              className="w-10 h-10 rounded-xl flex items-center justify-center bg-surface-container-high dark:bg-slate-900 border border-outline-variant/20 hover:border-primary/50 text-on-surface-variant hover:text-primary transition-all active:scale-90 group/back"
+              aria-label="Back to landing"
+            >
+              <span className="material-symbols-outlined text-[20px] group-hover/back:-translate-x-0.5 transition-transform">arrow_back</span>
+            </Link>
+            <Link href="/" className="flex items-center gap-2 group font-sans">
+               <span className="text-xl font-headline font-extrabold tracking-tighter text-indigo-700 dark:text-indigo-300 group-hover:text-primary transition-colors">SnapFins</span>
+            </Link>
+          </div>
           <div className="flex items-center gap-6 font-sans">
             {/* Toggles */}
             <div className="flex items-center gap-2">
@@ -87,28 +96,6 @@ export default function EnginePage() {
         </div>
       </nav>
 
-      {/* Floating Back Arrow — sticky left center */}
-      <Link
-        href="/"
-        aria-label="Back to Home"
-        className="fixed left-4 top-6 z-[60]
-          w-11 h-11 rounded-full
-          flex items-center justify-center
-          bg-white/80 dark:bg-slate-900/80
-          backdrop-blur-md
-          border border-outline-variant/20
-          shadow-lg shadow-black/10
-          hover:shadow-primary/30 hover:shadow-xl
-          hover:border-primary/40
-          hover:scale-110
-          active:scale-90
-          transition-all duration-200 ease-out
-          group/back"
-      >
-        <span className="material-symbols-outlined text-[20px] text-on-surface-variant group-hover/back:text-primary group-hover/back:-translate-x-0.5 transition-all duration-150">
-          arrow_back
-        </span>
-      </Link>
 
       {/* Main Document Container */}
       <main className="max-w-4xl mx-auto px-8 pt-32 pb-40">

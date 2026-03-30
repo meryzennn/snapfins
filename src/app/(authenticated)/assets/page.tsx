@@ -9,6 +9,7 @@ import { createClient } from "@/utils/supabase/client";
 import Link from "next/link";
 import AddAssetModal from "@/components/AddAssetModal";
 import EditAssetModal from "@/components/EditAssetModal";
+import DeleteAssetModal from "@/components/DeleteAssetModal";
 import SelectionToggle from "@/components/SelectionToggle";
 import {
   type Asset,
@@ -18,6 +19,7 @@ import {
   getAssetsByCategory,
 } from "@/lib/assets";
 import { AssetsSkeleton } from "@/components/Skeleton";
+import RowActionMenu from "@/components/RowActionMenu";
 
 export default function AssetsPage() {
   const { theme, setTheme } = useTheme();
@@ -33,36 +35,14 @@ export default function AssetsPage() {
 
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
-  const [menuPosition, setMenuPosition] = useState<{ top: number; right: number } | null>(null);
   const pageSize = 10;
 
 
   useEffect(() => {
     setMounted(true);
     fetchAssets();
-
-    const handleClickOutside = (event: MouseEvent) => {
-      if (!(event.target as Element).closest('.kebab-menu-container')) {
-          setOpenMenuId(null);
-          setMenuPosition(null);
-      }
-    };
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setOpenMenuId(null);
-        setMenuPosition(null);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("keydown", handleKeyDown);
-    };
   }, []);
+
 
   const fetchAssets = async () => {
     setIsLoading(true);
@@ -281,7 +261,7 @@ export default function AssetsPage() {
   return (
     <>
 
-      <main className="flex-grow max-w-7xl mx-auto w-full px-4 sm:px-6 md:px-8 py-6 md:py-10 space-y-8 md:space-y-10 pb-32 md:pb-8">
+      <main className="flex-grow max-w-7xl mx-auto w-full px-4 sm:px-6 md:px-8 py-6 md:py-10 space-y-8 md:space-y-10 pb-32 md:pb-12">
         <header className="flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-6">
           <div className="space-y-1">
             <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-on-surface font-headline">
@@ -400,7 +380,7 @@ export default function AssetsPage() {
             </section>
         )}
 
-        <section className="glass-card rounded-3xl border border-white/40 dark:border-white/10 shadow-xl overflow-hidden flex flex-col relative min-h-[300px]">
+        <section className="glass-card rounded-3xl border border-white/40 dark:border-white/10 shadow-xl overflow-hidden flex flex-col relative">
              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-6 md:p-8 border-b border-outline-variant/20 bg-white/40 dark:bg-slate-900/40 backdrop-blur-md gap-4">
                 <div>
                   <h2 className="font-headline font-bold text-xl text-on-surface">
@@ -438,11 +418,11 @@ export default function AssetsPage() {
                   </div>
                 )}
                 {isLoading ? (
-                    <div className="w-full h-[300px] flex items-center justify-center">
-                        <div className="w-10 h-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
+                    <div className="w-full h-[160px] flex items-center justify-center">
+                        <div className="w-8 h-8 border-[3px] border-primary/20 border-t-primary rounded-full animate-spin"></div>
                     </div>
                 ) : assets.length === 0 ? (
-                    <div className="flex-1 flex flex-col items-center justify-center py-20 px-6 text-center">
+                    <div className="flex-1 flex flex-col items-center justify-center py-16 px-6 text-center">
                         <div className="w-16 h-16 bg-surface-container rounded-2xl flex items-center justify-center mb-6 shadow-sm border border-outline-variant/10">
                           <span className="material-symbols-outlined text-4xl text-primary opacity-90">
                               inventory_2
@@ -496,7 +476,7 @@ export default function AssetsPage() {
                                 <th className="p-2.5 sm:p-4 whitespace-nowrap">{lang === "id" ? "Kategori" : "Category"}</th>
                                 <th className="p-2.5 sm:p-4 text-right whitespace-nowrap">{lang === "id" ? "Kuantitas" : "Quantity"}</th>
                                 <th className="p-2.5 sm:p-4 text-right whitespace-nowrap">{lang === "id" ? "Nilai" : "Value"}</th>
-                                <th className="p-2.5 sm:p-4 text-center whitespace-nowrap hidden sm:table-cell">{lang === "id" ? "Diperbarui" : "Updated"}</th>
+                                <th className="p-2.5 sm:p-4 text-center whitespace-nowrap">{lang === "id" ? "Diperbarui" : "Updated"}</th>
                                 <th className="p-2 text-center w-12 bg-slate-50 dark:bg-slate-900 border-l border-outline-variant/10"></th>
                             </tr>
                         </thead>
@@ -547,58 +527,16 @@ export default function AssetsPage() {
                                             </div>
                                         </div>
                                     </td>
-                                    <td className="p-2.5 sm:p-4 text-center hidden sm:table-cell text-on-surface-variant font-bold text-[10px] sm:text-[11px] uppercase tracking-widest">
+                                    <td className="p-2.5 sm:p-4 text-center text-on-surface-variant font-bold text-[10px] sm:text-[11px] uppercase tracking-widest">
                                         {new Date(asset.last_valued_at).toLocaleDateString(lang === "id" ? "id-ID" : "en-US", { month: "short", day: "numeric" })}
                                     </td>
-                                    <td className="p-2.5 sm:p-4 text-center kebab-menu-container bg-white dark:bg-slate-950 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 transition-all z-20">
-                                        <div className="relative flex items-center justify-center text-left w-full h-full">
-                                            <button 
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    if (openMenuId === asset.id) {
-                                                      setOpenMenuId(null);
-                                                      setMenuPosition(null);
-                                                    } else {
-                                                      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                                                      setMenuPosition({ top: rect.top, right: window.innerWidth - rect.right });
-                                                      setOpenMenuId(asset.id);
-                                                    }
-                                                }}
-                                                className="w-7 h-7 rounded-lg flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-slate-200 dark:hover:bg-slate-800 transition-all cursor-pointer group/btn"
-                                            >
-                                                <span className="material-symbols-outlined text-[18px] group-hover/btn:scale-110 transition-transform">menu</span>
-                                            </button>
-                                            
-                                            {openMenuId === asset.id && menuPosition && (
-                                                <div
-                                                    className="fixed w-36 bg-slate-900/95 dark:bg-slate-900/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-[0_10px_30px_rgba(0,0,0,0.4)] z-[200] py-1.5 animate-in fade-in zoom-in-95 duration-200 divide-y divide-white/5"
-                                                    style={{ top: menuPosition.top, right: menuPosition.right, transform: 'translateY(-100%) translateY(-4px)' }}
-                                                >
-                                                    <button 
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            setEditingAsset(asset);
-                                                            setOpenMenuId(null);
-                                                        }}
-                                                        className="w-full text-left px-4 py-2.5 hover:bg-white/5 transition-colors flex items-center justify-between group/item cursor-pointer"
-                                                    >
-                                                        <span className="text-[11px] font-black uppercase tracking-wider text-white/90 group-hover/item:text-primary-container transition-colors">{t("btnEdit") || "Edit"}</span>
-                                                        <span className="material-symbols-outlined text-[16px] text-primary-container group-hover/item:scale-110 transition-all">edit</span>
-                                                    </button>
-                                                    <button 
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            setDeletingAsset(asset);
-                                                            setOpenMenuId(null);
-                                                        }}
-                                                        className="w-full text-left px-4 py-2.5 hover:bg-white/5 transition-colors flex items-center justify-between group/item cursor-pointer"
-                                                    >
-                                                        <span className="text-[11px] font-black uppercase tracking-wider text-rose-400 group-hover/item:text-rose-300 transition-colors">{t("btnDelete") || "Delete"}</span>
-                                                        <span className="material-symbols-outlined text-[16px] text-rose-400 group-hover/item:scale-110 transition-all">delete</span>
-                                                    </button>
-                                                </div>
-                                            )}
-                                        </div>
+                                    <td className="p-1 px-2 text-center kebab-menu-container bg-white dark:bg-slate-950 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 transition-all z-20">
+                                        <RowActionMenu 
+                                            actions={[
+                                                { label: t("btnEdit"), icon: "edit", onClick: () => setEditingAsset(asset) },
+                                                { label: t("btnDelete"), icon: "delete", onClick: () => setDeletingAsset(asset), variant: "danger" }
+                                            ]}
+                                        />
                                     </td>
                                 </tr>
                             ))}
@@ -685,27 +623,11 @@ export default function AssetsPage() {
       )}
 
       {deletingAsset && (
-        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-300">
-            <div className="bg-surface dark:bg-slate-900 p-6 sm:p-10 rounded-3xl shadow-2xl flex flex-col w-full max-w-md border border-white/10 relative overflow-hidden">
-                <div className="w-16 h-16 rounded-full bg-error/10 text-error flex items-center justify-center mb-6 mx-auto">
-                    <span className="material-symbols-outlined text-3xl">warning</span>
-                </div>
-                <h3 className="font-headline font-bold text-2xl text-on-surface text-center mb-2">
-                    {lang === "id" ? "Hapus " : "Delete "}<span className="text-primary">{deletingAsset.name}</span>?
-                </h3>
-                <p className="text-center text-sm font-medium text-on-surface-variant mb-8">
-                    {lang === "id" ? "Aset ini akan dihapus secara permanen. Mutasi historis terkait tidak akan terhapus." : "This asset will be permanently removed from your portfolio. Legacy transactions will remain intact."}
-                </p>
-                <div className="flex gap-4">
-                    <button onClick={() => setDeletingAsset(null)} className="flex-1 py-3 px-4 rounded-xl font-bold border-2 border-outline-variant/20 text-on-surface hover:bg-surface-container-high transition-colors cursor-pointer">
-                        {lang === "id" ? "Batal" : "Cancel"}
-                    </button>
-                    <button onClick={handleDeleteAsset} className="flex-1 py-3 px-4 rounded-xl font-bold bg-error text-white hover:bg-error/90 transition-colors shadow-lg shadow-error/20 cursor-pointer">
-                        {lang === "id" ? "Hapus Aset" : "Delete Asset"}
-                    </button>
-                </div>
-            </div>
-        </div>
+        <DeleteAssetModal 
+            assetName={deletingAsset.name}
+            onClose={() => setDeletingAsset(null)}
+            onConfirm={handleDeleteAsset}
+        />
       )}
     </>
   );

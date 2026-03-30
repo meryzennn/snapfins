@@ -123,7 +123,7 @@ const ANALYTICS_TRANSLATIONS = {
     overspending: "⚠ Spending exceeds income",
     noExpenses: "No expenses",
     avgMonthlyExpense: "Average Monthly Expense",
-    avgMonthlyExpenseSub: "Average across all 12 months",
+    avgMonthlyExpenseSub: (count: number) => `Average across ${count} month${count !== 1 ? 's' : ''}`,
     highestSpendingMonth: "Highest Spending Month",
     spentLabel: (v: string) => `${v} spent`,
     lowestSpendingMonth: "Lowest Spending Month",
@@ -189,7 +189,7 @@ const ANALYTICS_TRANSLATIONS = {
     overspending: "⚠ Pengeluaran melebihi pemasukan",
     noExpenses: "Belum ada pengeluaran",
     avgMonthlyExpense: "Rata-rata Pengeluaran Bulanan",
-    avgMonthlyExpenseSub: "Rata-rata dari 12 bulan",
+    avgMonthlyExpenseSub: (count: number) => `Rata-rata dari ${count} bulan`,
     highestSpendingMonth: "Bulan dengan Pengeluaran Tertinggi",
     spentLabel: (v: string) => `${v} dibelanjakan`,
     lowestSpendingMonth: "Bulan dengan Pengeluaran Terendah",
@@ -228,7 +228,9 @@ function parseTxAmount(tx: any, toCurrency: SupportedCurrency): number {
 
 function pct(a: number, b: number): string {
   if (b === 0) return "—";
-  return ((a / b) * 100).toFixed(1) + "%";
+  const p = (a / b) * 100;
+  if (p > 0 && p < 0.1) return "< 0.1%";
+  return p.toFixed(1) + "%";
 }
 
 function trendBadge(curr: number, prev: number, reverseSign = false) {
@@ -544,7 +546,13 @@ export default function AnalyticsPage() {
   const topExpenseCategory = expByCategory[0];
   const biggestAssetCategory = assetAllocationData[0];
   const liquidRatio = netWorth > 0 ? (liquidAssets / netWorth) * 100 : 0;
-  const avgMonthlyExpense = monthlyChartData.reduce((s, d) => s + d.expense, 0) / 12;
+  // Average Monthly Expense: Total for Year / Months with active spending
+  const { avgMonthlyExpense, activeMonthCount } = useMemo(() => {
+    const totalExpYear = monthlyChartData.reduce((s, d) => s + d.expense, 0);
+    const monthsWithExp = monthlyChartData.filter(d => d.expense > 0).length;
+    const count = monthsWithExp || 1; // Avoid divide by zero
+    return { avgMonthlyExpense: totalExpYear / count, activeMonthCount: monthsWithExp };
+  }, [monthlyChartData]);
 
   // Best / worst spending month
   const { bestMonth, worstMonth } = useMemo(() => {
@@ -863,42 +871,50 @@ export default function AnalyticsPage() {
         </div>
 
         {/* ── PART C: Insight Cards ─────────────────────────────────────── */}
-        <div>
+        <div className="bg-surface-container-lowest dark:bg-slate-900/60 border border-outline-variant/20 rounded-2xl p-5 shadow-sm">
           <SectionHeader title={t.keyInsights} sub={t.keyInsightsSub} />
           {!hasTransactions && !hasAssets ? (
             <EmptyState icon="lightbulb" title={t.noInsights} subtitle={t.noInsightsSub} />
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               {hasTransactions && (
                 <>
-                  <InsightCard
-                    icon="category"
-                    title={t.topSpending}
-                    value={topExpenseCategory ? topExpenseCategory.name : "—"}
-                    sub={topExpenseCategory ? `${fmt(topExpenseCategory.value)} (${pct(topExpenseCategory.value, totalExpense)})` : t.noExpensesRecorded}
-                    color="bg-rose-500"
-                  />
-                  <InsightCard
-                    icon="percent"
-                    title={t.savingsRateLabel}
-                    value={totalIncome > 0 ? `${savingsRate.toFixed(1)}%` : "—"}
-                    sub={totalIncome > 0 ? t.savedThisPeriod(fmt(netCashflow)) : t.noIncomeRecorded}
-                    color={savingsRate >= 0 ? "bg-emerald-500" : "bg-rose-500"}
-                  />
-                  <InsightCard
-                    icon="balance"
-                    title={t.incomeExpenseRatio}
-                    value={totalExpense > 0 ? `${(totalIncome / totalExpense).toFixed(2)}×` : "—"}
-                    sub={totalExpense > 0 ? (totalIncome >= totalExpense ? t.healthy : t.overspending) : t.noExpenses}
-                    color={totalIncome >= totalExpense ? "bg-emerald-500" : "bg-amber-500"}
-                  />
-                  <InsightCard
-                    icon="trending_down"
-                    title={t.avgMonthlyExpense}
-                    value={avgMonthlyExpense > 0 ? fmt(avgMonthlyExpense) : "—"}
-                    sub={t.avgMonthlyExpenseSub}
-                    color="bg-violet-500"
-                  />
+                  {topExpenseCategory && (
+                    <InsightCard
+                      icon="category"
+                      title={t.topSpending}
+                      value={topExpenseCategory.name}
+                      sub={`${fmt(topExpenseCategory.value)} (${pct(topExpenseCategory.value, totalExpense)})`}
+                      color="bg-rose-500"
+                    />
+                  )}
+                  {totalIncome > 0 && (
+                    <InsightCard
+                      icon="percent"
+                      title={t.savingsRateLabel}
+                      value={`${savingsRate.toFixed(1)}%`}
+                      sub={t.savedThisPeriod(fmt(netCashflow))}
+                      color={savingsRate >= 0 ? "bg-emerald-500" : "bg-rose-500"}
+                    />
+                  )}
+                  {totalExpense > 0 && totalIncome > 0 && (
+                    <InsightCard
+                      icon="balance"
+                      title={t.incomeExpenseRatio}
+                      value={`${(totalIncome / totalExpense).toFixed(2)}×`}
+                      sub={totalIncome >= totalExpense ? t.healthy : t.overspending}
+                      color={totalIncome >= totalExpense ? "bg-emerald-500" : "bg-amber-500"}
+                    />
+                  )}
+                  {avgMonthlyExpense > 0 && (
+                    <InsightCard
+                      icon="trending_down"
+                      title={t.avgMonthlyExpense}
+                      value={fmt(avgMonthlyExpense)}
+                      sub={t.avgMonthlyExpenseSub(activeMonthCount || 1)}
+                      color="bg-violet-500"
+                    />
+                  )}
                   {worstMonth && (
                     <InsightCard
                       icon="warning"
@@ -921,20 +937,24 @@ export default function AnalyticsPage() {
               )}
               {hasAssets && (
                 <>
-                  <InsightCard
-                    icon="pie_chart"
-                    title={t.largestAssetClass}
-                    value={biggestAssetCategory ? biggestAssetCategory.name : "—"}
-                    sub={biggestAssetCategory ? `${fmt(biggestAssetCategory.value)} (${pct(biggestAssetCategory.value, netWorth)})` : ""}
-                    color="bg-indigo-500"
-                  />
-                  <InsightCard
-                    icon="water_drop"
-                    title={t.liquidAssetRatio}
-                    value={netWorth > 0 ? `${liquidRatio.toFixed(1)}%` : "—"}
-                    sub={t.readilyAccessible(fmt(liquidAssets))}
-                    color="bg-blue-500"
-                  />
+                  {biggestAssetCategory && (
+                    <InsightCard
+                      icon="pie_chart"
+                      title={t.largestAssetClass}
+                      value={biggestAssetCategory.name}
+                      sub={`${fmt(biggestAssetCategory.value)} (${pct(biggestAssetCategory.value, netWorth)})`}
+                      color="bg-indigo-500"
+                    />
+                  )}
+                  {netWorth > 0 && (
+                    <InsightCard
+                      icon="water_drop"
+                      title={t.liquidAssetRatio}
+                      value={`${liquidRatio.toFixed(1)}%`}
+                      sub={t.readilyAccessible(fmt(liquidAssets))}
+                      color="bg-blue-500"
+                    />
+                  )}
                 </>
               )}
             </div>

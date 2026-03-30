@@ -1,12 +1,25 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useLang } from "@/hooks/useLang";
 import { type AssetCategory, ASSET_CATEGORIES, type ValuationMode } from "@/lib/assets";
 import { currencySymbols, type SupportedCurrency } from "@/lib/currency";
 import { useScrollLock } from "@/hooks/useScrollLock";
 
 type AcquisitionMode = "opening_balance" | "via_transaction";
+
+const UI_CATEGORIES = [
+  { name: "Cash", icon: "payments", label: "Cash", labelId: "Tunai" },
+  { name: "Bank", icon: "account_balance", label: "Bank Account", labelId: "Rekening Bank" },
+  { name: "E-wallet", icon: "account_balance_wallet", label: "E-Wallet", labelId: "Dompet Digital" },
+  { name: "Crypto", icon: "currency_bitcoin", label: "Crypto", labelId: "Kripto" },
+  { name: "Stock / ETF", icon: "monitoring", label: "Stocks / ETF", labelId: "Saham / ETF" },
+  { name: "Gold", icon: "home_storage", label: "Gold", labelId: "Emas" },
+  { name: "Property", icon: "home", label: "Property", labelId: "Properti" },
+  { name: "Vehicle", icon: "directions_car", label: "Vehicle", labelId: "Kendaraan" },
+  { name: "Other", icon: "more_horiz", label: "Other", labelId: "Lainnya" },
+];
 
 interface AddAssetModalProps {
   onClose: () => void;
@@ -21,6 +34,11 @@ export default function AddAssetModal({ onClose, onSubmit, cashAssets = [] }: Ad
   const [step, setStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Step 0: Acquisition mode
   const [acquisitionMode, setAcquisitionMode] = useState<AcquisitionMode>("opening_balance");
@@ -42,6 +60,26 @@ export default function AddAssetModal({ onClose, onSubmit, cashAssets = [] }: Ad
   // Step 3 extra: via_transaction source
   const [sourceAssetId, setSourceAssetId] = useState("");
   const [purchaseAmount, setPurchaseAmount] = useState("");
+  const [gramWeight, setGramWeight] = useState("");
+
+  // Auto-set symbol for Gold
+  useEffect(() => {
+    if (category === "Gold" && valuationMode === "market") {
+      setSymbol("GC=F"); // Use Gold Futures (more stable in Yahoo Chart API than XAUUSD=X)
+      if (!name) setName(lang === "id" ? "Emas Spot" : "Gold Spot");
+    }
+  }, [category, valuationMode, lang, name]);
+
+  // Gram to Ounce Converter
+  useEffect(() => {
+    if (category === "Gold" && gramWeight) {
+      const g = parseFloat(gramWeight);
+      if (!isNaN(g)) {
+        const oz = g * 0.0321507;
+        setQuantity(oz.toFixed(3));
+      }
+    }
+  }, [gramWeight, category]);
 
   const TOTAL_STEPS = 3; // 0-indexed: 0,1,2,3
 
@@ -143,19 +181,25 @@ export default function AddAssetModal({ onClose, onSubmit, cashAssets = [] }: Ad
     return lang === "id" ? "Simpan Saldo Awal" : "Save Opening Balance";
   };
 
-  return (
-    <div className="fixed inset-0 z-[110] flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-300">
-      <div className="bg-surface dark:bg-slate-900 p-6 sm:p-10 rounded-t-[32px] sm:rounded-[32px] shadow-2xl flex flex-col w-full max-w-xl max-h-[calc(100svh-2rem)] border border-white/10 relative overflow-hidden">
+  if (!mounted) return null;
+
+  return createPortal(
+    (
+    <div className="fixed inset-0 z-[100] flex items-start sm:items-center justify-center bg-black/70 backdrop-blur-md px-3 pt-6 pb-32 sm:p-6 animate-in fade-in duration-300 overflow-y-auto">
+      <div
+        className="bg-surface p-4 sm:p-10 rounded-3xl shadow-2xl flex flex-col w-full sm:max-w-xl max-h-[calc(100svh-180px)] sm:max-h-[85svh] border border-outline-variant/20 relative overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Glow effect */}
         <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -z-10 pointer-events-none" />
 
         {/* Modal Header */}
-        <div className="flex justify-between items-center mb-6 sm:mb-8 relative z-10 shrink-0">
+        <div className="flex justify-between items-center mb-3 sm:mb-8 relative z-10 shrink-0">
           <div>
-            <h3 className="font-headline font-bold text-2xl sm:text-3xl text-on-surface dark:text-white mb-1">
+            <h3 className="font-headline font-bold text-lg sm:text-3xl text-on-surface dark:text-white leading-tight">
               {lang === "id" ? "Tambah Aset" : "Add Asset"}
             </h3>
-            <p className="text-xs sm:text-sm text-on-surface-variant dark:text-gray-400 font-medium italic opacity-70">
+            <p className="text-[10px] sm:text-sm text-on-surface-variant dark:text-gray-400 font-medium italic opacity-70 mt-0.5 sm:mt-1">
               {stepLabel()}
             </p>
           </div>
@@ -168,7 +212,7 @@ export default function AddAssetModal({ onClose, onSubmit, cashAssets = [] }: Ad
         </div>
 
         {/* Scrollable Content Area */}
-        <div className="flex-1 overflow-y-auto pr-2 -mr-2 scrollbar-thin scrollbar-thumb-outline-variant/30 scrollbar-track-transparent">
+        <div className="flex-1 overflow-y-auto px-6 py-4 custom-scrollbar">
           {error && (
             <div className="mb-6 p-4 rounded-xl bg-error/10 text-error text-sm font-bold border border-error/20 flex items-center gap-3">
               <span className="material-symbols-outlined">error</span>
@@ -178,32 +222,15 @@ export default function AddAssetModal({ onClose, onSubmit, cashAssets = [] }: Ad
 
         {step === 0 && (
           <div className="flex flex-col gap-4 animate-in slide-in-from-bottom-4 duration-500">
-
-            {/* Decision guide */}
-            <div className="text-[11px] text-on-surface-variant/60 bg-surface-container-low/60 rounded-xl px-4 py-3 leading-relaxed border border-outline-variant/10">
-              {lang === "id" ? (
-                <>
-                  <span className="font-bold text-on-surface-variant">Panduan cepat: </span>
-                  Sudah punya uang/aset? → <b>Tambah Saldo yang Dimiliki</b>. Beli aset baru pakai uang yang ada? → <b>Beli / Pindahkan ke Aset</b>. Mau catat gaji atau pengeluaran? → gunakan <b>Manual Entry</b> di halaman Beranda.
-                </>
-              ) : (
-                <>
-                  <span className="font-bold text-on-surface-variant">Quick guide: </span>
-                  Already have money or assets? → <b>Add Existing Balance</b>. Buying a new asset with existing cash? → <b>Buy / Move Into Asset</b>. Recording salary or bills? → use <b>Manual Entry</b> on the Dashboard.
-                </>
-              )}
-            </div>
-
-            {/* Option A: Add Existing Balance */}
             <button
               onClick={() => setAcquisitionMode("opening_balance")}
-              className={`flex items-start gap-4 p-5 rounded-2xl border-2 transition-all duration-300 cursor-pointer text-left ${
+              className={`flex items-start gap-3 sm:gap-4 p-3 sm:p-5 rounded-2xl border-2 transition-all duration-300 cursor-pointer text-left ${
                 acquisitionMode === "opening_balance"
                   ? "border-primary bg-primary/5 shadow-[0_0_15px_rgba(53,37,205,0.15)]"
                   : "border-outline-variant/20 bg-surface-container-low dark:bg-slate-800/50 hover:border-outline-variant/50"
               }`}
             >
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${acquisitionMode === "opening_balance" ? "bg-primary text-white" : "bg-outline-variant/20 text-on-surface"}`}>
+              <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${acquisitionMode === "opening_balance" ? "bg-primary text-white" : "bg-outline-variant/20 text-on-surface"}`}>
                 <span className="material-symbols-outlined text-lg">account_balance</span>
               </div>
               <div>
@@ -215,30 +242,18 @@ export default function AddAssetModal({ onClose, onSubmit, cashAssets = [] }: Ad
                     ? "Untuk uang atau aset yang sudah Anda miliki sebelum menggunakan SnapFins."
                     : "For money or assets you already had before using SnapFins."}
                 </span>
-                <span className="text-[10px] text-on-surface-variant/50">
-                  {lang === "id"
-                    ? "✓ Menambah Total Aset & Net Worth  ·  ✗ Bukan pendapatan bulanan"
-                    : "✓ Increases Total Assets & Net Worth  ·  ✗ Not monthly income"}
-                </span>
-                {acquisitionMode === "opening_balance" && (
-                  <span className="mt-2 inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-primary bg-primary/10 px-2 py-0.5 rounded-md">
-                    <span className="material-symbols-outlined text-[10px]">check</span>
-                    {lang === "id" ? "Disarankan untuk mulai" : "Recommended to start"}
-                  </span>
-                )}
               </div>
             </button>
 
-            {/* Option B: Buy / Move Into Asset */}
             <button
               onClick={() => setAcquisitionMode("via_transaction")}
-              className={`flex items-start gap-4 p-5 rounded-2xl border-2 transition-all duration-300 cursor-pointer text-left ${
+              className={`flex items-start gap-3 sm:gap-4 p-3 sm:p-5 rounded-2xl border-2 transition-all duration-300 cursor-pointer text-left ${
                 acquisitionMode === "via_transaction"
                   ? "border-secondary bg-secondary/5 shadow-[0_0_15px_rgba(16,185,129,0.15)]"
                   : "border-outline-variant/20 bg-surface-container-low dark:bg-slate-800/50 hover:border-outline-variant/50"
               }`}
             >
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${acquisitionMode === "via_transaction" ? "bg-secondary text-white" : "bg-outline-variant/20 text-on-surface"}`}>
+              <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${acquisitionMode === "via_transaction" ? "bg-secondary text-white" : "bg-outline-variant/20 text-on-surface"}`}>
                 <span className="material-symbols-outlined text-lg">swap_horiz</span>
               </div>
               <div>
@@ -247,97 +262,83 @@ export default function AddAssetModal({ onClose, onSubmit, cashAssets = [] }: Ad
                 </span>
                 <span className="text-sm font-medium text-on-surface-variant block mb-1.5">
                   {lang === "id"
-                    ? "Gunakan ini saat membeli saham, kripto, atau aset lain menggunakan uang yang ada di akun bank/kas Anda."
-                    : "Use this when you buy crypto, stocks, or other assets using money from an existing cash/bank account."}
+                    ? "Catat pembelian aset baru menggunakan dana dari akun kas/bank Anda."
+                    : "Record a new asset purchase using funds from your cash/bank account."}
                 </span>
                 <span className="text-[10px] text-on-surface-variant/50">
                   {lang === "id"
-                    ? "✓ Memotong saldo akun asal  ·  ✗ Bukan pendapatan  ·  ✗ Net worth tidak berubah banyak"
-                    : "✓ Deducts source account  ·  ✗ Not income  ·  ✗ Net worth stays roughly the same"}
+                    ? "✓ Terhubung ke pengeluaran  ·  ✓ Saldo kas otomatis berkurang"
+                    : "✓ Connected to spending  ·  ✓ Cash balance auto-reduces"}
                 </span>
               </div>
             </button>
-
-            <p className="text-[11px] text-on-surface-variant/40 text-center pt-1 mb-4">
-              {lang === "id"
-                ? "💡 Pendapatan/pengeluaran rutin? Pakai Manual Entry di halaman Beranda."
-                : "💡 Got salary or bills? Use Manual Entry on the Dashboard instead."}
-            </p>
           </div>
         )}
 
-        {/* STEP 1: Category */}
         {step === 1 && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 animate-in slide-in-from-bottom-4 duration-500 pb-4">
-            {ASSET_CATEGORIES.map((cat) => (
+          <div className="grid grid-cols-2 gap-3 animate-in slide-in-from-right-4 duration-500">
+            {UI_CATEGORIES.map((cat) => (
               <button
-                key={cat}
-                onClick={() => setCategory(cat)}
-                className={`flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all duration-300 cursor-pointer ${
-                  category === cat
-                    ? "border-primary bg-primary/5 text-primary shadow-[0_0_15px_rgba(53,37,205,0.15)]"
-                    : "border-outline-variant/20 bg-surface-container-low dark:bg-slate-800/50 hover:border-outline-variant/50 text-on-surface"
+                key={cat.name}
+                onClick={() => setCategory(cat.name as AssetCategory)}
+                className={`p-3 sm:p-4 rounded-xl border-2 text-left transition-all cursor-pointer ${
+                  category === cat.name
+                    ? "border-primary bg-primary/5 shadow-md"
+                    : "border-outline-variant/10 bg-surface-container-low hover:border-outline-variant/30"
                 }`}
               >
-                <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-3 ${category === cat ? "bg-primary/10" : "bg-outline-variant/10"}`}>
-                  <span className="material-symbols-outlined text-2xl">
-                    {cat === "Cash" ? "payments" : cat === "Bank" ? "account_balance" : cat === "E-wallet" ? "account_balance_wallet" : cat === "Crypto" ? "currency_bitcoin" : cat === "Stock / ETF" ? "monitoring" : cat === "Gold" ? "diamond" : cat === "Property" ? "real_estate_agent" : cat === "Vehicle" ? "directions_car" : "category"}
-                  </span>
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center mb-2 ${
+                  category === cat.name ? "bg-primary text-white" : "bg-outline-variant/10 text-on-surface-variant"
+                }`}>
+                  <span className="material-symbols-outlined text-base">{cat.icon}</span>
                 </div>
-                <span className="font-bold text-xs uppercase tracking-wider text-center">{cat}</span>
+                <span className={`text-[11px] sm:text-xs font-black uppercase tracking-widest ${
+                  category === cat.name ? "text-primary" : "text-on-surface"
+                }`}>
+                  {lang === "id" ? cat.labelId : cat.label}
+                </span>
               </button>
             ))}
           </div>
         )}
 
-        {/* STEP 2: Valuation Mode */}
         {step === 2 && (
-          <div className="flex flex-col gap-4 animate-in slide-in-from-bottom-4 duration-500">
+          <div className="flex flex-col gap-4 animate-in slide-in-from-right-4 duration-500">
             <button
               onClick={() => setValuationMode("manual")}
-              className={`flex items-start gap-4 p-5 rounded-2xl border-2 transition-all duration-300 cursor-pointer text-left ${
+              className={`flex items-center gap-4 p-5 rounded-2xl border-2 transition-all cursor-pointer text-left ${
                 valuationMode === "manual"
-                  ? "border-primary bg-primary/5 shadow-[0_0_15px_rgba(53,37,205,0.15)]"
-                  : "border-outline-variant/20 bg-surface-container-low dark:bg-slate-800/50 hover:border-outline-variant/50"
+                  ? "border-primary bg-primary/5"
+                  : "border-outline-variant/10 bg-surface-container-low hover:border-outline-variant/30"
               }`}
             >
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${valuationMode === "manual" ? "bg-primary text-white" : "bg-outline-variant/20 text-on-surface"}`}>
-                <span className="material-symbols-outlined text-lg">edit_square</span>
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${valuationMode === "manual" ? "bg-primary text-white" : "bg-outline-variant/10"}`}>
+                <span className="material-symbols-outlined">edit_note</span>
               </div>
               <div>
-                <span className={`font-bold text-base block mb-1 ${valuationMode === "manual" ? "text-primary" : "text-on-surface"}`}>
-                  {lang === "id" ? "Input Manual" : "Manual Value"}
-                </span>
-                <span className="text-sm font-medium text-on-surface-variant">
-                  {lang === "id" ? "Anda yang menentukan nilainya secara spesifik." : "You explicitly define the total current value."}
-                </span>
+                <span className="font-bold block text-on-surface">{lang === "id" ? "Update Manual" : "Manual Update"}</span>
+                <span className="text-xs text-on-surface-variant">{lang === "id" ? "Anda memasukkan total nilainya sendiri" : "You enter the total value yourself"}</span>
               </div>
             </button>
 
-            {(["Crypto", "Stock / ETF"].includes(category)) && (
+            {["Crypto", "Stock / ETF", "Gold"].includes(category) ? (
               <button
                 onClick={() => setValuationMode("market")}
-                className={`flex items-start gap-4 p-5 rounded-2xl border-2 transition-all duration-300 cursor-pointer text-left ${
+                className={`flex items-center gap-4 p-5 rounded-2xl border-2 transition-all cursor-pointer text-left ${
                   valuationMode === "market"
-                    ? "border-secondary bg-secondary/5 shadow-[0_0_15px_rgba(16,185,129,0.15)]"
-                    : "border-outline-variant/20 bg-surface-container-low dark:bg-slate-800/50 hover:border-outline-variant/50"
+                    ? "border-primary bg-primary/5"
+                    : "border-outline-variant/10 bg-surface-container-low hover:border-outline-variant/30"
                 }`}
               >
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${valuationMode === "market" ? "bg-secondary text-white" : "bg-outline-variant/20 text-on-surface"}`}>
-                  <span className="material-symbols-outlined text-lg">query_stats</span>
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${valuationMode === "market" ? "bg-primary text-white" : "bg-outline-variant/10"}`}>
+                  <span className="material-symbols-outlined">show_chart</span>
                 </div>
                 <div>
-                  <span className={`font-bold text-base block mb-1 ${valuationMode === "market" ? "text-secondary" : "text-on-surface"}`}>
-                    {lang === "id" ? "Harga Pasar Otomatis" : "Auto Market Price"}
-                  </span>
-                  <span className="text-sm font-medium text-on-surface-variant">
-                    {lang === "id" ? "Nilai dihitung otomatis via Harga Pasar × Kuantitas." : "Value automatically derived from Live Market Price × Quantity."}
-                  </span>
+                  <span className="font-bold block text-on-surface">{lang === "id" ? "Harga Pasar (Live)" : "Market Price (Live)"}</span>
+                  <span className="text-xs text-on-surface-variant">{lang === "id" ? "Otomatis update sesuai harga real-time" : "Auto-updates with real-time market data"}</span>
                 </div>
               </button>
-            )}
-
-            {(["Bank", "E-wallet", "Cash"].includes(category)) && (
+            ) : (
               <button disabled className="flex items-start gap-4 p-5 rounded-2xl border-2 border-outline-variant/10 bg-surface-container-low/50 dark:bg-slate-800/30 opacity-60 cursor-not-allowed text-left relative overflow-hidden">
                 <div className="absolute top-3 right-4">
                   <span className="text-[9px] uppercase tracking-widest font-black bg-outline-variant/20 text-on-surface-variant px-2 py-1 rounded-md">Coming Soon</span>
@@ -380,26 +381,41 @@ export default function AddAssetModal({ onClose, onSubmit, cashAssets = [] }: Ad
               {/* Market fields */}
               {valuationMode === "market" && (
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="flex flex-col gap-2">
-                    <label className="block text-xs font-black uppercase tracking-widest text-on-surface-variant">
-                      Symbol/Ticker <span className="text-error">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={symbol}
-                      onChange={e => setSymbol(e.target.value)}
-                      className="w-full uppercase bg-surface-container-low dark:bg-slate-800 border-2 border-outline-variant/20 focus:border-primary rounded-xl px-4 py-3 text-on-surface font-bold placeholder:text-outline/50 transition-colors outline-none"
-                      placeholder={category === "Crypto" ? "BTC" : "NASDAQ:AAPL or IDX:BBCA"}
-                      maxLength={20}
-                    />
-                    {category === "Stock / ETF" && (
-                      <p className="text-[10px] text-on-surface-variant mt-1.5 opacity-80 leading-relaxed">
-                        Tip: For US stocks use <b>AAPL</b> or <b>NASDAQ:AAPL</b>. <br />
-                        For Int'l use Prefix, e.g. <b>IDX:BBCA</b>.
+                  {category === "Gold" ? (
+                    <div className="flex flex-col gap-2">
+                      <label className="block text-xs font-black uppercase tracking-widest text-on-surface-variant">
+                        Symbol/Ticker <span className="text-error">*</span>
+                      </label>
+                      <div className="w-full bg-surface-container-low dark:bg-slate-800 border-2 border-primary/20 rounded-xl px-4 py-3 text-on-surface font-bold flex items-center gap-2">
+                        <span className="material-symbols-outlined text-sm text-primary">verified</span>
+                        GC=F (Gold Spot)
+                      </div>
+                      <p className="text-[10px] text-on-surface-variant mt-1.5 opacity-80 leading-relaxed italic">
+                        {lang === "id" ? "Terhubung ke harga emas dunia secara real-time." : "Connected to real-time global gold spot prices."}
                       </p>
-                    )}
-                  </div>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col gap-2">
+                      <label className="block text-xs font-black uppercase tracking-widest text-on-surface-variant">
+                        Symbol/Ticker <span className="text-error">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={symbol}
+                        onChange={e => setSymbol(e.target.value)}
+                        className="w-full uppercase bg-surface-container-low dark:bg-slate-800 border-2 border-outline-variant/20 focus:border-primary rounded-xl px-4 py-3 text-on-surface font-bold placeholder:text-outline/50 transition-colors outline-none"
+                        placeholder={category === "Crypto" ? "BTC" : "NASDAQ:AAPL or IDX:BBCA"}
+                        maxLength={20}
+                      />
+                      {category === "Stock / ETF" && (
+                        <p className="text-[10px] text-on-surface-variant mt-1.5 opacity-80 leading-relaxed">
+                          Tip: For US stocks use <b>AAPL</b> or <b>NASDAQ:AAPL</b>. <br />
+                          For Int'l use Prefix, e.g. <b>IDX:BBCA</b>.
+                        </p>
+                      )}
+                    </div>
+                  )}
                   <div className="flex flex-col gap-2">
                     <label className="block text-xs font-black uppercase tracking-widest text-on-surface-variant">
                       {lang === "id" ? "Kuantitas" : "Quantity"} <span className="text-error">*</span>
@@ -413,6 +429,33 @@ export default function AddAssetModal({ onClose, onSubmit, cashAssets = [] }: Ad
                       className="w-full bg-surface-container-low dark:bg-slate-800 border-2 border-outline-variant/20 focus:border-primary rounded-xl px-4 py-3 text-on-surface font-bold tabular-nums placeholder:text-outline/50 transition-colors outline-none"
                       placeholder="0"
                     />
+                    {category === "Gold" && (
+                      <div className="mt-2 p-3 bg-primary/5 border border-primary/20 rounded-xl">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-[10px] font-black uppercase tracking-tighter text-primary">
+                            {lang === "id" ? "PENGUBAH GRAM KE ONS" : "GRAM TO OUNCE CONVERTER"}
+                          </span>
+                          <span className="material-symbols-outlined text-xs text-primary">calculate</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            value={gramWeight}
+                            onChange={(e) => setGramWeight(e.target.value)}
+                            className="w-full bg-transparent border-b border-primary/30 text-xs font-bold text-on-surface outline-none focus:border-primary"
+                            placeholder="Grams (e.g. 10)"
+                          />
+                          <span className="text-[10px] font-bold text-on-surface-variant shrink-0">
+                            → {quantity || "0"} Oz
+                          </span>
+                        </div>
+                        <p className="text-[9px] text-on-surface-variant/70 mt-1">
+                          {lang === "id" 
+                            ? "* 1 gram ≈ 0.03215 ons troy. Kuantitas akan otomatis diperbarui." 
+                            : "* 1 gram ≈ 0.03215 oz troy. Quantity updates automatically."}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -537,7 +580,7 @@ export default function AddAssetModal({ onClose, onSubmit, cashAssets = [] }: Ad
         </div>
 
         {/* Footer Navigation */}
-        <div className="mt-6 sm:mt-10 flex justify-between items-center border-t border-outline-variant/10 pt-6 shrink-0 relative z-10">
+        <div className="mt-3 sm:mt-10 flex justify-between items-center border-t border-outline-variant/10 pt-3 sm:pt-6 shrink-0 relative z-10">
           {step > 0 ? (
             <button
               onClick={handlePrev}
@@ -571,5 +614,7 @@ export default function AddAssetModal({ onClose, onSubmit, cashAssets = [] }: Ad
         </div>
       </div>
     </div>
+    ),
+    document.body
   );
 }

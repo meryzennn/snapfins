@@ -59,10 +59,19 @@ export default function TutorialPage() {
 
       {/* Header / Nav */}
       <nav className="sticky top-0 z-50 w-full backdrop-blur-md bg-white/70 dark:bg-slate-950/70 border-b border-outline-variant/10">
-        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 group">
-             <span className="text-xl font-headline font-extrabold tracking-tighter text-indigo-700 dark:text-indigo-300 group-hover:text-primary transition-colors">SnapFins</span>
-          </Link>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-20 flex items-center justify-between">
+          <div className="flex items-center gap-2 sm:gap-4">
+            <Link 
+              href="/" 
+              className="w-10 h-10 rounded-xl flex items-center justify-center bg-surface-container-high dark:bg-slate-900 border border-outline-variant/20 hover:border-primary/50 text-on-surface-variant hover:text-primary transition-all active:scale-90 group/back"
+              aria-label="Back to landing"
+            >
+              <span className="material-symbols-outlined text-[20px] group-hover/back:-translate-x-0.5 transition-transform">arrow_back</span>
+            </Link>
+            <Link href="/" className="flex items-center gap-2 group">
+               <span className="text-xl font-headline font-extrabold tracking-tighter text-indigo-700 dark:text-indigo-300 group-hover:text-primary transition-colors">SnapFins</span>
+            </Link>
+          </div>
           <div className="flex items-center gap-6">
             
             {/* Toggles */}
@@ -88,28 +97,6 @@ export default function TutorialPage() {
         </div>
       </nav>
 
-      {/* Floating Back Arrow — sticky left center */}
-      <Link
-        href="/"
-        aria-label="Back to Home"
-        className="fixed left-4 top-6 z-[60]
-          w-11 h-11 rounded-full
-          flex items-center justify-center
-          bg-white/80 dark:bg-slate-900/80
-          backdrop-blur-md
-          border border-outline-variant/20
-          shadow-lg shadow-black/10
-          hover:shadow-primary/30 hover:shadow-xl
-          hover:border-primary/40
-          hover:scale-110
-          active:scale-90
-          transition-all duration-200 ease-out
-          group/back"
-      >
-        <span className="material-symbols-outlined text-[20px] text-on-surface-variant group-hover/back:text-primary group-hover/back:-translate-x-0.5 transition-all duration-150">
-          arrow_back
-        </span>
-      </Link>
 
       <main className="relative">
         {/* Section 1: Introduction Section (Hero) */}
@@ -134,21 +121,21 @@ export default function TutorialPage() {
           <div className="max-w-5xl mx-auto grid gap-12 sm:gap-16">
             
             {/* Step 1 */}
-            <section className="relative group p-6 sm:p-10 rounded-[40px] bg-white dark:bg-slate-900 shadow-2xl shadow-black/5 dark:shadow-black/20 border border-outline-variant/10 hover:border-primary/30 transition-all duration-500 animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
-              <div className="flex flex-col md:flex-row gap-10 items-center">
+            <section className="relative group p-5 sm:p-10 rounded-[32px] sm:rounded-[40px] bg-white dark:bg-slate-900 shadow-2xl shadow-black/5 dark:shadow-black/20 border border-outline-variant/10 hover:border-primary/30 transition-all duration-500 animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
+              <div className="flex flex-col md:flex-row gap-8 sm:gap-10 items-center">
                 <div className="flex-1">
-                  <div className="w-14 h-14 bg-primary/10 text-primary rounded-2xl flex items-center justify-center mb-8 shadow-inner shadow-primary/20">
-                    <span className="material-symbols-outlined text-3xl">architecture</span>
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 bg-primary/10 text-primary rounded-2xl flex items-center justify-center mb-6 sm:mb-8 shadow-inner shadow-primary/20">
+                    <span className="material-symbols-outlined text-2xl sm:text-3xl">architecture</span>
                   </div>
-                  <h2 className="font-headline font-bold text-3xl text-on-surface dark:text-white mb-6">
+                  <h2 className="font-headline font-bold text-2xl sm:text-3xl text-on-surface dark:text-white mb-4 sm:mb-6">
                     {t('tutorialSection1Title')}
                   </h2>
-                  <p className="text-on-surface-variant dark:text-gray-400 text-lg leading-relaxed font-medium">
+                  <p className="text-on-surface-variant dark:text-gray-400 text-base sm:text-lg leading-relaxed font-medium">
                     {t('tutorialSection1Desc')}
                   </p>
                 </div>
                 <div className="flex-1 w-full flex justify-center">
-                   <div className="relative w-full max-w-[300px] aspect-square rounded-3xl bg-surface-container-low dark:bg-slate-800 border-2 border-primary/20 p-6 shadow-2xl rotate-3 group-hover:rotate-0 transition-transform duration-700 overflow-hidden">
+                   <div className="relative w-full max-w-[260px] sm:max-w-[300px] aspect-square rounded-3xl bg-surface-container-low dark:bg-slate-800 border-2 border-primary/20 p-4 sm:p-6 shadow-2xl rotate-3 group-hover:rotate-0 transition-transform duration-700 overflow-hidden">
                       <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent"></div>
                       <div className="relative z-10 space-y-4">
                          <div className="h-6 w-3/4 bg-primary/20 rounded-full animate-pulse"></div>
@@ -163,21 +150,21 @@ export default function TutorialPage() {
             </section>
 
             {/* Step 2 */}
-            <section className="relative group p-6 sm:p-10 rounded-[40px] bg-white dark:bg-slate-900 shadow-2xl shadow-black/5 dark:shadow-black/20 border border-outline-variant/10 hover:border-emerald-500/30 transition-all duration-500 animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
-              <div className="flex flex-col md:flex-row-reverse gap-10 items-center">
+            <section className="relative group p-5 sm:p-10 rounded-[32px] sm:rounded-[40px] bg-white dark:bg-slate-900 shadow-2xl shadow-black/5 dark:shadow-black/20 border border-outline-variant/10 hover:border-emerald-500/30 transition-all duration-500 animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
+              <div className="flex flex-col md:flex-row-reverse gap-8 sm:gap-10 items-center">
                 <div className="flex-1">
-                  <div className="w-14 h-14 bg-emerald-500/10 text-emerald-500 rounded-2xl flex items-center justify-center mb-8 shadow-inner shadow-emerald-500/20">
-                    <span className="material-symbols-outlined text-3xl">photo_camera</span>
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 bg-emerald-500/10 text-emerald-500 rounded-2xl flex items-center justify-center mb-6 sm:mb-8 shadow-inner shadow-emerald-500/20">
+                    <span className="material-symbols-outlined text-2xl sm:text-3xl">photo_camera</span>
                   </div>
-                  <h2 className="font-headline font-bold text-3xl text-on-surface dark:text-white mb-6">
+                  <h2 className="font-headline font-bold text-2xl sm:text-3xl text-on-surface dark:text-white mb-4 sm:mb-6">
                     {t('tutorialSection2Title')}
                   </h2>
-                  <p className="text-on-surface-variant dark:text-gray-400 text-lg leading-relaxed font-medium">
+                  <p className="text-on-surface-variant dark:text-gray-400 text-base sm:text-lg leading-relaxed font-medium">
                     {t('tutorialSection2Desc')}
                   </p>
                 </div>
                 <div className="flex-1 w-full flex justify-center">
-                   <div className="relative w-full max-w-[300px] aspect-square rounded-3xl bg-surface-container-low dark:bg-slate-800 border-2 border-emerald-500/20 p-6 shadow-2xl -rotate-3 group-hover:rotate-0 transition-transform duration-700 overflow-hidden">
+                   <div className="relative w-full max-w-[260px] sm:max-w-[300px] aspect-square rounded-3xl bg-surface-container-low dark:bg-slate-800 border-2 border-emerald-500/20 p-4 sm:p-6 shadow-2xl -rotate-3 group-hover:rotate-0 transition-transform duration-700 overflow-hidden">
                       <div className="absolute inset-0 bg-gradient-to-bl from-emerald-500/10 to-transparent"></div>
                       <div className="relative z-10 flex flex-col items-center justify-center h-full">
                          <div className="w-20 h-20 bg-emerald-500/20 rounded-full flex items-center justify-center animate-bounce">
@@ -191,21 +178,21 @@ export default function TutorialPage() {
             </section>
 
             {/* Step 3 */}
-            <section className="relative group p-6 sm:p-10 rounded-[40px] bg-white dark:bg-slate-900 shadow-2xl shadow-black/5 dark:shadow-black/20 border border-outline-variant/10 hover:border-indigo-500/30 transition-all duration-500 animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
-              <div className="flex flex-col md:flex-row gap-10 items-center">
+            <section className="relative group p-5 sm:p-10 rounded-[32px] sm:rounded-[40px] bg-white dark:bg-slate-900 shadow-2xl shadow-black/5 dark:shadow-black/20 border border-outline-variant/10 hover:border-indigo-500/30 transition-all duration-500 animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
+              <div className="flex flex-col md:flex-row gap-8 sm:gap-10 items-center">
                 <div className="flex-1">
-                  <div className="w-14 h-14 bg-indigo-500/10 text-indigo-500 rounded-2xl flex items-center justify-center mb-8 shadow-inner shadow-indigo-500/20">
-                    <span className="material-symbols-outlined text-3xl">grid_view</span>
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 bg-indigo-500/10 text-indigo-500 rounded-2xl flex items-center justify-center mb-6 sm:mb-8 shadow-inner shadow-indigo-500/20">
+                    <span className="material-symbols-outlined text-2xl sm:text-3xl">grid_view</span>
                   </div>
-                  <h2 className="font-headline font-bold text-3xl text-on-surface dark:text-white mb-6">
+                  <h2 className="font-headline font-bold text-2xl sm:text-3xl text-on-surface dark:text-white mb-4 sm:mb-6">
                     {t('tutorialSection3Title')}
                   </h2>
-                  <p className="text-on-surface-variant dark:text-gray-400 text-lg leading-relaxed font-medium">
+                  <p className="text-on-surface-variant dark:text-gray-400 text-base sm:text-lg leading-relaxed font-medium">
                     {t('tutorialSection3Desc')}
                   </p>
                 </div>
                 <div className="flex-1 w-full flex justify-center">
-                   <div className="relative w-full max-w-[300px] aspect-square rounded-3xl bg-surface-container-low dark:bg-slate-800 border-2 border-indigo-500/20 p-2 shadow-2xl rotate-1 group-hover:rotate-0 transition-transform duration-700">
+                   <div className="relative w-full max-w-[260px] sm:max-w-[300px] aspect-square rounded-3xl bg-surface-container-low dark:bg-slate-800 border-2 border-indigo-500/20 p-2 shadow-2xl rotate-1 group-hover:rotate-0 transition-transform duration-700">
                       <div className="grid grid-cols-2 gap-2 h-full">
                          <div className="bg-indigo-500/10 rounded-xl"></div>
                          <div className="bg-indigo-500/20 rounded-xl"></div>
@@ -218,21 +205,21 @@ export default function TutorialPage() {
             </section>
 
             {/* Step 4 */}
-            <section className="relative group p-6 sm:p-10 rounded-[40px] bg-white dark:bg-slate-900 shadow-2xl shadow-black/5 dark:shadow-black/20 border border-outline-variant/10 hover:border-rose-500/30 transition-all duration-500 animate-fade-in-up" style={{ animationDelay: '0.4s' }}>
-              <div className="flex flex-col md:flex-row-reverse gap-10 items-center">
+            <section className="relative group p-5 sm:p-10 rounded-[32px] sm:rounded-[40px] bg-white dark:bg-slate-900 shadow-2xl shadow-black/5 dark:shadow-black/20 border border-outline-variant/10 hover:border-rose-500/30 transition-all duration-500 animate-fade-in-up" style={{ animationDelay: '0.4s' }}>
+              <div className="flex flex-col md:flex-row-reverse gap-8 sm:gap-10 items-center">
                 <div className="flex-1">
-                  <div className="w-14 h-14 bg-rose-500/10 text-rose-500 rounded-2xl flex items-center justify-center mb-8 shadow-inner shadow-rose-500/20">
-                    <span className="material-symbols-outlined text-3xl">query_stats</span>
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 bg-rose-500/10 text-rose-500 rounded-2xl flex items-center justify-center mb-6 sm:mb-8 shadow-inner shadow-rose-500/20">
+                    <span className="material-symbols-outlined text-2xl sm:text-3xl">query_stats</span>
                   </div>
-                  <h2 className="font-headline font-bold text-3xl text-on-surface dark:text-white mb-6">
+                  <h2 className="font-headline font-bold text-2xl sm:text-3xl text-on-surface dark:text-white mb-4 sm:mb-6">
                     {t('tutorialSection4Title')}
                   </h2>
-                  <p className="text-on-surface-variant dark:text-gray-400 text-lg leading-relaxed font-medium">
+                  <p className="text-on-surface-variant dark:text-gray-400 text-base sm:text-lg leading-relaxed font-medium">
                     {t('tutorialSection4Desc')}
                   </p>
                 </div>
                 <div className="flex-1 w-full flex justify-center">
-                   <div className="relative w-full max-w-[300px] aspect-square rounded-3xl bg-surface-container-low dark:bg-slate-800 border-2 border-rose-500/20 p-6 shadow-2xl -rotate-2 group-hover:rotate-0 transition-transform duration-700">
+                   <div className="relative w-full max-w-[260px] sm:max-w-[300px] aspect-square rounded-3xl bg-surface-container-low dark:bg-slate-800 border-2 border-rose-500/20 p-4 sm:p-6 shadow-2xl -rotate-2 group-hover:rotate-0 transition-transform duration-700">
                       <div className="h-full flex flex-col justify-end">
                          <div className="flex items-end gap-2 h-32">
                             <div className="w-full bg-rose-500/20 h-10 rounded-t-lg"></div>
