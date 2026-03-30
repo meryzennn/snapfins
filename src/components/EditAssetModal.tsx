@@ -42,10 +42,18 @@ export default function EditAssetModal({ initialData, onClose, onSubmit }: EditA
   
   // Format initial manual value for the text input
   const formattedInitialValue = useMemo(() => {
+    // raw values from DB
     const val = initialData.manual_value ?? (initialData.valuation_mode === "manual" ? initialData.current_value : null);
-    if (val === null || val === undefined) return "";
+    if (val === null || val === undefined || val === "") return "";
+    
+    const num = Number(val);
+    if (isNaN(num)) return "";
+
     const locale = initialCurrency === "IDR" ? "id-ID" : "en-US";
-    return new Intl.NumberFormat(locale).format(Number(val));
+    return new Intl.NumberFormat(locale, {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: initialCurrency === "IDR" ? 0 : 2
+    }).format(num);
   }, [initialData.manual_value, initialData.current_value, initialData.valuation_mode, initialCurrency]);
 
   const [category, setCategory] = useState<AssetCategory>(initialData.category as AssetCategory || "Cash");
@@ -102,8 +110,16 @@ export default function EditAssetModal({ initialData, onClose, onSubmit }: EditA
       let exchange = null;
 
       if (valuationMode === "manual") {
-          const raw = manualValue.replace(/[^0-9]/g, "");
-          const m = raw ? parseInt(raw, 10) : 0;
+          // Parse localized number (handle dots/commas based on currency)
+          // For IDR: 50.000 -> 50000
+          // For USD: 50,000.50 -> 50000.5
+          let raw = manualValue;
+          if (currency === "IDR") {
+            raw = raw.replace(/\./g, "").replace(/,/g, "."); 
+          } else {
+            raw = raw.replace(/,/g, ""); 
+          }
+          const m = parseFloat(raw);
           if (isNaN(m)) throw new Error("Invalid manual value");
           finalManualValue = m;
           finalCurrentValue = m;
@@ -114,8 +130,6 @@ export default function EditAssetModal({ initialData, onClose, onSubmit }: EditA
           
           if (!symbol.trim()) throw new Error("Symbol required for market valuation");
           
-          // Only fetch new price if symbol changed, otherwise can be optimized.
-          // But actually, safest to always fetch a fresh quote when editing a market asset to ensure it's still wildly valid and update current_value accurately.
           const type = category === "Crypto" ? "crypto" : "stock";
           const res = await fetch(`/api/prices?symbol=${symbol}&type=${type}`);
           const data = await res.json();
@@ -131,7 +145,6 @@ export default function EditAssetModal({ initialData, onClose, onSubmit }: EditA
       }
 
       await onSubmit({
-        // Do not update ID here, that should be handled by the parent
         name,
         category,
         valuation_mode: valuationMode,
@@ -166,10 +179,8 @@ export default function EditAssetModal({ initialData, onClose, onSubmit }: EditA
         className="bg-surface dark:bg-slate-900 p-4 sm:p-10 rounded-3xl shadow-2xl flex flex-col w-full sm:max-w-xl max-h-[calc(100svh-180px)] sm:max-h-[85svh] border border-white/10 relative overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Glow effect */}
         <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -z-10 pointer-events-none" />
 
-        {/* Modal Header */}
         <div className="flex justify-between items-center mb-3 sm:mb-8 relative z-10 shrink-0">
           <div>
              <div className="flex items-center gap-2 sm:gap-3 mb-0.5 sm:mb-1">
@@ -193,7 +204,6 @@ export default function EditAssetModal({ initialData, onClose, onSubmit }: EditA
         </div>
 
 
-        {/* Scrollable Content Area */}
         <div className="flex-1 overflow-y-auto pr-1 -mr-1 scrollbar-thin scrollbar-thumb-outline-variant/30 scrollbar-track-transparent">
           {error && (
               <div className="mb-6 p-4 rounded-xl bg-error/10 text-error text-sm font-bold border border-error/20 flex items-center gap-3">
@@ -202,7 +212,6 @@ export default function EditAssetModal({ initialData, onClose, onSubmit }: EditA
               </div>
           )}
 
-          {/* STEP 1: Category */}
           {step === 1 && (
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 animate-in slide-in-from-right-4 duration-500 overflow-y-auto pb-2 scrollbar-thin">
               {UI_CATEGORIES.map((cat) => (
@@ -226,7 +235,6 @@ export default function EditAssetModal({ initialData, onClose, onSubmit }: EditA
             </div>
           )}
 
-          {/* STEP 2: Valuation Mode */}
           {step === 2 && (
             <div className="flex flex-col gap-4 animate-in slide-in-from-right-4 duration-500">
                 <button
@@ -292,11 +300,9 @@ export default function EditAssetModal({ initialData, onClose, onSubmit }: EditA
             </div>
           )}
 
-          {/* STEP 3: Details Input */}
           {step === 3 && (
               <div className="space-y-4 animate-in slide-in-from-right-4 duration-500">
                   <div className="space-y-4">
-                      {/* 1. Asset Name */}
                       <div className="flex flex-col gap-1.5">
                           <label className="block text-[10px] font-black uppercase tracking-widest text-primary ml-1">
                               {lang === "id" ? "Nama Aset" : "Asset Name"} <span className="text-error">*</span>
@@ -311,10 +317,8 @@ export default function EditAssetModal({ initialData, onClose, onSubmit }: EditA
                           />
                       </div>
                       
-                      {/* 2. Valuation-Specific Fields */}
                       {valuationMode === "market" ? (
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                              {/* Symbol/Ticker */}
                               <div className="flex flex-col gap-1.5">
                                   <label className="block text-[10px] font-black uppercase tracking-widest text-primary ml-1">
                                       {category === "Gold" ? "SYMBOL" : "TICKER / SYMBOL"} <span className="text-error">*</span>
@@ -337,7 +341,6 @@ export default function EditAssetModal({ initialData, onClose, onSubmit }: EditA
                                   )}
                               </div>
 
-                              {/* Quantity / Weight */}
                               <div className="flex flex-col gap-1.5">
                                   <label className="block text-[10px] font-black uppercase tracking-widest text-primary ml-1">
                                       {category === "Gold" ? (lang === "id" ? "BERAT (ONS)" : "WEIGHT (OZ)") : (lang === "id" ? "KUANTITAS" : "QUANTITY")} <span className="text-error">*</span>
@@ -348,7 +351,7 @@ export default function EditAssetModal({ initialData, onClose, onSubmit }: EditA
                                       step="any"
                                       value={quantity}
                                       onChange={e => setQuantity(e.target.value)}
-                                      className="w-full bg-surface-container-low dark:bg-slate-800 border-2 border-outline-variant/20 focus:border-primary rounded-xl px-4 py-3 text-on-surface font-bold tabular-nums placeholder:text-outline/50 transition-colors outline-none"
+                                      className="w-full bg-surface-container-low dark:bg-slate-800 border-2 border-outline-variant/20 focus:border-primary rounded-xl px-4 py-3 text-on-surface font-bold tabular-nums placeholder:text-outline/40 transition-colors outline-none"
                                       placeholder="0"
                                   />
                                   {category === "Gold" && (
@@ -375,7 +378,6 @@ export default function EditAssetModal({ initialData, onClose, onSubmit }: EditA
                               </div>
                           </div>
                       ) : (
-                          /* Manual Entry / Balance */
                            <div className="flex flex-col gap-1.5">
                               <label className="block text-[10px] font-black uppercase tracking-widest text-primary ml-1">
                                   {["Cash", "Bank", "E-wallet"].includes(category) 
@@ -387,17 +389,7 @@ export default function EditAssetModal({ initialData, onClose, onSubmit }: EditA
                                       <select
                                           value={currency}
                                           onChange={(e) => {
-                                              const newCurrency = e.target.value as SupportedCurrency;
-                                              const raw = manualValue.replace(/[^0-9]/g, "");
-                                              if (raw) {
-                                                  const locale = newCurrency === "IDR" ? "id-ID" : "en-US";
-                                                  const numericVal = parseInt(raw, 10);
-                                                  const fmt = new Intl.NumberFormat(locale).format(numericVal);
-                                                  setCurrency(newCurrency);
-                                                  setManualValue(fmt);
-                                              } else {
-                                                  setCurrency(newCurrency);
-                                              }
+                                              setCurrency(e.target.value as SupportedCurrency);
                                           }}
                                           className="bg-transparent text-on-surface text-[10px] font-black pl-3 pr-6 py-2.5 focus:outline-none cursor-pointer w-20 shrink-0 appearance-none h-full"
                                       >

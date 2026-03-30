@@ -173,7 +173,14 @@ export default function AssetsPage() {
   const handleEditAsset = async (assetData: any) => {
     if (!editingAsset) return;
     const supabase = createClient();
-    const { error } = await supabase.from("assets").update(assetData).eq("id", editingAsset.id);
+    
+    // For market assets, ensure we mark them as freshly valued to prevent immediate refresh overwrite
+    const updatePayload = {
+      ...assetData,
+      last_valued_at: assetData.valuation_mode === "market" ? new Date().toISOString() : assetData.last_valued_at
+    };
+
+    const { error } = await supabase.from("assets").update(updatePayload).eq("id", editingAsset.id);
     if (!error) {
         setEditingAsset(null);
         await fetchAssets();
@@ -206,7 +213,7 @@ export default function AssetsPage() {
   const totalPages = Math.ceil(normalizedAssets.length / pageSize) || 1;
   const paginatedAssets = normalizedAssets.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
-  const handleSelectAll = (ids: string[]) => {
+  const handleSelectAll = () => {
     if (selectedIds.length === normalizedAssets.length && normalizedAssets.length > 0) {
       setSelectedIds([]);
     } else {
@@ -459,7 +466,7 @@ export default function AssetsPage() {
                                   <SelectionToggle
                                     checked={selectedIds.length > 0 && selectedIds.length === normalizedAssets.length}
                                     indeterminate={selectedIds.length > 0 && selectedIds.length < normalizedAssets.length}
-                                    onChange={() => handleSelectAll([])}
+                                    onChange={() => handleSelectAll()}
                                   />
                                 </th>
                                 <th className="p-2.5 sm:p-4 whitespace-nowrap">{lang === "id" ? "Aset" : "Asset"}</th>
@@ -521,9 +528,16 @@ export default function AssetsPage() {
                                         {new Date(asset.last_valued_at).toLocaleDateString(lang === "id" ? "id-ID" : "en-US", { month: "short", day: "numeric" })}
                                     </td>
                                     <td className="p-1 px-2 text-center kebab-menu-container bg-white dark:bg-slate-950 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 transition-all z-20">
-                                        <RowActionMenu 
+                                    <RowActionMenu 
                                             actions={[
-                                                { label: t("btnEdit"), icon: "edit", onClick: () => setEditingAsset(asset) },
+                                                { 
+                                                  label: t("btnEdit"), 
+                                                  icon: "edit", 
+                                                  onClick: () => {
+                                                    const rawAsset = assets.find(a => a.id === asset.id);
+                                                    setEditingAsset(rawAsset || asset);
+                                                  }
+                                                },
                                                 { label: t("btnDelete"), icon: "delete", onClick: () => setAssetsToDelete([asset]), variant: "danger" }
                                             ]}
                                         />
