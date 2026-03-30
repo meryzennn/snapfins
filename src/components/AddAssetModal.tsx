@@ -144,18 +144,18 @@ export default function AddAssetModal({ onClose, onSubmit, cashAssets = [] }: Ad
   };
 
   return (
-    <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-300">
-      <div className="bg-surface dark:bg-slate-900 p-6 sm:p-10 rounded-3xl shadow-2xl flex flex-col w-full max-w-xl border border-white/10 relative overflow-hidden">
+    <div className="fixed inset-0 z-[110] flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-300">
+      <div className="bg-surface dark:bg-slate-900 p-6 sm:p-10 rounded-t-[32px] sm:rounded-[32px] shadow-2xl flex flex-col w-full max-w-xl max-h-[calc(100svh-2rem)] border border-white/10 relative overflow-hidden">
         {/* Glow effect */}
         <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -z-10 pointer-events-none" />
 
         {/* Modal Header */}
-        <div className="flex justify-between items-center mb-8 relative z-10">
+        <div className="flex justify-between items-center mb-6 sm:mb-8 relative z-10 shrink-0">
           <div>
-            <h3 className="font-headline font-bold text-3xl text-on-surface dark:text-white mb-1">
+            <h3 className="font-headline font-bold text-2xl sm:text-3xl text-on-surface dark:text-white mb-1">
               {lang === "id" ? "Tambah Aset" : "Add Asset"}
             </h3>
-            <p className="text-sm text-on-surface-variant dark:text-gray-400 font-medium italic opacity-70">
+            <p className="text-xs sm:text-sm text-on-surface-variant dark:text-gray-400 font-medium italic opacity-70">
               {stepLabel()}
             </p>
           </div>
@@ -167,12 +167,14 @@ export default function AddAssetModal({ onClose, onSubmit, cashAssets = [] }: Ad
           </button>
         </div>
 
-        {error && (
-          <div className="mb-6 p-4 rounded-xl bg-error/10 text-error text-sm font-bold border border-error/20 flex items-center gap-3">
-            <span className="material-symbols-outlined">error</span>
-            {error}
-          </div>
-        )}
+        {/* Scrollable Content Area */}
+        <div className="flex-1 overflow-y-auto pr-2 -mr-2 scrollbar-thin scrollbar-thumb-outline-variant/30 scrollbar-track-transparent">
+          {error && (
+            <div className="mb-6 p-4 rounded-xl bg-error/10 text-error text-sm font-bold border border-error/20 flex items-center gap-3">
+              <span className="material-symbols-outlined">error</span>
+              {error}
+            </div>
+          )}
 
         {step === 0 && (
           <div className="flex flex-col gap-4 animate-in slide-in-from-bottom-4 duration-500">
@@ -256,7 +258,7 @@ export default function AddAssetModal({ onClose, onSubmit, cashAssets = [] }: Ad
               </div>
             </button>
 
-            <p className="text-[11px] text-on-surface-variant/40 text-center pt-1">
+            <p className="text-[11px] text-on-surface-variant/40 text-center pt-1 mb-4">
               {lang === "id"
                 ? "💡 Pendapatan/pengeluaran rutin? Pakai Manual Entry di halaman Beranda."
                 : "💡 Got salary or bills? Use Manual Entry on the Dashboard instead."}
@@ -266,7 +268,7 @@ export default function AddAssetModal({ onClose, onSubmit, cashAssets = [] }: Ad
 
         {/* STEP 1: Category */}
         {step === 1 && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 animate-in slide-in-from-bottom-4 duration-500 overflow-y-auto max-h-[50vh] pr-2 pb-2 scrollbar-thin">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 animate-in slide-in-from-bottom-4 duration-500 pb-4">
             {ASSET_CATEGORIES.map((cat) => (
               <button
                 key={cat}
@@ -532,14 +534,15 @@ export default function AddAssetModal({ onClose, onSubmit, cashAssets = [] }: Ad
             </div>
           </div>
         )}
+        </div>
 
         {/* Footer Navigation */}
-        <div className="mt-10 flex justify-between items-center border-t border-outline-variant/10 pt-6">
+        <div className="mt-6 sm:mt-10 flex justify-between items-center border-t border-outline-variant/10 pt-6 shrink-0 relative z-10">
           {step > 0 ? (
             <button
               onClick={handlePrev}
               disabled={isSubmitting}
-              className="text-on-surface-variant font-bold text-sm hover:text-on-surface transition-colors uppercase tracking-widest px-2 cursor-pointer"
+              className="text-on-surface-variant font-bold text-xs sm:text-sm hover:text-on-surface transition-colors uppercase tracking-widest px-2 cursor-pointer"
             >
               {lang === "id" ? "KEMBALI" : "BACK"}
             </button>
@@ -548,7 +551,7 @@ export default function AddAssetModal({ onClose, onSubmit, cashAssets = [] }: Ad
           {step < TOTAL_STEPS ? (
             <button
               onClick={handleNext}
-              className="bg-primary/10 text-primary font-bold px-8 py-3 rounded-xl hover:bg-primary/20 transition-all flex items-center gap-2 cursor-pointer"
+              className="bg-primary/10 text-primary font-bold px-6 sm:px-8 py-3 rounded-xl hover:bg-primary/20 transition-all flex items-center gap-2 cursor-pointer text-sm sm:text-base"
             >
               {lang === "id" ? "Lanjut" : "Next"}
               <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
@@ -557,7 +560,7 @@ export default function AddAssetModal({ onClose, onSubmit, cashAssets = [] }: Ad
             <button
               onClick={handleSubmit}
               disabled={isSubmitting}
-              className="bg-gradient-to-r from-primary to-primary-container text-white font-bold px-8 py-3 rounded-xl transition-all hover:bg-primary-fixed hover:-translate-y-0.5 shadow-lg shadow-primary/20 active:scale-95 disabled:opacity-50 disabled:transform-none flex items-center justify-center gap-2 min-w-[160px] cursor-pointer magic-glow-hover"
+              className="bg-gradient-to-r from-primary to-primary-container text-white font-bold px-6 sm:px-8 py-3 rounded-xl transition-all hover:bg-primary-fixed hover:-translate-y-0.5 shadow-lg shadow-primary/20 active:scale-95 disabled:opacity-50 disabled:transform-none flex items-center justify-center gap-2 min-w-[140px] sm:min-w-[160px] cursor-pointer magic-glow-hover text-sm sm:text-base"
             >
               {isSubmitting && (
                 <span className="material-symbols-outlined animate-spin text-[18px]">progress_activity</span>
