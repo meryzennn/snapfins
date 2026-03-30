@@ -19,6 +19,7 @@ export default function RowActionMenu({ actions }: RowActionMenuProps) {
   const [menuPosition, setMenuPosition] = useState<{ top: number; right: number } | null>(null);
   const [mounted, setMounted] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -28,7 +29,11 @@ export default function RowActionMenu({ actions }: RowActionMenuProps) {
     if (!isOpen) return;
 
     const handleClickOutside = (event: MouseEvent) => {
-      if (triggerRef.current && !triggerRef.current.contains(event.target as Node)) {
+      // Check if click was NOT on the trigger AND NOT inside the menu
+      const isOutsideTrigger = triggerRef.current && !triggerRef.current.contains(event.target as Node);
+      const isOutsideMenu = menuRef.current && !menuRef.current.contains(event.target as Node);
+
+      if (isOutsideTrigger && isOutsideMenu) {
         setIsOpen(false);
       }
     };
@@ -88,6 +93,7 @@ export default function RowActionMenu({ actions }: RowActionMenuProps) {
         menuPosition &&
         createPortal(
           <div
+            ref={menuRef}
             className="fixed w-36 bg-slate-900/95 dark:bg-slate-950/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-[0_10px_30px_rgba(0,0,0,0.5)] z-[9999] py-1.5 animate-in fade-in zoom-in-95 duration-200 divide-y divide-white/5"
             style={{
               top: menuPosition.top,
@@ -105,7 +111,9 @@ export default function RowActionMenu({ actions }: RowActionMenuProps) {
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
+                  // Trigger the action first to ensure parent state updates
                   action.onClick();
+                  // Then close the menu
                   setIsOpen(false);
                 }}
                 className="w-full text-left px-4 py-2.5 hover:bg-white/5 transition-colors flex items-center justify-between group/item cursor-pointer"

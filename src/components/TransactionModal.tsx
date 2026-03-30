@@ -196,13 +196,22 @@ export default function TransactionModal({
 
           {/* Modal Header */}
           <div className="flex justify-between items-center mb-3 sm:mb-8 relative z-10 shrink-0">
-            <div>
-              <h3 className="font-headline font-bold text-lg sm:text-2xl text-on-surface dark:text-white">
-                {initialData ? t("editTransaction") : t("manualEntryTitle")}
-              </h3>
-              <p className="text-[10px] sm:text-sm text-on-surface-variant dark:text-gray-400 font-medium italic opacity-70">
-                {lang === "id" ? "Catat laporan arus kas Anda" : "Record your cashflow entry"}
-              </p>
+            <div className="flex items-center gap-3">
+              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${initialData ? "bg-amber-500/10 text-amber-500" : "bg-primary/10 text-primary"}`}>
+                <span className="material-symbols-outlined text-2xl">
+                  {initialData ? "edit_note" : "add_card"}
+                </span>
+              </div>
+              <div>
+                <h3 className="font-headline font-bold text-lg sm:text-2xl text-on-surface dark:text-white">
+                  {initialData ? t("editTransaction") : t("manualEntryTitle")}
+                </h3>
+                <p className="text-[10px] sm:text-sm text-on-surface-variant dark:text-gray-400 font-medium italic opacity-70">
+                  {initialData 
+                    ? (lang === "id" ? "Perbarui detail transaksi Anda" : "Update your transaction details")
+                    : (lang === "id" ? "Catat laporan arus kas Anda" : "Record your cashflow entry")}
+                </p>
+              </div>
             </div>
             <button
               onClick={onClose}
