@@ -259,7 +259,7 @@ export const translations = {
       "To maintain precision across N-currency pairs, the engine implements a triangular arbitrage model. Every asset valuation follows the normalization formula: V = Σ(Qi × (Pi / Pusd)). By pinning all assets to a synthetic USD pivot, we eliminate the 'ghost volatility' often seen in direct cross-pair conversions (e.g., IDR/SOL), ensuring the net worth delta is purely asset-driven, not currency-driven.",
     whitepaperSection3DeepTitle: "4.0 Distributed Data Mesh & Synchronization",
     whitepaperSection3DeepText:
-      "The system's integrity is maintained by a 300-second synchronization mesh. We aggregate data from Binance (WebSockets), Yahoo Finance (Restful poll), and Open Exchange Rates. This data is processed through a weighted caching layer at the edge, reducing latency to <45ms for global users while maintaining high data freshness for volatility-sensitive assets.",
+      "The system's integrity is maintained by a 300-second synchronization mesh. We aggregate data from CoinGecko Terminal (REST), Yahoo Finance (Restful poll), and Open Exchange Rates. This data is processed through a weighted caching layer at the edge, reducing latency to <45ms for global users while maintaining high data freshness for volatility-sensitive assets.",
     whitepaperSection4DeepTitle: "5.0 Privacy Directive & Data Sovereignty",
     whitepaperSection4DeepText:
       "SnapFins operates on a 'User-First Persistence' model. Using Supabase Row Level Security (RLS) and JWT-based authentication, we ensure that the neural fingerprints of your finances are accessible only to the originating identity. We provide a 'Nuke Protocol': allowing users to perform a cryptographic purge of their entire financial history with one-click finality.",
@@ -287,7 +287,7 @@ export const translations = {
       "The core formula is Σ(Asset_Quantity × Live_Market_Price) - Total_Liabilities. To maintain sub-cent precision across 11 global currencies, we use a USD-triangular arbitrage engine. Every asset, regardless of its native currency, is normalized through a USD pivot. This ensures that a price change in IDR doesn't falsely inflate a USD-denominated net worth due to exchange rate lag. Your wealth is calculated against a stable, standardized mathematical baseline.",
     engineSection3Title: "Live Market Vitals & Edge-Sync",
     engineSection3Text:
-      "We fetch live data from three primary pillars: Binance (Crypto), Yahoo Finance (Stocks/ETFs), and Open Exchange Rates (Forex). To ensure performance and responsiveness, market data is cached at the edge and synchronized in 300-second (5-minute) intervals. This balances real-time precision with system stability. For stock markets that are closed, the engine automatically pivots to the most recent 'Close Price' until the next trading session opens.",
+      "We fetch live data from three primary pillars: CoinGecko Terminal (Crypto), Yahoo Finance (Stocks/ETFs), and Open Exchange Rates (Forex). To ensure performance and responsiveness, market data is cached at the edge and synchronized in 300-second (5-minute) intervals. This balances real-time precision with system stability. For stock markets that are closed, the engine automatically pivots to the most recent 'Close Price' until the next trading session opens.",
 
     // ---- MASTERY GUIDE (TECHNICAL/SHORT) ----
     masteryGuideTitle: "The Engine Behind SnapFins",
@@ -301,7 +301,7 @@ export const translations = {
       "Powered by Google Gemini 1.5 Flash (Multimodal). We use high-fidelity OCR and few-shot prompting to extract merchant metadata, dates, and amounts.",
     globalMarketTitle: "Global Connectivity",
     globalMarketDesc:
-      "Standardized market integration with Binance (Crypto), Yahoo Finance (Stocks), and Open Exchange Rates (Forex). Synchronized in 300s intervals.",
+      "Standardized market integration with CoinGecko Terminal (Crypto), Yahoo Finance (Stocks), and Open Exchange Rates (Forex). Synchronized in 300s intervals.",
   },
 
   id: {
@@ -561,7 +561,7 @@ export const translations = {
       "Untuk menjaga presisi di seluruh pasangan N-mata uang, mesin mengimplementasikan model arbitrase segitiga. Setiap valuasi aset mengikuti formula normalisasi: V = Σ(Qi × (Pi / Pusd)). Dengan mematok semua aset ke pivot USD sintetis, kami menghilangkan 'volatilitas hantu' yang sering terlihat dalam konversi lintas pasangan langsung (misalnya IDR/SOL), memastikan delta kekayaan bersih murni didorong oleh aset, bukan mata uang.",
     whitepaperSection3DeepTitle: "4.0 Mesh Data Terdistribusi & Sinkronisasi",
     whitepaperSection3DeepText:
-      "Integritas sistem dipertahankan oleh mesh sinkronisasi 300 detik. Kami mengagregasi data dari Binance (WebSockets), Yahoo Finance (Restful poll), dan Open Exchange Rates. Data ini diproses melalui lapisan caching tertimbang di edge, mengurangi latensi hingga <45ms untuk pengguna global sambil menjaga kesegaran data tinggi untuk aset yang sensitif terhadap volatilitas.",
+      "Integritas sistem dipertahankan oleh mesh sinkronisasi 300 detik. Kami mengagregasi data dari CoinGecko Terminal (REST), Yahoo Finance (Restful poll), dan Open Exchange Rates. Data ini diproses melalui lapisan caching tertimbang di edge, mengurangi latensi hingga <45ms untuk pengguna global sambil menjaga kesegaran data tinggi untuk aset yang sensitif terhadap volatilitas.",
     whitepaperSection4DeepTitle: "5.0 Direktif Privasi & Kedaulatan Data",
     whitepaperSection4DeepText:
       "SnapFins beroperasi pada model 'User-First Persistence'. Menggunakan Supabase Row Level Security (RLS) dan autentikasi berbasis JWT, kami memastikan bahwa sidik jari neural keuangan Anda hanya dapat diakses oleh identitas asal. Kami menyediakan 'Protokol Nuke': memungkinkan pengguna melakukan penghapusan kriptografis atas seluruh riwayat keuangan mereka dengan finalitas satu klik.",
@@ -589,7 +589,7 @@ export const translations = {
       "Formula intinya adalah Σ(Jumlah_Aset × Harga_Pasar_Langsung) - Total_Utang. Untuk menjaga presisi hingga satuan sen terkecil di 11 mata uang global, kami menggunakan mesin arbitrase segitiga USD. Setiap aset, tanpa memandang mata uang aslinya, dinormalisasi melalui pivot USD. Ini memastikan bahwa perubahan harga dalam IDR tidak secara salah menggembungkan kekayaan bersih dalam denominasi USD karena keterlambatan nilai tukar. Kekayaan Anda dihitung berdasarkan garis dasar matematika yang stabil dan terstandarisasi.",
     engineSection3Title: "Vitals Pasar Langsung & Sinkronisasi-Edge",
     engineSection3Text:
-      "Kami mengambil data langsung dari tiga pilar utama: Binance (Kripto), Yahoo Finance (Saham/ETF), dan Open Exchange Rates (Valas). Untuk memastikan performa dan responsivitas, data pasar disimpan di cache edge dan disinkronkan dalam interval 300 detik (5 menit). Ini menyeimbangkan presisi waktu nyata dengan stabilitas sistem. Untuk pasar saham yang sedang tutup, mesin akan otomatis beralih ke 'Harga Penutupan' terakhir hingga sesi perdagangan berikutnya dibuka.",
+      "Kami mengambil data langsung dari tiga pilar utama: CoinGecko Terminal (Kripto), Yahoo Finance (Saham/ETF), dan Open Exchange Rates (Valas). Untuk memastikan performa dan responsivitas, data pasar disimpan di cache edge dan disinkronkan dalam interval 300 detik (5 menit). Ini menyeimbangkan presisi waktu nyata dengan stabilitas sistem. Untuk pasar saham yang sedang tutup, mesin akan otomatis beralih ke 'Harga Penutupan' terakhir hingga sesi perdagangan berikutnya dibuka.",
 
     // ---- MASTERY GUIDE (TECHNICAL/SHORT) ----
     masteryGuideTitle: "Mesin di Balik SnapFins",
@@ -603,7 +603,7 @@ export const translations = {
       "Ditenagai Google Gemini 1.5 Flash (Multimodal). Menggunakan OCR fidelitas tinggi dan few-shot prompting.",
     globalMarketTitle: "Konektivitas Global",
     globalMarketDesc:
-      "Integrasi pasar standar dengan Binance (Kripto), Yahoo Finance (Saham), dan OpenER. Sinkronisasi 300 detik.",
+      "Integrasi pasar standar dengan CoinGecko Terminal (Kripto), Yahoo Finance (Saham), dan OpenER. Sinkronisasi 300 detik.",
   },
 } as const;
 
