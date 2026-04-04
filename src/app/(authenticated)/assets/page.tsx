@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useTheme } from "@/hooks/useTheme";
 import { useLang } from "@/hooks/useLang";
 import { useCurrency } from "@/hooks/useCurrency";
-import { convert, formatValue, currencySymbols, type SupportedCurrency } from "@/lib/currency";
+import { convert, formatValue, currencySymbols, type SupportedCurrency, updateExchangeRates } from "@/lib/currency";
 import { createClient } from "@/utils/supabase/client";
 import Link from "next/link";
 import AddAssetModal from "@/components/AddAssetModal";
@@ -35,13 +35,34 @@ export default function AssetsPage() {
 
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
+  const [ratesInitialized, setRatesInitialized] = useState(false);
   const pageSize = 10;
 
 
+  const initRates = async () => {
+    try {
+      const res = await fetch("https://open.er-api.com/v6/latest/USD");
+      const data = await res.json();
+      if (data && data.rates) {
+        updateExchangeRates(data.rates);
+      }
+    } catch (e) {
+      console.warn("Rates fetch failed:", e);
+    } finally {
+      setRatesInitialized(true);
+    }
+  };
+
   useEffect(() => {
     setMounted(true);
-    fetchAssets();
+    initRates();
   }, []);
+
+  useEffect(() => {
+    if (!mounted || !ratesInitialized) return;
+    fetchAssets();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mounted, ratesInitialized]);
 
 
   const fetchAssets = async () => {
@@ -58,8 +79,8 @@ export default function AssetsPage() {
         .order("created_at", { ascending: false });
 
       if (!error && data) {
-        setAssets(data);
-        performSmartRefresh(data, userData.user.id);
+        const finalAssets = await performSmartRefresh(data, userData.user.id);
+        setAssets(finalAssets);
       }
     } else {
       window.location.href = "/";
@@ -67,7 +88,7 @@ export default function AssetsPage() {
     setIsLoading(false);
   };
 
-  const performSmartRefresh = async (currentAssets: Asset[], userId: string) => {
+  const performSmartRefresh = async (currentAssets: Asset[], userId: string): Promise<Asset[]> => {
     const now = Date.now();
     const assetsToUpdate = currentAssets.filter((a) => {
         if (a.valuation_mode !== "market" || !a.symbol || !a.quantity) return false;
@@ -81,7 +102,7 @@ export default function AssetsPage() {
         return false;
     });
 
-    if (assetsToUpdate.length === 0) return;
+    if (assetsToUpdate.length === 0) return currentAssets;
 
     const items = assetsToUpdate.map(a => ({
         symbol: a.symbol!,
@@ -107,12 +128,28 @@ export default function AssetsPage() {
                 const quote = json.results[i];
 
                 if (quote && quote.price && !quote.error) {
-                    const newCurrentValue = Number(asset.quantity) * quote.price;
+                    const quoteCur = quote.quote_currency || "USD";
+                    const assetCur = asset.currency || "USD";
+                    const priceInAssetCur = convert(quote.price, quoteCur as SupportedCurrency, assetCur as SupportedCurrency);
+                    
+                    const newCurrentValue = Number(asset.quantity) * priceInAssetCur;
+                    
+                    console.log(`[Smart Refresh] ${asset.symbol}:`, {
+                        id: asset.id,
+                        symbol: asset.symbol,
+                        currency: assetCur,
+                        quantity: asset.quantity,
+                        quotePrice: quote.price,
+                        quoteCur: quoteCur,
+                        priceInAssetCur: priceInAssetCur,
+                        newCurrentValue: newCurrentValue
+                    });
+
                     const newDateISO = new Date(quote.updatedAt).toISOString();
                     
                     const { error } = await supabase.from("assets")
                         .update({ 
-                            last_price: quote.price, 
+                            last_price: priceInAssetCur, 
                             current_value: newCurrentValue,
                             last_valued_at: newDateISO
                         })
@@ -124,7 +161,7 @@ export default function AssetsPage() {
                         if (idx >= 0) {
                             newAssets[idx] = { 
                                 ...newAssets[idx], 
-                                last_price: quote.price, 
+                                last_price: priceInAssetCur, 
                                 current_value: newCurrentValue,
                                 last_valued_at: newDateISO
                             };
@@ -134,12 +171,13 @@ export default function AssetsPage() {
             }
 
             if (updatedAny) {
-                setAssets(newAssets);
+                return newAssets;
             }
         }
     } catch (err) {
         console.warn("Smart refresh silently failed", err);
     }
+    return currentAssets;
   };
 
 
@@ -251,7 +289,7 @@ export default function AssetsPage() {
       return colors[cat] || "bg-gray-500";
   };
 
-  if (!mounted || isLoading) {
+  if (!mounted || isLoading || !ratesInitialized) {
     return <AssetsSkeleton />;
   }
 
