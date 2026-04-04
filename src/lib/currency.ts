@@ -122,3 +122,32 @@ export function normalizeCurrency(c: string): SupportedCurrency {
   if (upper === 'KRW' || upper === '₩') return 'KRW';
   return 'USD'; // default
 }
+
+/**
+ * Parses an amount string (which might contain currency symbols, commas, dots) into a raw number.
+ */
+export function parseAmount(amountStr: string | number | undefined | null, expectedCurrency?: SupportedCurrency): number {
+  if (amountStr === undefined || amountStr === null) return 0;
+  if (typeof amountStr === 'number') return isNaN(amountStr) ? 0 : amountStr;
+  
+  const numStr = String(amountStr);
+  const txCurrency = expectedCurrency || normalizeCurrency(
+    numStr.includes("IDR") || numStr.includes("Rp") ? "IDR" :
+    numStr.includes("$") || numStr.includes("USD") ? "USD" :
+    numStr.includes("€") || numStr.includes("EUR") ? "EUR" :
+    numStr.includes("£") || numStr.includes("GBP") ? "GBP" :
+    numStr.includes("¥") || numStr.includes("JPY") || numStr.includes("CNY") ? "JPY" :
+    numStr.includes("₩") || numStr.includes("KRW") ? "KRW" : "USD"
+  );
+
+  let cleanAmount = numStr.replace(/[^0-9.,-]/g, "");
+  if (txCurrency === "IDR") {
+    // IDR usually uses dots for thousands separator
+    cleanAmount = cleanAmount.replace(/\./g, "").replace(/,/g, ".");
+  } else {
+    // USD etc uses commas for thousands separator
+    cleanAmount = cleanAmount.replace(/,/g, "");
+  }
+
+  return parseFloat(cleanAmount) || 0;
+}

@@ -10,6 +10,7 @@ import {
   updateExchangeRates,
   currencySymbols,
   currencyNames,
+  parseAmount,
   type SupportedCurrency,
 } from "@/lib/currency";
 import { useEffect, useState, useRef } from "react";
@@ -245,9 +246,9 @@ export default function DashboardPage() {
       const txMonth = txDate.getMonth();
       const txYear = txDate.getFullYear();
 
-      // EXPLICIT NUMERIC PARSING - No logic guessing!
-      const rawVal = Number(tx.amount) || 0;
-      const txCurrency = (tx.currency || currency) as SupportedCurrency;
+      // USE parseAmount
+      const rawVal = parseAmount(tx.amount, tx.currency as SupportedCurrency);
+      const txCurrency = normalizeCurrency(tx.currency || "USD");
       const val = convert(rawVal, txCurrency, currency as SupportedCurrency);
 
       // Only Income / Expense for period reporting — no Investment in cashflow
@@ -379,35 +380,9 @@ export default function DashboardPage() {
   // Calculate Pivot Data (grouped by category)
   const pivotData = filteredTransactions.reduce(
     (acc, tx) => {
-      const numStr = tx.amount;
-      const txCurrency = normalizeCurrency(
-        tx.currency ||
-          (numStr.includes("IDR") || numStr.includes("Rp")
-            ? "IDR"
-            : numStr.includes("$") || numStr.includes("USD")
-              ? "USD"
-              : numStr.includes("€") || numStr.includes("EUR")
-                ? "EUR"
-                : numStr.includes("£") || numStr.includes("GBP")
-                  ? "GBP"
-                  : numStr.includes("¥") ||
-                      numStr.includes("JPY") ||
-                      numStr.includes("CNY")
-                    ? "JPY"
-                    : numStr.includes("₩") || numStr.includes("KRW")
-                      ? "KRW"
-                      : "USD"),
-      );
-
-      let cleanAmount = numStr.replace(/[^0-9.,-]/g, "");
-      if (txCurrency === "IDR") {
-        cleanAmount = cleanAmount.replace(/\./g, "").replace(/,/g, ".");
-      } else {
-        cleanAmount = cleanAmount.replace(/,/g, "");
-      }
-
-      const rawVal = parseFloat(cleanAmount) || 0;
-      const amount = convert(rawVal, txCurrency, currency);
+      const txCurrency = normalizeCurrency(tx.currency || "USD");
+      const rawVal = parseAmount(tx.amount, txCurrency);
+      const amount = convert(rawVal, txCurrency, currency as SupportedCurrency);
 
       if (!acc[tx.category]) {
         acc[tx.category] = {
@@ -452,7 +427,7 @@ export default function DashboardPage() {
 
 
 
-  const dashboardSmartRefresh = async (currentRows: any[], userId: string, prefCurrency: SupportedCurrency) => {
+  const dashboardSmartRefresh = async (currentRows: any[], userId: string, prefCurrency: SupportedCurrency): Promise<any[]> => {
     const now = Date.now();
     const stale = currentRows.filter((a: any) => {
       if (a.valuation_mode !== "market" || !a.symbol || !a.quantity) return false;
@@ -463,7 +438,7 @@ export default function DashboardPage() {
       return false;
     });
 
-    if (stale.length === 0) return;
+    if (stale.length === 0) return currentRows;
 
     try {
       const items = stale.map((a: any) => ({
@@ -476,35 +451,41 @@ export default function DashboardPage() {
         body: JSON.stringify({ items }),
       });
       const json = await res.json();
-      if (!json.results) return;
+      if (!json.results) return currentRows;
 
       const supabase = createClient();
       const updatedMap: Record<string, number> = {};
+      const updatedPriceMap: Record<string, number> = {};
       for (let i = 0; i < stale.length; i++) {
         const asset = stale[i];
         const quote = json.results[i];
         if (quote && quote.price && !quote.error) {
-          const newCurrentValue = Number(asset.quantity) * quote.price;
+          const quoteCur = quote.quote_currency || "USD";
+          const assetCur = asset.currency || "USD";
+          const priceInAssetCur = convert(quote.price, quoteCur as SupportedCurrency, assetCur as SupportedCurrency);
+          const newCurrentValue = Number(asset.quantity) * priceInAssetCur;
+          
           await supabase.from("assets").update({
-            last_price: quote.price,
+            last_price: priceInAssetCur,
             current_value: newCurrentValue,
             last_valued_at: new Date(quote.updatedAt).toISOString(),
           }).eq("id", asset.id);
+          
           updatedMap[asset.id] = newCurrentValue;
+          updatedPriceMap[asset.id] = priceInAssetCur;
         }
       }
 
-      // Patch the in-memory rows with refreshed current_values → triggers recompute of totalAssets
-      setAssetRows(prev =>
-        prev.map(item =>
+      // Return patched rows
+      return currentRows.map(item =>
           updatedMap[item.id] !== undefined
-            ? { ...item, current_value: updatedMap[item.id] }
+            ? { ...item, current_value: updatedMap[item.id], last_price: updatedPriceMap[item.id] }
             : item
-        )
       );
     } catch (err) {
       console.warn("Dashboard smart refresh silently failed", err);
     }
+    return currentRows;
   };
 
   const fetchTransactions = async () => {
@@ -532,14 +513,18 @@ export default function DashboardPage() {
       }
 
       if (!assetError && assetData) {
+        // Lightweight smart refresh of stale market assets before setting state
+        const finalAssetData = await dashboardSmartRefresh(assetData, userData.user.id, currency as SupportedCurrency);
+        
         // Store raw rows — totalAssets is computed reactively at render time
-        setAssetRows(assetData);
+        setAssetRows(finalAssetData);
+        
         // Populate cash/bank/e-wallet assets for the Source Account dropdown
         const cashTypes = ["Cash", "Bank", "E-wallet"];
-        setCashAssets(assetData.filter((a: any) => cashTypes.includes(a.category)));
+        setCashAssets(finalAssetData.filter((a: any) => cashTypes.includes(a.category)));
 
-        // Compute initial total for localStorage NW snapshot (at fetch time, rates should be initialized)
-        const initialTotal = assetData.reduce((sum: number, item: any) => {
+        // Compute initial total for localStorage NW snapshot
+        const initialTotal = finalAssetData.reduce((sum: number, item: any) => {
           const val = Number(item.current_value) || 0;
           const assetCur = (item.currency || "USD") as SupportedCurrency;
           return sum + convert(val, assetCur, currency as SupportedCurrency);
@@ -558,9 +543,6 @@ export default function DashboardPage() {
           }
           localStorage.setItem(NW_KEY, JSON.stringify({ value: initialTotal, savedAt: Date.now() }));
         } catch { /* localStorage unavailable — trend will just be hidden */ }
-
-        // Lightweight smart refresh of stale market assets
-        dashboardSmartRefresh(assetData, userData.user.id, currency as SupportedCurrency);
       }
     } else {
       // Not authenticated, redirect to landing
@@ -607,7 +589,7 @@ export default function DashboardPage() {
       for (const tx of linkedTxs) {
         const linkedAsset = assetRows.find((a: any) => a.id === tx.linked_asset_id);
         if (linkedAsset) {
-          const txAmt = parseFloat(tx.amount.toString().replace(/[^0-9.-]/g, "")) || 0;
+          const txAmt = parseAmount(tx.amount, tx.currency as SupportedCurrency);
           const txCur = (tx.currency || "USD") as SupportedCurrency;
           const assetCur = (linkedAsset.currency || "USD") as SupportedCurrency;
           const amtInAssetCur = convert(txAmt, txCur, assetCur);
@@ -642,8 +624,13 @@ export default function DashboardPage() {
 
   useEffect(() => {
     setMounted(true);
-    fetchTransactions();
   }, []);
+
+  useEffect(() => {
+    if (!ratesInitialized || !mounted) return;
+    fetchTransactions();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ratesInitialized, mounted]);
 
 
   // ── SHARED DB HELPERS ───────────────────────────────────────────────────
@@ -675,7 +662,7 @@ export default function DashboardPage() {
     if (!userData?.user) throw new Error("Auth required");
 
     const isIDR = form.currency === "IDR";
-    const rawAmount = parseFloat(form.amount.replace(isIDR ? /\./g : /,/g, "").replace(/,/g, ".")) || 0;
+    const rawAmount = parseAmount(form.amount, form.currency as SupportedCurrency);
     const dbType = form.type === "Income" ? "Credit" : "Debit";
     
     const asset = form.linked_asset_id ? assetRows.find((a: any) => a.id === form.linked_asset_id) : null;
@@ -761,7 +748,7 @@ export default function DashboardPage() {
     }
   };
 
-  if (!mounted || isLoadingTx) {
+  if (!mounted || isLoadingTx || !ratesInitialized) {
     return <DashboardSkeleton />;
   }
 
