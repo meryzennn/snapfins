@@ -195,19 +195,19 @@ export const translations = {
 
     // ---- TUTORIAL & SUPPORT ----
     tutorialTitle: "Getting Started with SnapFins",
-    tutorialStep1: "1. Set Your Global Currency",
+    tutorialStep1: "Set Your Global Currency",
     step1Desc:
       "Choose your primary currency (USD/IDR) in the header. All assets and older transactions will auto-convert instantly based on live market rates.",
-    tutorialStep2: "2. Add Your Existing Balances",
+    tutorialStep2: "Add Your Existing Balances",
     step2Desc:
       "Navigate to the Assets page and use 'Opening Balance' to record money you already have in your savings or cash wallets.",
-    tutorialStep3: "3. Track New Purchases",
+    tutorialStep3: "Track New Purchases",
     step3Desc:
       "Use 'Buy / Move Into Asset' when purchasing Stocks or Crypto using your bank balance to keep your Net Worth calculation accurate.",
-    tutorialStep4: "4. Hands-free AI Scanning",
+    tutorialStep4: "Hands-free AI Scanning",
     step4Desc:
-      "Upload or snap a photo of any receipt. Our Gemini AI extracts the date, merchant, and total amount for you with zero manual typing.",
-    tutorialStep5: "5. Review Your Analytics",
+      "Just take a photo of your receipt using the Scan Receipt button. Gemini AI will automatically extract the amount, date, and smartly categorize the expense.",
+    tutorialStep5: "Review Your Analytics",
     step5Desc:
       "Watch your Net Worth badge and transaction ledger react to your spending and income trends in real-time.",
     supportCreator: "Support the Creator",
@@ -373,7 +373,7 @@ export const translations = {
       "Familiar namun powerful. Rasakan grid data berkinerja tinggi yang menangani ribuan baris dengan filter instan dan tampilan pivot.",
     feature3Title: "💰 Pelacakan Multi-Aset",
     feature3Desc:
-      "Dari Solana dan Bitcoin hingga Emas fisik dan saham konvensional. Sinkronkan seluruh portofolio Anda dalam satu dasbor terpadu.",
+      "Dari Solana dan Bitcoin hingga Emas fisik dan saham konvensional. Sinkronkan seluruh portofolio dalam satu dasbor terpadu.",
 
     ctaTitle: "Siap mengambil alih kendali waktu Anda?",
     ctaSubtitle:
@@ -538,19 +538,19 @@ export const translations = {
 
     // ---- TUTORIAL & SUPPORT ----
     tutorialTitle: "Memulai dengan SnapFins",
-    tutorialStep1: "1. Atur Mata Uang Global",
+    tutorialStep1: "Atur Mata Uang Global",
     step1Desc:
-      "Pilih mata uang utama Anda (USD/IDR) di header. Semua aset dan transaksi akan dikonversi otomatis berdasarkan kurs pasar saat ini.",
-    tutorialStep2: "2. Tambahkan Saldo Saat Ini",
+      "Pilih mata uang utama (USD/IDR) di menu header. Seluruh aset dan transaksi lama akan otomatis menyesuaikan nilainya mengikuti kurs pasar terkini.",
+    tutorialStep2: "Tambahkan Saldo Saat Ini",
     step2Desc:
-      "Buka halaman Aset dan gunakan 'Saldo Awal' untuk mencatat uang yang sudah Anda miliki di tabungan atau dompet tunai.",
-    tutorialStep3: "3. Catat Pembelian Aset Baru",
+      "Buka halaman Aset (Assets) dan gunakan opsi 'Saldo Awal' untuk mencatat uang yang sudah ada di tabungan atau dompet Anda.",
+    tutorialStep3: "Catat Pembelian Aset Baru",
     step3Desc:
-      "Gunakan 'Beli / Pindahkan Aset' saat membeli Saham atau Kripto menggunakan saldo bank agar perhitungan Kekayaan Bersih tetap akurat.",
-    tutorialStep4: "4. Scan Struk Otomatis (AI)",
+      "Gunakan fitur 'Beli / Pindahkan ke Aset' setiap kali membeli Saham/Kripto menggunakan saldo bank Anda agar perhitungan Kekayaan Bersih tetap akurat.",
+    tutorialStep4: "Scan Struk Otomatis (AI)",
     step4Desc:
-      "Unggah atau foto struk belanja Anda. AI Gemini kami akan mengekstrak tanggal, merchant, dan jumlah total untuk Anda tanpa mengetik manual.",
-    tutorialStep5: "5. Pantau Analitik Anda",
+      "Cukup foto struk belanja Anda lewat tombol Scan Struk. Gemini AI akan otomatis membaca nominal, tanggal, dan langsung mengkategorikan pengeluaran tersebut secara cerdas.",
+    tutorialStep5: "Pantau Analitik Anda",
     step5Desc:
       "Lihat badge Kekayaan Bersih dan buku besar transaksi Anda bereaksi terhadap tren belanja dan pendapatan secara real-time.",
     supportCreator: "Dukung Kreator",
