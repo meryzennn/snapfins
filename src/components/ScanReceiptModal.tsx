@@ -148,6 +148,9 @@ export default function ScanReceiptModal({
   };
 
   const capturePhoto = () => {
+    if (isScanning) return;
+    setIsScanning(true);
+
     if (videoRef.current && canvasRef.current) {
       if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
       const video = videoRef.current;
@@ -161,14 +164,24 @@ export default function ScanReceiptModal({
           if (blob) {
             stopCamera();
             processScanData(blob);
+          } else {
+            setIsScanning(false);
           }
         }, "image/jpeg", 0.9);
+      } else {
+        setIsScanning(false);
       }
+    } else {
+      setIsScanning(false);
     }
   };
 
   const processScanData = async (file: File | Blob, isUpload = false) => {
-    if (isUpload) setScanSource("upload");
+    if (isUpload) {
+      if (isScanning) return;
+      setScanSource("upload");
+      setIsScanning(true);
+    }
     setScanStep("analyzing");
     setScanError(null);
     setScanningLogs(["> Establishing connection to Gemini AI..."]);
@@ -202,12 +215,14 @@ export default function ScanReceiptModal({
 
         setTempScanData(data.transaction);
         setScanStep("confirm");
+        setIsScanning(false);
       } else {
         throw new Error(data.error || t("scanErrorHint"));
       }
     } catch (error: any) {
       setScanError(error.message || t("tryAgainWithDifferent"));
       setScanStep("select");
+      setIsScanning(false);
     }
   };
 
@@ -285,6 +300,7 @@ export default function ScanReceiptModal({
                   <input
                       type="file"
                       accept="image/*"
+                      disabled={isScanning}
                       className="hidden"
                       onChange={(e) => {
                           const file = e.target.files?.[0];
@@ -316,7 +332,8 @@ export default function ScanReceiptModal({
                   
                   <button 
                     onClick={capturePhoto}
-                    className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-4 border-primary p-1 bg-white/20 backdrop-blur-sm group hover:scale-110 transition-all cursor-pointer"
+                    disabled={isScanning}
+                    className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full border-4 border-primary p-1 bg-white/20 backdrop-blur-sm group transition-all ${isScanning ? 'opacity-50 cursor-wait scale-95' : 'hover:scale-110 cursor-pointer'}`}
                   >
                     <div className="w-full h-full rounded-full bg-primary flex items-center justify-center shadow-lg group-hover:bg-primary-container">
                       <span className="material-symbols-outlined text-white text-2xl sm:text-3xl">camera_alt</span>
