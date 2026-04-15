@@ -303,17 +303,6 @@ export default function ScanReceiptModal({
             {scanStep === 'camera' && (
               <div className="relative rounded-2xl overflow-hidden aspect-[9/16] max-h-[75svh] sm:max-h-[65svh] mx-auto bg-slate-950 border-2 border-primary/30 shadow-2xl animate-in zoom-in duration-300">
                 <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
-                
-                {supportsTorch && (
-                  <button 
-                    onClick={toggleFlash}
-                    className="absolute top-4 right-4 z-[60] w-12 h-12 rounded-full bg-black/60 backdrop-blur-md border border-white/20 text-white flex items-center justify-center hover:bg-black/80 transition-colors shadow-lg cursor-pointer"
-                  >
-                    <span className={`material-symbols-outlined ${flashOn ? 'text-primary drop-shadow-[0_0_8px_rgba(var(--primary),0.8)]' : ''}`}>
-                      {flashOn ? 'flash_on' : 'flash_off'}
-                    </span>
-                  </button>
-                )}
 
                 <div className="absolute inset-0 scanner-overlay-gradient pointer-events-none">
                   <div className="scanner-corner top-4 left-4 border-t-4 border-l-4"></div>
@@ -322,7 +311,9 @@ export default function ScanReceiptModal({
                   <div className="scanner-corner bottom-4 right-4 border-b-4 border-r-4"></div>
                   <div className="animate-scan-line"></div>
                 </div>
-                <div className="absolute bottom-8 inset-x-0 flex justify-center items-center">
+                <div className="absolute bottom-8 inset-x-0 px-8 flex justify-between items-center z-[60]">
+                  <div className="w-12 h-12" /> {/* Left Spacer */}
+                  
                   <button 
                     onClick={capturePhoto}
                     className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-4 border-primary p-1 bg-white/20 backdrop-blur-sm group hover:scale-110 transition-all cursor-pointer"
@@ -331,6 +322,19 @@ export default function ScanReceiptModal({
                       <span className="material-symbols-outlined text-white text-2xl sm:text-3xl">camera_alt</span>
                     </div>
                   </button>
+
+                  <div className="w-12 h-12 flex justify-center items-center">
+                    {supportsTorch && (
+                      <button 
+                        onClick={toggleFlash}
+                        className="w-12 h-12 rounded-full bg-black/60 backdrop-blur-md border border-white/20 text-white flex items-center justify-center hover:bg-black/80 transition-colors shadow-lg cursor-pointer hover:scale-105 active:scale-95"
+                      >
+                        <span className={`material-symbols-outlined ${flashOn ? 'text-primary drop-shadow-[0_0_8px_rgba(var(--primary),0.8)] drop-shadow-xl animate-pulse' : ''}`}>
+                          {flashOn ? 'flash_on' : 'flash_off'}
+                        </span>
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             )}
