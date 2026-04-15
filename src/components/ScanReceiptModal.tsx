@@ -33,6 +33,8 @@ export default function ScanReceiptModal({
   const [scanningLogs, setScanningLogs] = useState<string[]>([]);
   const [tempScanData, setTempScanData] = useState<any>(null);
   const [scanSource, setScanSource] = useState<"camera" | "upload" | null>(null);
+  const [flashOn, setFlashOn] = useState(false);
+  const [supportsTorch, setSupportsTorch] = useState(false);
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -62,6 +64,8 @@ export default function ScanReceiptModal({
     setTempScanData(null);
     setScanSource(null);
     setIsScanning(false);
+    setFlashOn(false);
+    setSupportsTorch(false);
   };
 
   const startCamera = async () => {
@@ -81,6 +85,15 @@ export default function ScanReceiptModal({
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
+      }
+      
+      // Check for torch capabilities
+      const track = stream.getVideoTracks()[0];
+      if (track && 'getCapabilities' in track) {
+        const capabilities = track.getCapabilities();
+        if ((capabilities as any).torch) {
+          setSupportsTorch(true);
+        }
       }
     } catch (err: any) {
       console.error("Camera access failed:", err);
@@ -107,6 +120,22 @@ export default function ScanReceiptModal({
     };
   }, [scanStep, lang]);
 
+  const toggleFlash = async () => {
+    if (!streamRef.current) return;
+    const track = streamRef.current.getVideoTracks()[0];
+    if (track) {
+      try {
+        const newState = !flashOn;
+        await track.applyConstraints({
+          advanced: [{ torch: newState }] as any
+        });
+        setFlashOn(newState);
+      } catch (err) {
+        console.warn("Torch constraint failed", err);
+      }
+    }
+  };
+
   const stopCamera = () => {
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((track) => track.stop());
@@ -115,6 +144,7 @@ export default function ScanReceiptModal({
     if (videoRef.current) {
       videoRef.current.srcObject = null;
     }
+    setFlashOn(false);
   };
 
   const capturePhoto = () => {
@@ -273,6 +303,18 @@ export default function ScanReceiptModal({
             {scanStep === 'camera' && (
               <div className="relative rounded-2xl overflow-hidden aspect-[9/16] max-h-[75svh] sm:max-h-[65svh] mx-auto bg-slate-950 border-2 border-primary/30 shadow-2xl animate-in zoom-in duration-300">
                 <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
+                
+                {supportsTorch && (
+                  <button 
+                    onClick={toggleFlash}
+                    className="absolute top-4 right-4 z-[60] w-12 h-12 rounded-full bg-black/60 backdrop-blur-md border border-white/20 text-white flex items-center justify-center hover:bg-black/80 transition-colors shadow-lg cursor-pointer"
+                  >
+                    <span className={`material-symbols-outlined ${flashOn ? 'text-primary drop-shadow-[0_0_8px_rgba(var(--primary),0.8)]' : ''}`}>
+                      {flashOn ? 'flash_on' : 'flash_off'}
+                    </span>
+                  </button>
+                )}
+
                 <div className="absolute inset-0 scanner-overlay-gradient pointer-events-none">
                   <div className="scanner-corner top-4 left-4 border-t-4 border-l-4"></div>
                   <div className="scanner-corner top-4 right-4 border-t-4 border-r-4"></div>
