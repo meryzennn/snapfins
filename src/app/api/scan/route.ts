@@ -60,8 +60,6 @@ export async function POST(req: Request) {
     `;
 
     const models = [
-      "gemini-3.1-flash-lite-preview",
-      "gemini-3.1-pro-preview",
       "gemini-2.0-flash"
     ];
     let quotaHit = false;
