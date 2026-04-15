@@ -13,6 +13,7 @@ import { LandingPageSkeleton } from "@/components/Skeleton";
 import { useReveal } from "@/hooks/useReveal";
 import ProfileDropdown from "@/components/layout/ProfileDropdown";
 import { AnimatePresence } from "framer-motion";
+import InstallPWAButton from "@/components/InstallPWAButton";
 
 export default function LandingPage() {
   const { theme, setTheme } = useTheme();
@@ -236,6 +237,7 @@ export default function LandingPage() {
               <span className="material-symbols-outlined text-rose-500 group-hover:scale-125 transition-all animate-heart-pulse">favorite</span>
               {t('supportCreator')}
             </button>
+            <InstallPWAButton />
           </div>
           
           {/* Hero Visual */}

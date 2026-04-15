@@ -41,6 +41,7 @@ export const translations = {
     privacyPolicy: "Privacy Policy",
     termsOfService: "Terms of Service",
     support: "Support",
+    installApp: "Install SnapFins",
 
     // ---- AUTH MODAL ----
     signIn: "Sign In",
@@ -383,6 +384,7 @@ export const translations = {
     privacyPolicy: "Kebijakan Privasi",
     termsOfService: "Syarat Layanan",
     support: "Dukungan",
+    installApp: "Install SnapFins",
 
     // ---- AUTH MODAL ----
     signIn: "Masuk",
