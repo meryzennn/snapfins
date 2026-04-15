@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useLang } from "@/hooks/useLang";
 
-export default function InstallPWAButton() {
+export default function InstallPWAButton({ variant = 'hero' }: { variant?: 'hero' | 'header' }) {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isStandalone, setIsStandalone] = useState(true); // Default to true to avoid hydration mismatch blinking
   const { t } = useLang();
@@ -51,6 +51,18 @@ export default function InstallPWAButton() {
 
   // Hide the button completely if the app is already installed as a PWA
   if (isStandalone) return null;
+
+  if (variant === 'header') {
+    return (
+      <button
+        onClick={handleInstallClick}
+        title={t('installApp')}
+        className="w-10 h-10 rounded-lg sm:rounded-full bg-indigo-500/10 hover:bg-indigo-500/20 transition-colors flex items-center justify-center group border border-indigo-500/30 shadow-sm"
+      >
+        <span className="material-symbols-outlined text-indigo-700 dark:text-indigo-300 group-hover:scale-110 transition-transform text-[20px]">download_for_offline</span>
+      </button>
+    );
+  }
 
   return (
     <button
