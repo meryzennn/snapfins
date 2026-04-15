@@ -586,6 +586,8 @@ export default function DashboardPage() {
         tx => deleteQueue.includes(tx.id) && tx.linked_asset_id
       );
 
+      const updatedBalances: Record<string, number> = {};
+
       for (const tx of linkedTxs) {
         const linkedAsset = assetRows.find((a: any) => a.id === tx.linked_asset_id);
         if (linkedAsset) {
@@ -596,7 +598,14 @@ export default function DashboardPage() {
           // Reverse: Income had added, Expense had subtracted
           const isIncome = tx.type === "Credit" || tx.type === "Income";
           const reversalDelta = isIncome ? -amtInAssetCur : amtInAssetCur;
-          const newValue = Math.max(0, Number(linkedAsset.current_value) + reversalDelta);
+          
+          const currentValue = updatedBalances[linkedAsset.id] !== undefined 
+            ? updatedBalances[linkedAsset.id] 
+            : Number(linkedAsset.current_value);
+            
+          const newValue = currentValue + reversalDelta;
+          updatedBalances[linkedAsset.id] = newValue;
+          
           await supabase.from("assets").update({ current_value: newValue }).eq("id", linkedAsset.id);
           setAssetRows((prev: any[]) =>
             prev.map((a: any) => a.id === linkedAsset.id ? { ...a, current_value: newValue } : a)
@@ -645,7 +654,7 @@ export default function DashboardPage() {
     const amtInAssetCur = convert(delta, txCurrency as SupportedCurrency, linkedAsset.currency as SupportedCurrency);
     if (isNaN(amtInAssetCur)) return;
 
-    const newValue = Math.max(0, Number(linkedAsset.current_value) + amtInAssetCur);
+    const newValue = Number(linkedAsset.current_value) + amtInAssetCur;
     const { error } = await supabase.from("assets").update({ current_value: newValue }).eq("id", assetId);
     if (error) {
       console.error("applyAssetDelta error:", error.message);
@@ -1286,7 +1295,7 @@ export default function DashboardPage() {
               <thead>
                 {viewMode === "grid" ? (
                   <tr className="bg-slate-50 dark:bg-slate-900 text-on-surface-variant uppercase font-black text-[10px] tracking-widest border-b border-outline-variant/10 sticky top-0 z-20 shadow-[0_1px_3px_rgba(0,0,0,0.05)]">
-                    <th className="p-2.5 sm:p-4 pl-6 text-center w-12 hidden sm:table-cell">
+                    <th className="p-2.5 sm:p-4 pl-6 text-center w-12">
                       <SelectionToggle
                         checked={selectedIds.length > 0 && selectedIds.length === paginatedTransactions.length}
                         indeterminate={selectedIds.length > 0 && selectedIds.length < paginatedTransactions.length}
@@ -1329,7 +1338,7 @@ export default function DashboardPage() {
                         key={tx.id}
                         className={`hover:bg-grid-row-hover dark:hover:bg-slate-800/50 transition-colors group border-b border-outline-variant/5 text-sm font-semibold ${selectedIds.includes(tx.id) ? "bg-primary/[0.08]" : ""}`}
                       >
-                        <td className="p-2.5 sm:p-4 pl-6 text-center hidden sm:table-cell">
+                        <td className="p-2.5 sm:p-4 pl-6 text-center">
                           <SelectionToggle
                             checked={selectedIds.includes(tx.id)}
                             onChange={() => handleSelectRow(tx.id)}

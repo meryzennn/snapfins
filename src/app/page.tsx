@@ -215,28 +215,28 @@ export default function LandingPage() {
           <p data-reveal="text" data-reveal-delay="2" className="text-lg md:text-xl text-on-surface-variant max-w-2xl mx-auto mb-12 leading-relaxed font-medium">
             {t('heroSubtitle')}
           </p>
-          <div data-reveal="text" data-reveal-delay="3" className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-20">
+          <div data-reveal="text" data-reveal-delay="3" className="flex flex-row gap-3 sm:gap-4 justify-center items-stretch mb-20 w-full max-w-lg mx-auto sm:max-w-none">
             {user ? (
               <Link 
                 href="/dashboard" 
-                className="bg-gradient-to-br from-primary to-primary-container px-10 py-5 rounded-lg text-white font-bold text-lg shadow-xl shadow-primary/20 hover:shadow-primary/40 hover:-translate-y-0.5 transition-all active:scale-95 w-full sm:w-auto text-center"
+                className="bg-gradient-to-br from-primary to-primary-container px-4 py-4 sm:px-10 sm:py-5 rounded-xl text-white font-bold text-sm sm:text-lg shadow-xl shadow-primary/20 hover:shadow-primary/40 hover:-translate-y-0.5 transition-all active:scale-95 flex-1 sm:flex-none flex items-center justify-center text-center"
               >
                 {t('navDashboard')}
               </Link>
             ) : (
               <button 
                 onClick={() => setShowLoginModal(true)} 
-                className="bg-gradient-to-br from-primary to-primary-container px-10 py-5 rounded-lg text-white font-bold text-lg shadow-xl shadow-primary/20 hover:shadow-primary/40 hover:-translate-y-0.5 transition-all active:scale-95 w-full sm:w-auto text-center"
+                className="bg-gradient-to-br from-primary to-primary-container px-4 py-4 sm:px-10 sm:py-5 rounded-xl text-white font-bold text-sm sm:text-lg shadow-xl shadow-primary/20 hover:shadow-primary/40 hover:-translate-y-0.5 transition-all active:scale-95 flex-1 sm:flex-none flex items-center justify-center text-center"
               >
                 {t('heroGetStarted')}
               </button>
             )}
             <button 
               onClick={() => setShowSupportModal(true)} 
-              className="bg-surface-container-high dark:bg-slate-800 px-8 py-5 rounded-lg text-on-surface dark:text-white font-bold text-lg border border-outline-variant/30 hover:bg-surface-container-highest dark:hover:bg-slate-700 transition-all active:scale-95 w-full sm:w-auto text-center flex items-center justify-center gap-2 group shadow-sm hover:shadow-indigo-500/20 hover:shadow-xl hover:-translate-y-1"
+              className="bg-surface-container-high dark:bg-slate-800 px-4 py-4 sm:px-8 sm:py-5 rounded-xl text-on-surface dark:text-white font-bold text-xs sm:text-lg border border-outline-variant/30 hover:bg-surface-container-highest dark:hover:bg-slate-700 transition-all active:scale-95 flex-1 sm:flex-none flex items-center justify-center text-center gap-1.5 sm:gap-2 group shadow-sm hover:shadow-indigo-500/20 hover:shadow-xl hover:-translate-y-1"
             >
-              <span className="material-symbols-outlined text-rose-500 group-hover:scale-125 transition-all animate-heart-pulse">favorite</span>
-              {t('supportCreator')}
+              <span className="material-symbols-outlined text-rose-500 text-lg sm:text-2xl group-hover:scale-125 transition-all animate-heart-pulse">favorite</span>
+              <span>{t('supportCreator')}</span>
             </button>
           </div>
           
