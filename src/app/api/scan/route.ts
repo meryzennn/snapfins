@@ -4,7 +4,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 export async function POST(req: Request) {
   let language = 'en';
   try {
-    const apiKeysConfig = process.env.GEMINI_API_KEYS || process.env.GEMINI_API_KEY;
+    const apiKeysConfig = process.env.SNAPFINS_GEMINI_API_KEYS || process.env.GEMINI_API_KEYS || process.env.GEMINI_API_KEY;
     if (!apiKeysConfig) {
       return NextResponse.json({ error: 'Gemini API Key(s) not configured in .env.local' }, { status: 500 });
     }
@@ -60,7 +60,7 @@ export async function POST(req: Request) {
     `;
 
     const models = [
-      "gemini-2.0-flash"
+      "gemini-2.5-flash"
     ];
     let quotaHit = false;
     let lastError: any;
