@@ -163,6 +163,7 @@ export default function LandingPage() {
             </a>
           </nav>
           <div className="flex items-center gap-4">
+            <InstallPWAButton variant="header" />
             <div className="flex items-center gap-2">
               <div className="flex bg-surface-container-low border border-outline-variant/30 rounded-lg p-0.5">
                 <button onClick={() => setLang('en')} className={`text-[10px] font-bold px-2 py-1.5 rounded-md transition-colors ${lang === 'en' ? 'bg-primary text-white shadow-sm' : 'text-on-surface-variant hover:text-on-surface'}`}>EN</button>
@@ -237,7 +238,6 @@ export default function LandingPage() {
               <span className="material-symbols-outlined text-rose-500 group-hover:scale-125 transition-all animate-heart-pulse">favorite</span>
               {t('supportCreator')}
             </button>
-            <InstallPWAButton />
           </div>
           
           {/* Hero Visual */}
