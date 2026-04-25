@@ -55,7 +55,6 @@ export default function AddAssetModal({ onClose, onSubmit, cashAssets = [] }: Ad
   const [quantity, setQuantity] = useState("");
   const [manualValue, setManualValue] = useState("");
   const [currency, setCurrency] = useState("USD");
-  const [notes, setNotes] = useState("");
 
   // Step 3 extra: via_transaction source
   const [sourceAssetId, setSourceAssetId] = useState("");
@@ -153,7 +152,6 @@ export default function AddAssetModal({ onClose, onSubmit, cashAssets = [] }: Ad
         last_price: lastPrice,
         quote_currency: quoteCurrency,
         currency: valuationMode === "market" ? (quoteCurrency || "USD") : (currency as SupportedCurrency),
-        notes,
         // Acquisition metadata — consumed by handleAddAsset in assets/page.tsx
         acquisition_mode: acquisitionMode,
         source_asset_id: acquisitionMode === "via_transaction" ? (sourceAssetId || null) : null,
@@ -521,6 +519,8 @@ export default function AddAssetModal({ onClose, onSubmit, cashAssets = [] }: Ad
                   </p>
                 </div>
               )}
+
+
 
               {/* via_transaction: source account + purchase amount */}
               {acquisitionMode === "via_transaction" && (

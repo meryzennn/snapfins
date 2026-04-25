@@ -1,5 +1,7 @@
 "use client";
 
+import { motion, AnimatePresence } from "framer-motion";
+
 import { useTheme } from "@/hooks/useTheme";
 import { useLang } from "@/hooks/useLang";
 import { useCurrency } from "@/hooks/useCurrency";
@@ -24,6 +26,7 @@ import RowActionMenu from "@/components/RowActionMenu";
 import TransactionModal from "@/components/TransactionModal";
 import ScanReceiptModal from "@/components/ScanReceiptModal";
 import DeleteTransactionModal from "@/components/DeleteTransactionModal";
+import TransactionDetailModal from "@/components/TransactionDetailModal";
 const assignColor = (category: string) => {
   const map: Record<string, string> = {
     DINING: "purple",
@@ -55,18 +58,21 @@ const getCategoryStyle = (color: string) => {
   return styles[color] || styles.slate;
 };
 
-
 export default function DashboardPage() {
   const { theme, setTheme } = useTheme();
   const { lang, setLang, t } = useLang();
   const { currency, setCurrency } = useCurrency();
   const [mounted, setMounted] = useState(false);
-  
+
   // View & Filter States
   const [viewMode, setViewMode] = useState<"grid" | "pivot">("grid");
   const [filterCategory, setFilterCategory] = useState<string>("ALL");
-  const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth()); // 0-11, -1 for ALL
-  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState<number>(
+    new Date().getMonth(),
+  ); // 0-11, -1 for ALL
+  const [selectedYear, setSelectedYear] = useState<number>(
+    new Date().getFullYear(),
+  );
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [showCurrencyDropdown, setShowCurrencyDropdown] = useState(false);
   const [showYearDropdown, setShowYearDropdown] = useState(false);
@@ -89,9 +95,18 @@ export default function DashboardPage() {
   const [deleteQueue, setDeleteQueue] = useState<string[]>([]);
   const [isDeletingRows, setIsDeletingRows] = useState(false);
   const [scanSuccess, setScanSuccess] = useState<any>(null);
+  const [selectedTxForDetail, setSelectedTxForDetail] = useState<any>(null);
 
   // --- Trend Indicator Component with 5s Loop ---
-  const TrendIndicator = ({ trend, isExpense = false, context }: { trend: string, isExpense?: boolean, context?: string }) => {
+  const TrendIndicator = ({
+    trend,
+    isExpense = false,
+    context,
+  }: {
+    trend: string;
+    isExpense?: boolean;
+    context?: string;
+  }) => {
     const [animationKey, setAnimationKey] = useState(0);
 
     useEffect(() => {
@@ -103,12 +118,14 @@ export default function DashboardPage() {
     }, [mounted, trend]);
 
     if (!mounted || trend === "—") return null;
-    
+
     if (trend === "NEW") {
       return (
         <div key={animationKey} className="flex items-center gap-2">
           <div className="flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-bold text-on-surface-variant bg-surface-container/40 shrink-0 w-fit transition-all duration-500 hover:scale-105 shadow-sm border border-outline-variant/20 tracking-wider uppercase">
-            <span>{lang === "id" ? "Baru periode ini" : "New this period"}</span>
+            <span>
+              {lang === "id" ? "Baru periode ini" : "New this period"}
+            </span>
           </div>
         </div>
       );
@@ -117,30 +134,83 @@ export default function DashboardPage() {
     const val = parseFloat(trend.replace(/[^\d.-]/g, ""));
     const isUp = val > 0;
     const isDown = val < 0;
-    const colorClass = isExpense 
-      ? (isDown ? "text-secondary bg-secondary-container/20" : isUp ? "text-error bg-error-container/20" : "text-on-surface-variant bg-surface-container/20") 
-      : (isUp ? "text-secondary bg-secondary-container/20" : isDown ? "text-error bg-error-container/20" : "text-on-surface-variant bg-surface-container/20");
+    const colorClass = isExpense
+      ? isDown
+        ? "text-secondary bg-secondary-container/20"
+        : isUp
+          ? "text-error bg-error-container/20"
+          : "text-on-surface-variant bg-surface-container/20"
+      : isUp
+        ? "text-secondary bg-secondary-container/20"
+        : isDown
+          ? "text-error bg-error-container/20"
+          : "text-on-surface-variant bg-surface-container/20";
     const strokeColor = "currentColor";
 
     return (
       <div key={animationKey} className="flex items-center gap-2">
-        <div className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-bold ${colorClass} shrink-0 w-fit transition-all duration-500 hover:scale-105 shadow-sm`}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="overflow-visible shrink-0">
+        <div
+          className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-bold ${colorClass} shrink-0 w-fit transition-all duration-500 hover:scale-105 shadow-sm`}
+        >
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            className="overflow-visible shrink-0"
+          >
             {isUp || val === 0 ? (
               <>
-                <path key={`up-path-${animationKey}`} d="M2 18L8 12L12 16L22 6" stroke={strokeColor} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="animate-draw-path" />
-                <path key={`up-arrow-${animationKey}`} d="M16 6H22V12" stroke={strokeColor} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="animate-fade-scale" />
+                <path
+                  key={`up-path-${animationKey}`}
+                  d="M2 18L8 12L12 16L22 6"
+                  stroke={strokeColor}
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="animate-draw-path"
+                />
+                <path
+                  key={`up-arrow-${animationKey}`}
+                  d="M16 6H22V12"
+                  stroke={strokeColor}
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="animate-fade-scale"
+                />
               </>
             ) : (
               <>
-                <path key={`down-path-${animationKey}`} d="M2 6L8 12L12 8L22 18" stroke={strokeColor} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="animate-draw-path" />
-                <path key={`down-arrow-${animationKey}`} d="M16 18H22V12" stroke={strokeColor} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="animate-fade-scale" />
+                <path
+                  key={`down-path-${animationKey}`}
+                  d="M2 6L8 12L12 8L22 18"
+                  stroke={strokeColor}
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="animate-draw-path"
+                />
+                <path
+                  key={`down-arrow-${animationKey}`}
+                  d="M16 18H22V12"
+                  stroke={strokeColor}
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="animate-fade-scale"
+                />
               </>
             )}
           </svg>
           <span className="tabular-nums">{Math.abs(val).toFixed(1)}%</span>
         </div>
-        {context && <span className="text-[10px] font-bold text-on-surface-variant/40 whitespace-nowrap uppercase tracking-wider">{context}</span>}
+        {context && (
+          <span className="text-[10px] font-bold text-on-surface-variant/40 whitespace-nowrap uppercase tracking-wider">
+            {context}
+          </span>
+        )}
       </div>
     );
   };
@@ -173,7 +243,10 @@ export default function DashboardPage() {
         const data = await res.json();
         if (data && data.rates) {
           setRates(data.rates);
-          localStorage.setItem(CACHE_KEY, JSON.stringify({ rates: data.rates, timestamp: Date.now() }));
+          localStorage.setItem(
+            CACHE_KEY,
+            JSON.stringify({ rates: data.rates, timestamp: Date.now() }),
+          );
         }
       } catch (error) {
         console.error("Failed to fetch exchange rates:", error);
@@ -188,9 +261,18 @@ export default function DashboardPage() {
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
-      if (filterDropdownRef.current && !filterDropdownRef.current.contains(target)) setShowFilterDropdown(false);
-      if (yearDropdownRef.current && !yearDropdownRef.current.contains(target)) setShowYearDropdown(false);
-      if (monthDropdownRef.current && !monthDropdownRef.current.contains(target)) setShowMonthDropdown(false);
+      if (
+        filterDropdownRef.current &&
+        !filterDropdownRef.current.contains(target)
+      )
+        setShowFilterDropdown(false);
+      if (yearDropdownRef.current && !yearDropdownRef.current.contains(target))
+        setShowYearDropdown(false);
+      if (
+        monthDropdownRef.current &&
+        !monthDropdownRef.current.contains(target)
+      )
+        setShowMonthDropdown(false);
     };
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
@@ -224,7 +306,14 @@ export default function DashboardPage() {
   // Filtered Investment Assets (non-cash equivalents)
   const totalInvestment = assetRows.reduce((sum, item) => {
     const cat = (item.category || "").toUpperCase();
-    const isInvest = ["STOCK / ETF", "CRYPTO", "GOLD", "PROPERTY", "VEHICLE", "OTHER"].includes(cat);
+    const isInvest = [
+      "STOCK / ETF",
+      "CRYPTO",
+      "GOLD",
+      "PROPERTY",
+      "VEHICLE",
+      "OTHER",
+    ].includes(cat);
     if (!isInvest) return sum;
     const val = Number(item.current_value) || 0;
     const assetCur = (item.currency || "USD") as SupportedCurrency;
@@ -254,22 +343,29 @@ export default function DashboardPage() {
       // Only Income / Expense for period reporting — no Investment in cashflow
       if (isAllMonths) {
         if (txYear === selectedYear) {
-          if (tx.type === "Credit" || tx.type === "Income") incomeCurrent += val;
-          else if (tx.type === "Debit" || tx.type === "Expense") expenseCurrent += val;
+          if (tx.type === "Credit" || tx.type === "Income")
+            incomeCurrent += val;
+          else if (tx.type === "Debit" || tx.type === "Expense")
+            expenseCurrent += val;
         } else if (txYear === selectedYear - 1) {
           if (tx.type === "Credit" || tx.type === "Income") incomePrev += val;
-          else if (tx.type === "Debit" || tx.type === "Expense") expensePrev += val;
+          else if (tx.type === "Debit" || tx.type === "Expense")
+            expensePrev += val;
         }
       } else {
         const prevMonth = selectedMonth === 0 ? 11 : selectedMonth - 1;
-        const prevMonthYear = selectedMonth === 0 ? selectedYear - 1 : selectedYear;
+        const prevMonthYear =
+          selectedMonth === 0 ? selectedYear - 1 : selectedYear;
 
         if (txMonth === selectedMonth && txYear === selectedYear) {
-          if (tx.type === "Credit" || tx.type === "Income") incomeCurrent += val;
-          else if (tx.type === "Debit" || tx.type === "Expense") expenseCurrent += val;
+          if (tx.type === "Credit" || tx.type === "Income")
+            incomeCurrent += val;
+          else if (tx.type === "Debit" || tx.type === "Expense")
+            expenseCurrent += val;
         } else if (txMonth === prevMonth && txYear === prevMonthYear) {
           if (tx.type === "Credit" || tx.type === "Income") incomePrev += val;
-          else if (tx.type === "Debit" || tx.type === "Expense") expensePrev += val;
+          else if (tx.type === "Debit" || tx.type === "Expense")
+            expensePrev += val;
         }
       }
     });
@@ -289,23 +385,38 @@ export default function DashboardPage() {
       return (diff / Math.abs(prev)) * 100.0;
     };
 
-    const iTrend = (incomeCurrent !== null && !isNaN(incomeCurrent)) ? computeTrend(incomeCurrent, incomePrev) : null;
-    const eTrend = (expenseCurrent !== null && !isNaN(expenseCurrent)) ? computeTrend(expenseCurrent, expensePrev) : null;
+    const iTrend =
+      incomeCurrent !== null && !isNaN(incomeCurrent)
+        ? computeTrend(incomeCurrent, incomePrev)
+        : null;
+    const eTrend =
+      expenseCurrent !== null && !isNaN(expenseCurrent)
+        ? computeTrend(expenseCurrent, expensePrev)
+        : null;
 
-    // NW trend vs prior snapshoted net worth (localStorage). 
-    // If no prior snapshot exists, we derive an "Implied Baseline" 
+    // NW trend vs prior snapshoted net worth (localStorage).
+    // If no prior snapshot exists, we derive an "Implied Baseline"
     // based on this period's net savings (Income - Expense).
     const currentPeriodDelta = (incomeCurrent || 0) - (expenseCurrent || 0);
     const impliedBaseline = netWorthNow - currentPeriodDelta;
-    
+
     // Choose between actual snapshot or implied delta-based trend
-    const baselineForTrend = priorNetWorth !== null ? priorNetWorth : impliedBaseline;
-    const nwTrend = computeTrend(netWorthNow, baselineForTrend) || (netWorthNow > 0 ? "NEW" : null);
+    const baselineForTrend =
+      priorNetWorth !== null ? priorNetWorth : impliedBaseline;
+    const nwTrend =
+      computeTrend(netWorthNow, baselineForTrend) ||
+      (netWorthNow > 0 ? "NEW" : null);
 
     const hasHistory = incomePrev > 0 || expensePrev > 0;
     const comparisonContext = isAllMonths
-      ? (hasHistory ? `vs ${selectedYear - 1}` : "")
-      : (hasHistory ? (lang === "id" ? "vs bulan lalu" : "vs last month") : "");
+      ? hasHistory
+        ? `vs ${selectedYear - 1}`
+        : ""
+      : hasHistory
+        ? lang === "id"
+          ? "vs bulan lalu"
+          : "vs last month"
+        : "";
 
     return {
       income: formatValue(incomeCurrent, currency),
@@ -313,9 +424,24 @@ export default function DashboardPage() {
       totalAssetsStr: formatValue(totalAssets, currency),
       totalInvestmentStr: formatValue(totalInvestment, currency),
       netWorth: formatValue(netWorthNow, currency),
-      incomeTrend: iTrend !== null ? (iTrend === "NEW" ? "NEW" : (iTrend as number).toFixed(1)) : "—",
-      expenseTrend: eTrend !== null ? (eTrend === "NEW" ? "NEW" : (eTrend as number).toFixed(1)) : "—",
-      netWorthTrend: nwTrend !== null ? (nwTrend === "NEW" ? "NEW" : (nwTrend as number).toFixed(1)) : "—",
+      incomeTrend:
+        iTrend !== null
+          ? iTrend === "NEW"
+            ? "NEW"
+            : (iTrend as number).toFixed(1)
+          : "—",
+      expenseTrend:
+        eTrend !== null
+          ? eTrend === "NEW"
+            ? "NEW"
+            : (eTrend as number).toFixed(1)
+          : "—",
+      netWorthTrend:
+        nwTrend !== null
+          ? nwTrend === "NEW"
+            ? "NEW"
+            : (nwTrend as number).toFixed(1)
+          : "—",
       comparisonContext,
     };
   };
@@ -332,12 +458,18 @@ export default function DashboardPage() {
       // Annual view
       if (!isCurrentYear) return null;
       const endOfYear = new Date(selectedYear, 11, 31);
-      const diff = Math.ceil((endOfYear.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+      const diff = Math.ceil(
+        (endOfYear.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
+      );
       return `${Math.max(0, diff)} ${lang === "id" ? "hari tersisa tahun ini" : "days left this year"}`;
     } else {
       // Monthly view
       if (!isCurrentYear || !isCurrentMonth) return null;
-      const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+      const lastDay = new Date(
+        today.getFullYear(),
+        today.getMonth() + 1,
+        0,
+      ).getDate();
       const diff = lastDay - today.getDate();
       return `${Math.max(0, diff)} ${lang === "id" ? "hari tersisa bulan ini" : "days left this month"}`;
     }
@@ -356,8 +488,10 @@ export default function DashboardPage() {
   const availableYears = (() => {
     const currentYear = new Date().getFullYear();
     const dataYears = transactions.map((t) => new Date(t.date).getFullYear());
-    const years = Array.from(new Set([currentYear, currentYear - 1, ...dataYears]));
-    
+    const years = Array.from(
+      new Set([currentYear, currentYear - 1, ...dataYears]),
+    );
+
     const minYear = Math.min(...years);
     const maxYear = Math.max(...years);
     const list = [];
@@ -392,8 +526,10 @@ export default function DashboardPage() {
           invested: 0,
         };
       }
-      if (tx.type === "Debit" || tx.type === "Expense") acc[tx.category].spent += amount;
-      else if (tx.type === "Credit" || tx.type === "Income") acc[tx.category].received += amount;
+      if (tx.type === "Debit" || tx.type === "Expense")
+        acc[tx.category].spent += amount;
+      else if (tx.type === "Credit" || tx.type === "Income")
+        acc[tx.category].received += amount;
       else if (tx.type === "Investment") acc[tx.category].invested += amount;
 
       return acc;
@@ -424,13 +560,15 @@ export default function DashboardPage() {
       ? Math.ceil(filteredTransactions.length / pageSize)
       : Math.ceil(pivotRows.length / pageSize);
 
-
-
-
-  const dashboardSmartRefresh = async (currentRows: any[], userId: string, prefCurrency: SupportedCurrency): Promise<any[]> => {
+  const dashboardSmartRefresh = async (
+    currentRows: any[],
+    userId: string,
+    prefCurrency: SupportedCurrency,
+  ): Promise<any[]> => {
     const now = Date.now();
     const stale = currentRows.filter((a: any) => {
-      if (a.valuation_mode !== "market" || !a.symbol || !a.quantity) return false;
+      if (a.valuation_mode !== "market" || !a.symbol || !a.quantity)
+        return false;
       const lastValued = new Date(a.last_valued_at || a.updated_at).getTime();
       const ageMs = now - lastValued;
       if (a.category === "Crypto" && ageMs > 15 * 60 * 1000) return true;
@@ -462,25 +600,36 @@ export default function DashboardPage() {
         if (quote && quote.price && !quote.error) {
           const quoteCur = quote.quote_currency || "USD";
           const assetCur = asset.currency || "USD";
-          const priceInAssetCur = convert(quote.price, quoteCur as SupportedCurrency, assetCur as SupportedCurrency);
+          const priceInAssetCur = convert(
+            quote.price,
+            quoteCur as SupportedCurrency,
+            assetCur as SupportedCurrency,
+          );
           const newCurrentValue = Number(asset.quantity) * priceInAssetCur;
-          
-          await supabase.from("assets").update({
-            last_price: priceInAssetCur,
-            current_value: newCurrentValue,
-            last_valued_at: new Date(quote.updatedAt).toISOString(),
-          }).eq("id", asset.id);
-          
+
+          await supabase
+            .from("assets")
+            .update({
+              last_price: priceInAssetCur,
+              current_value: newCurrentValue,
+              last_valued_at: new Date(quote.updatedAt).toISOString(),
+            })
+            .eq("id", asset.id);
+
           updatedMap[asset.id] = newCurrentValue;
           updatedPriceMap[asset.id] = priceInAssetCur;
         }
       }
 
       // Return patched rows
-      return currentRows.map(item =>
-          updatedMap[item.id] !== undefined
-            ? { ...item, current_value: updatedMap[item.id], last_price: updatedPriceMap[item.id] }
-            : item
+      return currentRows.map((item) =>
+        updatedMap[item.id] !== undefined
+          ? {
+              ...item,
+              current_value: updatedMap[item.id],
+              last_price: updatedPriceMap[item.id],
+            }
+          : item,
       );
     } catch (err) {
       console.warn("Dashboard smart refresh silently failed", err);
@@ -489,7 +638,6 @@ export default function DashboardPage() {
   };
 
   const fetchTransactions = async () => {
-
     setIsLoadingTx(true);
     const supabase = createClient();
     const { data: userData } = await supabase.auth.getUser();
@@ -504,7 +652,9 @@ export default function DashboardPage() {
 
       const { data: assetData, error: assetError } = await supabase
         .from("assets")
-        .select("id, name, current_value, currency, symbol, category, quantity, valuation_mode, last_valued_at, updated_at")
+        .select(
+          "id, name, current_value, currency, symbol, category, quantity, valuation_mode, last_valued_at, updated_at",
+        )
         .eq("user_id", userData.user.id);
 
       if (!error && data) {
@@ -514,14 +664,20 @@ export default function DashboardPage() {
 
       if (!assetError && assetData) {
         // Lightweight smart refresh of stale market assets before setting state
-        const finalAssetData = await dashboardSmartRefresh(assetData, userData.user.id, currency as SupportedCurrency);
-        
+        const finalAssetData = await dashboardSmartRefresh(
+          assetData,
+          userData.user.id,
+          currency as SupportedCurrency,
+        );
+
         // Store raw rows — totalAssets is computed reactively at render time
         setAssetRows(finalAssetData);
-        
+
         // Populate cash/bank/e-wallet assets for the Source Account dropdown
         const cashTypes = ["Cash", "Bank", "E-wallet"];
-        setCashAssets(finalAssetData.filter((a: any) => cashTypes.includes(a.category)));
+        setCashAssets(
+          finalAssetData.filter((a: any) => cashTypes.includes(a.category)),
+        );
 
         // Compute initial total for localStorage NW snapshot
         const initialTotal = finalAssetData.reduce((sum: number, item: any) => {
@@ -541,8 +697,13 @@ export default function DashboardPage() {
               setPriorNetWorth(value);
             }
           }
-          localStorage.setItem(NW_KEY, JSON.stringify({ value: initialTotal, savedAt: Date.now() }));
-        } catch { /* localStorage unavailable — trend will just be hidden */ }
+          localStorage.setItem(
+            NW_KEY,
+            JSON.stringify({ value: initialTotal, savedAt: Date.now() }),
+          );
+        } catch {
+          /* localStorage unavailable — trend will just be hidden */
+        }
       }
     } else {
       // Not authenticated, redirect to landing
@@ -552,8 +713,8 @@ export default function DashboardPage() {
   };
 
   const handleSelectRow = (id: string) => {
-    setSelectedIds(prev => 
-      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id],
     );
   };
 
@@ -579,36 +740,47 @@ export default function DashboardPage() {
     if (deleteQueue.length === 0) return;
     setIsDeletingRows(true);
     const supabase = createClient();
-    
+
     try {
       // Reverse asset balances for any linked transactions before deleting
       const linkedTxs = transactions.filter(
-        tx => deleteQueue.includes(tx.id) && tx.linked_asset_id
+        (tx) => deleteQueue.includes(tx.id) && tx.linked_asset_id,
       );
 
       const updatedBalances: Record<string, number> = {};
 
       for (const tx of linkedTxs) {
-        const linkedAsset = assetRows.find((a: any) => a.id === tx.linked_asset_id);
+        const linkedAsset = assetRows.find(
+          (a: any) => a.id === tx.linked_asset_id,
+        );
         if (linkedAsset) {
-          const txAmt = parseAmount(tx.amount, tx.currency as SupportedCurrency);
+          const txAmt = parseAmount(
+            tx.amount,
+            tx.currency as SupportedCurrency,
+          );
           const txCur = (tx.currency || "USD") as SupportedCurrency;
           const assetCur = (linkedAsset.currency || "USD") as SupportedCurrency;
           const amtInAssetCur = convert(txAmt, txCur, assetCur);
           // Reverse: Income had added, Expense had subtracted
           const isIncome = tx.type === "Credit" || tx.type === "Income";
           const reversalDelta = isIncome ? -amtInAssetCur : amtInAssetCur;
-          
-          const currentValue = updatedBalances[linkedAsset.id] !== undefined 
-            ? updatedBalances[linkedAsset.id] 
-            : Number(linkedAsset.current_value);
-            
+
+          const currentValue =
+            updatedBalances[linkedAsset.id] !== undefined
+              ? updatedBalances[linkedAsset.id]
+              : Number(linkedAsset.current_value);
+
           const newValue = currentValue + reversalDelta;
           updatedBalances[linkedAsset.id] = newValue;
-          
-          await supabase.from("assets").update({ current_value: newValue }).eq("id", linkedAsset.id);
+
+          await supabase
+            .from("assets")
+            .update({ current_value: newValue })
+            .eq("id", linkedAsset.id);
           setAssetRows((prev: any[]) =>
-            prev.map((a: any) => a.id === linkedAsset.id ? { ...a, current_value: newValue } : a)
+            prev.map((a: any) =>
+              a.id === linkedAsset.id ? { ...a, current_value: newValue } : a,
+            ),
           );
         }
       }
@@ -619,8 +791,12 @@ export default function DashboardPage() {
         .in("id", deleteQueue);
 
       if (!error) {
-        setTransactions(prev => prev.filter(tx => !deleteQueue.includes(tx.id)));
-        setSelectedIds(prev => prev.filter(id => !deleteQueue.includes(id)));
+        setTransactions((prev) =>
+          prev.filter((tx) => !deleteQueue.includes(tx.id)),
+        );
+        setSelectedIds((prev) =>
+          prev.filter((id) => !deleteQueue.includes(id)),
+        );
         setShowDeleteTxModal(false);
         setDeleteQueue([]);
       }
@@ -638,12 +814,15 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!ratesInitialized || !mounted) return;
     fetchTransactions();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ratesInitialized, mounted]);
 
-
   // ── SHARED DB HELPERS ───────────────────────────────────────────────────
-  const applyAssetDelta = async (assetId: string, delta: number, txCurrency: string) => {
+  const applyAssetDelta = async (
+    assetId: string,
+    delta: number,
+    txCurrency: string,
+  ) => {
     if (!assetId || assetId.trim() === "") return;
     const supabase = createClient();
     const linkedAsset = assetRows.find((a: any) => a.id === assetId);
@@ -651,17 +830,26 @@ export default function DashboardPage() {
       console.warn("applyAssetDelta: asset not found", assetId);
       return;
     }
-    const amtInAssetCur = convert(delta, txCurrency as SupportedCurrency, linkedAsset.currency as SupportedCurrency);
+    const amtInAssetCur = convert(
+      delta,
+      txCurrency as SupportedCurrency,
+      linkedAsset.currency as SupportedCurrency,
+    );
     if (isNaN(amtInAssetCur)) return;
 
     const newValue = Number(linkedAsset.current_value) + amtInAssetCur;
-    const { error } = await supabase.from("assets").update({ current_value: newValue }).eq("id", assetId);
+    const { error } = await supabase
+      .from("assets")
+      .update({ current_value: newValue })
+      .eq("id", assetId);
     if (error) {
       console.error("applyAssetDelta error:", error.message);
       return;
     }
     setAssetRows((prev: any[]) =>
-      prev.map((a: any) => a.id === assetId ? { ...a, current_value: newValue } : a)
+      prev.map((a: any) =>
+        a.id === assetId ? { ...a, current_value: newValue } : a,
+      ),
     );
   };
 
@@ -671,11 +859,16 @@ export default function DashboardPage() {
     if (!userData?.user) throw new Error("Auth required");
 
     const isIDR = form.currency === "IDR";
-    const rawAmount = parseAmount(form.amount, form.currency as SupportedCurrency);
+    const rawAmount = parseAmount(
+      form.amount,
+      form.currency as SupportedCurrency,
+    );
     const dbType = form.type === "Income" ? "Credit" : "Debit";
-    
-    const asset = form.linked_asset_id ? assetRows.find((a: any) => a.id === form.linked_asset_id) : null;
-    const sourceLabel = asset ? asset.name : (form.source || "Manual Entry");
+
+    const asset = form.linked_asset_id
+      ? assetRows.find((a: any) => a.id === form.linked_asset_id)
+      : null;
+    const sourceLabel = asset ? asset.name : form.source || "Manual Entry";
 
     const payload = {
       user_id: userData.user.id,
@@ -695,43 +888,75 @@ export default function DashboardPage() {
       // Reverse old balance
       if (editingTx.linked_asset_id) {
         const oldAmt = Number(editingTx.amount) || 0;
-        const oldIsIncome = editingTx.type === "Credit" || editingTx.type === "Income";
-        await applyAssetDelta(editingTx.linked_asset_id, oldIsIncome ? -oldAmt : oldAmt, editingTx.currency || "USD");
+        const oldIsIncome =
+          editingTx.type === "Credit" || editingTx.type === "Income";
+        await applyAssetDelta(
+          editingTx.linked_asset_id,
+          oldIsIncome ? -oldAmt : oldAmt,
+          editingTx.currency || "USD",
+        );
       }
 
-      const { data, error } = await supabase.from("transactions").update(payload).eq("id", editingTx.id).select();
+      const { data, error } = await supabase
+        .from("transactions")
+        .update(payload)
+        .eq("id", editingTx.id)
+        .select();
       if (error) throw error;
-      
+
       if (data?.[0]) {
         // Apply new balance
         if (form.linked_asset_id) {
-          await applyAssetDelta(form.linked_asset_id, dbType === "Credit" ? rawAmount : -rawAmount, form.currency);
+          await applyAssetDelta(
+            form.linked_asset_id,
+            dbType === "Credit" ? rawAmount : -rawAmount,
+            form.currency,
+          );
         }
-        setTransactions(prev => prev.map(tx => tx.id === editingTx.id ? { ...data[0], isAi: data[0].is_ai } : tx));
+        setTransactions((prev) =>
+          prev.map((tx) =>
+            tx.id === editingTx.id ? { ...data[0], isAi: data[0].is_ai } : tx,
+          ),
+        );
         setEditingTx(null);
         fetchTransactions();
       }
     } else {
-      const { data, error } = await supabase.from("transactions").insert([payload]).select();
+      const { data, error } = await supabase
+        .from("transactions")
+        .insert([payload])
+        .select();
       if (error) throw error;
-      
+
       if (data?.[0]) {
         if (form.linked_asset_id) {
-          await applyAssetDelta(form.linked_asset_id, dbType === "Credit" ? rawAmount : -rawAmount, form.currency);
+          await applyAssetDelta(
+            form.linked_asset_id,
+            dbType === "Credit" ? rawAmount : -rawAmount,
+            form.currency,
+          );
         }
-        setTransactions(prev => [{ ...data[0], isAi: data[0].is_ai }, ...prev]);
+        setTransactions((prev) => [
+          { ...data[0], isAi: data[0].is_ai },
+          ...prev,
+        ]);
         fetchTransactions();
       }
     }
   };
 
-  const handleScanSuccess = async (tempData: any, assetId?: string, amount?: number, cur?: string) => {
+  const handleScanSuccess = async (
+    tempData: any,
+    assetId?: string,
+    amount?: number,
+    cur?: string,
+  ) => {
     const supabase = createClient();
     const asset = assetId ? assetRows.find((a: any) => a.id === assetId) : null;
-    
+
     // Ensure we have a valid numeric amount
     const rawAmount = Number(amount) || 0;
-    
+
     const payload = {
       user_id: tempData.userId || (await supabase.auth.getUser()).data.user?.id,
       date: tempData.date,
@@ -746,12 +971,15 @@ export default function DashboardPage() {
       is_ai: true,
     };
 
-    const { data, error } = await supabase.from("transactions").insert([payload]).select();
+    const { data, error } = await supabase
+      .from("transactions")
+      .insert([payload])
+      .select();
     if (error) throw error;
-    
+
     if (data?.[0]) {
       if (assetId) await applyAssetDelta(assetId, -rawAmount, cur || "IDR");
-      setTransactions(prev => [{ ...data[0], isAi: data[0].is_ai }, ...prev]);
+      setTransactions((prev) => [{ ...data[0], isAi: data[0].is_ai }, ...prev]);
       setScanSuccess(data[0]);
       fetchTransactions();
     }
@@ -793,7 +1021,7 @@ export default function DashboardPage() {
         isOpen={showDeleteTxModal}
         onClose={() => setShowDeleteTxModal(false)}
         onConfirm={confirmDeleteBatch}
-        transactions={transactions.filter(tx => deleteQueue.includes(tx.id))}
+        transactions={transactions.filter((tx) => deleteQueue.includes(tx.id))}
         isDeleting={isDeletingRows}
         lang={lang}
         t={t as any}
@@ -801,47 +1029,62 @@ export default function DashboardPage() {
         preferredCurrency={currency}
       />
 
-      {scanSuccess && createPortal(
-        <div className="fixed inset-0 z-[100] flex items-start sm:items-center justify-center bg-black/60 backdrop-blur-sm p-4 pt-20 sm:pt-4">
-          <div className="bg-surface p-8 rounded-3xl shadow-2xl flex flex-col items-center max-w-sm w-full border border-primary/20 animate-in fade-in zoom-in duration-300">
-            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-6 relative">
-              <span className="material-symbols-outlined text-primary text-4xl">
-                check_circle
-              </span>
-            </div>
-            <h3 className="font-headline font-bold text-xl text-on-surface mb-2">
-              {t("scanSuccessTitle")}
-            </h3>
-            <p className="text-sm text-center text-on-surface-variant leading-relaxed mb-4">
-              {t("scanSuccessDate", scanSuccess.date)}
-            </p>
+      <AnimatePresence>
+        {selectedTxForDetail && (
+          <TransactionDetailModal
+            transaction={selectedTxForDetail}
+            onClose={() => setSelectedTxForDetail(null)}
+            onEdit={handleEdit}
+            onDelete={(id) => handleDeleteClick([id])}
+            lang={lang}
+            currency={currency as SupportedCurrency}
+            t={t as any}
+          />
+        )}
+      </AnimatePresence>
 
-            <div className="flex flex-col gap-3 w-full">
-              <button
-                onClick={() => {
-                  const d = new Date(scanSuccess.date);
-                  setSelectedMonth(d.getMonth());
-                  setSelectedYear(d.getFullYear());
-                  setScanSuccess(null);
-                }}
-                className="w-full bg-primary hover:bg-primary-container text-white font-bold py-3 px-4 rounded-xl transition-all shadow-md active:scale-95 flex items-center justify-center gap-2"
-              >
-                <span className="material-symbols-outlined text-lg">
-                  visibility
+      {scanSuccess &&
+        createPortal(
+          <div className="fixed inset-0 z-[100] flex items-start sm:items-center justify-center bg-black/60 backdrop-blur-sm p-4 pt-20 sm:pt-4">
+            <div className="bg-surface p-8 rounded-3xl shadow-2xl flex flex-col items-center max-w-sm w-full border border-primary/20 animate-in fade-in zoom-in duration-300">
+              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-6 relative">
+                <span className="material-symbols-outlined text-primary text-4xl">
+                  check_circle
                 </span>
-                {t("viewTransaction")}
-              </button>
-              <button
-                onClick={() => setScanSuccess(null)}
-                className="w-full bg-surface-container hover:bg-surface-container-high text-on-surface font-bold py-3 px-4 rounded-xl transition-all active:scale-95"
-              >
-                {t("cancel")}
-              </button>
+              </div>
+              <h3 className="font-headline font-bold text-xl text-on-surface mb-2">
+                {t("scanSuccessTitle")}
+              </h3>
+              <p className="text-sm text-center text-on-surface-variant leading-relaxed mb-4">
+                {t("scanSuccessDate", scanSuccess.date)}
+              </p>
+
+              <div className="flex flex-col gap-3 w-full">
+                <button
+                  onClick={() => {
+                    const d = new Date(scanSuccess.date);
+                    setSelectedMonth(d.getMonth());
+                    setSelectedYear(d.getFullYear());
+                    setScanSuccess(null);
+                  }}
+                  className="w-full bg-primary hover:bg-primary-container text-white font-bold py-3 px-4 rounded-xl transition-all shadow-md active:scale-95 flex items-center justify-center gap-2"
+                >
+                  <span className="material-symbols-outlined text-lg">
+                    visibility
+                  </span>
+                  {t("viewTransaction")}
+                </button>
+                <button
+                  onClick={() => setScanSuccess(null)}
+                  className="w-full bg-surface-container hover:bg-surface-container-high text-on-surface font-bold py-3 px-4 rounded-xl transition-all active:scale-95"
+                >
+                  {t("cancel")}
+                </button>
+              </div>
             </div>
-          </div>
-        </div>,
-        document.body
-      )}
+          </div>,
+          document.body,
+        )}
 
       <main className="max-w-7xl mx-auto w-full px-4 sm:px-6 md:px-8 py-6 md:py-10 space-y-8 md:space-y-10 pb-32 md:pb-12">
         {/* Header Section */}
@@ -862,7 +1105,9 @@ export default function DashboardPage() {
               }}
               className="flex sm:hidden px-5 py-3 rounded-xl border border-outline-variant text-on-surface font-bold text-sm hover:bg-surface-container-low transition-all active:scale-[0.98] items-center justify-center gap-2 cursor-pointer"
             >
-              <span className="material-symbols-outlined text-lg">edit_note</span>
+              <span className="material-symbols-outlined text-lg">
+                edit_note
+              </span>
               {t("manualEntry")}
             </button>
             <button
@@ -876,8 +1121,38 @@ export default function DashboardPage() {
             </button>
             <button
               onClick={() => setShowScanModal(true)}
-              className="px-5 py-4 sm:py-2.5 rounded-xl sm:rounded-lg bg-gradient-to-r from-primary to-primary-container text-white font-bold text-sm shadow-[0_4px_15px_rgba(53,37,205,0.3)] transition-all active:scale-[0.98] flex items-center justify-center gap-2 magic-glow-hover cursor-pointer overflow-hidden group"
+              className="px-5 py-4 sm:py-2.5 rounded-xl sm:rounded-lg bg-gradient-to-r from-primary to-primary-container text-white font-bold text-sm shadow-[0_4px_15px_rgba(53,37,205,0.3)] transition-all active:scale-[0.98] flex items-center justify-center gap-2 magic-glow-hover cursor-pointer group relative"
             >
+              <div className="star-1">
+                <svg className="star-svg" xmlns="http://www.w3.org/2000/svg" xmlSpace="preserve" version="1.1" viewBox="0 0 784.11 815.53">
+                  <path d="M392.05 0c-20.9,210.08 -184.06,378.41 -392.05,407.78 207.96,29.37 371.12,197.68 392.05,407.74 20.93,-210.06 184.09,-378.37 392.05,-407.74 -207.98,-29.38 -371.16,-197.69 -392.06,-407.78z" />
+                </svg>
+              </div>
+              <div className="star-2">
+                <svg className="star-svg" xmlns="http://www.w3.org/2000/svg" xmlSpace="preserve" version="1.1" viewBox="0 0 784.11 815.53">
+                  <path d="M392.05 0c-20.9,210.08 -184.06,378.41 -392.05,407.78 207.96,29.37 371.12,197.68 392.05,407.74 20.93,-210.06 184.09,-378.37 392.05,-407.74 -207.98,-29.38 -371.16,-197.69 -392.06,-407.78z" />
+                </svg>
+              </div>
+              <div className="star-3">
+                <svg className="star-svg" xmlns="http://www.w3.org/2000/svg" xmlSpace="preserve" version="1.1" viewBox="0 0 784.11 815.53">
+                  <path d="M392.05 0c-20.9,210.08 -184.06,378.41 -392.05,407.78 207.96,29.37 371.12,197.68 392.05,407.74 20.93,-210.06 184.09,-378.37 392.05,-407.74 -207.98,-29.38 -371.16,-197.69 -392.06,-407.78z" />
+                </svg>
+              </div>
+              <div className="star-4">
+                <svg className="star-svg" xmlns="http://www.w3.org/2000/svg" xmlSpace="preserve" version="1.1" viewBox="0 0 784.11 815.53">
+                  <path d="M392.05 0c-20.9,210.08 -184.06,378.41 -392.05,407.78 207.96,29.37 371.12,197.68 392.05,407.74 20.93,-210.06 184.09,-378.37 392.05,-407.74 -207.98,-29.38 -371.16,-197.69 -392.06,-407.78z" />
+                </svg>
+              </div>
+              <div className="star-5">
+                <svg className="star-svg" xmlns="http://www.w3.org/2000/svg" xmlSpace="preserve" version="1.1" viewBox="0 0 784.11 815.53">
+                  <path d="M392.05 0c-20.9,210.08 -184.06,378.41 -392.05,407.78 207.96,29.37 371.12,197.68 392.05,407.74 20.93,-210.06 184.09,-378.37 392.05,-407.74 -207.98,-29.38 -371.16,-197.69 -392.06,-407.78z" />
+                </svg>
+              </div>
+              <div className="star-6">
+                <svg className="star-svg" xmlns="http://www.w3.org/2000/svg" xmlSpace="preserve" version="1.1" viewBox="0 0 784.11 815.53">
+                  <path d="M392.05 0c-20.9,210.08 -184.06,378.41 -392.05,407.78 207.96,29.37 371.12,197.68 392.05,407.74 20.93,-210.06 184.09,-378.37 392.05,-407.74 -207.98,-29.38 -371.16,-197.69 -392.06,-407.78z" />
+                </svg>
+              </div>
               <span
                 className="material-symbols-outlined text-lg focus:outline-none animate-stars-float"
                 style={{ fontVariationSettings: "'FILL' 1" }}
@@ -886,6 +1161,7 @@ export default function DashboardPage() {
               </span>
               <span className="relative z-10">{t("scanReceipt")}</span>
             </button>
+
           </div>
         </header>
 
@@ -897,7 +1173,10 @@ export default function DashboardPage() {
             <div className="h-6 mb-2">
               {totals.netWorthTrend !== "—" && (
                 <div className="relative flex justify-between items-start">
-                  <TrendIndicator trend={totals.netWorthTrend} context={totals.comparisonContext} />
+                  <TrendIndicator
+                    trend={totals.netWorthTrend}
+                    context={totals.comparisonContext}
+                  />
                 </div>
               )}
             </div>
@@ -908,8 +1187,8 @@ export default function DashboardPage() {
                     {t("totalNetWorth")}
                   </p>
                 </div>
-                <div 
-                  className={`${totals.netWorth.length > 20 ? "text-base" : totals.netWorth.length > 18 ? "text-lg" : totals.netWorth.length > 15 ? "text-xl" : totals.netWorth.length > 12 ? "text-2xl" : "text-3xl"} text-on-surface font-black font-headline tracking-tighter break-all sm:whitespace-nowrap`} 
+                <div
+                  className={`${totals.netWorth.length > 20 ? "text-base" : totals.netWorth.length > 18 ? "text-lg" : totals.netWorth.length > 15 ? "text-xl" : totals.netWorth.length > 12 ? "text-2xl" : "text-3xl"} text-on-surface font-black font-headline tracking-tighter break-all sm:whitespace-nowrap`}
                   title={totals.netWorth}
                 >
                   {totals.netWorth}
@@ -932,7 +1211,10 @@ export default function DashboardPage() {
             <div className="h-6 mb-2">
               {totals.incomeTrend !== "—" && totals.incomeTrend !== "0.0" && (
                 <div className="relative flex justify-between items-start">
-                  <TrendIndicator trend={totals.incomeTrend} context={totals.comparisonContext} />
+                  <TrendIndicator
+                    trend={totals.incomeTrend}
+                    context={totals.comparisonContext}
+                  />
                 </div>
               )}
             </div>
@@ -940,11 +1222,13 @@ export default function DashboardPage() {
               <div className="min-w-0 flex-grow">
                 <div className="h-8">
                   <p className="text-[10px] uppercase tracking-[0.2em] font-extrabold text-on-surface-variant mb-1 leading-tight">
-                    {selectedMonth === -1 ? t("annualIncome") : t("monthlyIncome")}
+                    {selectedMonth === -1
+                      ? t("annualIncome")
+                      : t("monthlyIncome")}
                   </p>
                 </div>
-                <div 
-                  className={`${totals.income.length > 20 ? "text-base" : totals.income.length > 18 ? "text-lg" : totals.income.length > 15 ? "text-xl" : totals.income.length > 12 ? "text-2xl" : "text-3xl"} text-secondary font-black font-headline tracking-tighter break-all sm:whitespace-nowrap`} 
+                <div
+                  className={`${totals.income.length > 20 ? "text-base" : totals.income.length > 18 ? "text-lg" : totals.income.length > 15 ? "text-xl" : totals.income.length > 12 ? "text-2xl" : "text-3xl"} text-secondary font-black font-headline tracking-tighter break-all sm:whitespace-nowrap`}
                   title={totals.income}
                 >
                   {totals.income}
@@ -971,11 +1255,16 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <Link href="/assets" className="glass-card p-5 rounded-2xl border border-white/40 dark:border-white/10 shadow-xl relative overflow-hidden group bg-gradient-to-br from-white/60 dark:from-slate-900/60 to-surface-container-low/40 dark:to-slate-800/40 cursor-pointer block hover:shadow-2xl transition-all duration-300">
+          <Link
+            href="/assets"
+            className="glass-card p-5 rounded-2xl border border-white/40 dark:border-white/10 shadow-xl relative overflow-hidden group bg-gradient-to-br from-white/60 dark:from-slate-900/60 to-surface-container-low/40 dark:to-slate-800/40 cursor-pointer block hover:shadow-2xl transition-all duration-300"
+          >
             <div className="absolute -top-4 -right-4 w-24 h-24 bg-primary/5 rounded-full blur-2xl group-hover:bg-primary/20 transition-colors"></div>
             <div className="h-6 mb-2 flex items-center gap-1.5">
-                <span className="inline-block w-1.5 h-1.5 bg-secondary rounded-full kinetic-spark shadow-[0_0_4px_rgba(16,185,129,0.8)]"></span>
-                <span className="text-[9px] uppercase tracking-widest text-secondary font-black opacity-80 group-hover:opacity-100 transition-opacity">MARKET SYNC</span>
+              <span className="inline-block w-1.5 h-1.5 bg-secondary rounded-full kinetic-spark shadow-[0_0_4px_rgba(16,185,129,0.8)]"></span>
+              <span className="text-[9px] uppercase tracking-widest text-secondary font-black opacity-80 group-hover:opacity-100 transition-opacity">
+                MARKET SYNC
+              </span>
             </div>
             <div className="relative flex justify-between items-start gap-4">
               <div className="min-w-0 flex-grow">
@@ -984,8 +1273,8 @@ export default function DashboardPage() {
                     {lang === "id" ? "Total Investasi" : "Total Investment"}
                   </p>
                 </div>
-                <div 
-                  className={`${totals.totalInvestmentStr.length > 20 ? "text-base" : totals.totalInvestmentStr.length > 18 ? "text-lg" : totals.totalInvestmentStr.length > 15 ? "text-xl" : totals.totalInvestmentStr.length > 12 ? "text-2xl" : "text-3xl"} text-primary font-black font-headline tracking-tighter break-all sm:whitespace-nowrap transition-transform duration-300 group-hover:-translate-y-0.5`} 
+                <div
+                  className={`${totals.totalInvestmentStr.length > 20 ? "text-base" : totals.totalInvestmentStr.length > 18 ? "text-lg" : totals.totalInvestmentStr.length > 15 ? "text-xl" : totals.totalInvestmentStr.length > 12 ? "text-2xl" : "text-3xl"} text-primary font-black font-headline tracking-tighter break-all sm:whitespace-nowrap transition-transform duration-300 group-hover:-translate-y-0.5`}
                   title={totals.totalInvestmentStr}
                 >
                   {totals.totalInvestmentStr}
@@ -1008,7 +1297,11 @@ export default function DashboardPage() {
             <div className="h-6 mb-2">
               {totals.expenseTrend !== "—" && totals.expenseTrend !== "0.0" && (
                 <div className="relative flex justify-between items-start">
-                  <TrendIndicator trend={totals.expenseTrend} isExpense context={totals.comparisonContext} />
+                  <TrendIndicator
+                    trend={totals.expenseTrend}
+                    isExpense
+                    context={totals.comparisonContext}
+                  />
                 </div>
               )}
             </div>
@@ -1016,11 +1309,13 @@ export default function DashboardPage() {
               <div className="min-w-0 flex-grow">
                 <div className="h-8">
                   <p className="text-[10px] uppercase tracking-[0.2em] font-extrabold text-on-surface-variant mb-1 leading-tight">
-                    {selectedMonth === -1 ? t("annualExpense") : t("monthlyExpense")}
+                    {selectedMonth === -1
+                      ? t("annualExpense")
+                      : t("monthlyExpense")}
                   </p>
                 </div>
-                <div 
-                  className={`${totals.expense.length > 20 ? "text-base" : totals.expense.length > 18 ? "text-lg" : totals.expense.length > 15 ? "text-xl" : totals.expense.length > 12 ? "text-2xl" : "text-3xl"} text-error font-black font-headline tracking-tighter break-all sm:whitespace-nowrap`} 
+                <div
+                  className={`${totals.expense.length > 20 ? "text-base" : totals.expense.length > 18 ? "text-lg" : totals.expense.length > 15 ? "text-xl" : totals.expense.length > 12 ? "text-2xl" : "text-3xl"} text-error font-black font-headline tracking-tighter break-all sm:whitespace-nowrap`}
                   title={totals.expense}
                 >
                   {totals.expense}
@@ -1051,7 +1346,10 @@ export default function DashboardPage() {
                   : "Transactions show money moving in and out this period."}
               </p>
             </div>
-            <div className="flex flex-wrap items-center gap-2 sm:gap-4 relative" ref={filterDropdownRef}>
+            <div
+              className="flex flex-wrap items-center gap-2 sm:gap-4 relative"
+              ref={filterDropdownRef}
+            >
               {mounted && (
                 <>
                   {/* View Toggle */}
@@ -1076,26 +1374,30 @@ export default function DashboardPage() {
                   <div className="flex items-center gap-2">
                     {/* Year Selector */}
                     <div className="relative" ref={yearDropdownRef}>
-                      <button 
+                      <button
                         onClick={() => setShowYearDropdown(!showYearDropdown)}
                         className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border border-outline-variant/30 bg-surface-container-low text-on-surface shadow-sm transition-all hover:border-outline-variant cursor-pointer ${showYearDropdown ? "ring-2 ring-primary/20 border-primary" : ""}`}
                       >
-                        <span className="material-symbols-outlined text-sm text-primary/70">calendar_month</span>
-                        <span className="text-[11px] font-bold">{selectedYear}</span>
+                        <span className="material-symbols-outlined text-sm text-primary/70">
+                          calendar_month
+                        </span>
+                        <span className="text-[11px] font-bold">
+                          {selectedYear}
+                        </span>
                         <span className="material-symbols-outlined text-xs text-on-surface-variant opacity-50">
                           {showYearDropdown ? "expand_less" : "expand_more"}
                         </span>
                       </button>
 
-                      <div 
+                      <div
                         className={`absolute left-0 lg:left-0 top-11 w-32 bg-white dark:bg-slate-900 border border-outline-variant/20 rounded-2xl shadow-2xl z-[100] overflow-hidden dropdown-transition origin-top-left ${
-                          showYearDropdown 
-                            ? "opacity-100 translate-y-0 scale-100 pointer-events-auto visible" 
+                          showYearDropdown
+                            ? "opacity-100 translate-y-0 scale-100 pointer-events-auto visible"
                             : "opacity-0 -translate-y-8 scale-90 pointer-events-none invisible"
                         }`}
                       >
                         <div className="max-h-60 overflow-y-auto py-1 scrollbar-thin">
-                          {availableYears.map(year => (
+                          {availableYears.map((year) => (
                             <button
                               key={year}
                               onClick={() => {
@@ -1106,7 +1408,9 @@ export default function DashboardPage() {
                             >
                               {year}
                               {selectedYear === year && (
-                                <span className="material-symbols-outlined text-sm">check</span>
+                                <span className="material-symbols-outlined text-sm">
+                                  check
+                                </span>
                               )}
                             </button>
                           ))}
@@ -1116,22 +1420,26 @@ export default function DashboardPage() {
 
                     {/* Month Selector */}
                     <div className="relative" ref={monthDropdownRef}>
-                      <button 
+                      <button
                         onClick={() => setShowMonthDropdown(!showMonthDropdown)}
                         className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border border-outline-variant/30 bg-surface-container-low text-on-surface shadow-sm transition-all hover:border-outline-variant cursor-pointer ${showMonthDropdown ? "ring-2 ring-primary/20 border-primary" : ""}`}
                       >
                         <span className="text-[11px] font-bold">
-                          {selectedMonth === -1 ? t("allMonths") : (t("months") as unknown as string[])[selectedMonth]}
+                          {selectedMonth === -1
+                            ? t("allMonths")
+                            : (t("months") as unknown as string[])[
+                                selectedMonth
+                              ]}
                         </span>
                         <span className="material-symbols-outlined text-xs text-on-surface-variant opacity-50">
                           {showMonthDropdown ? "expand_less" : "expand_more"}
                         </span>
                       </button>
 
-                      <div 
+                      <div
                         className={`absolute left-0 lg:left-0 top-11 w-44 bg-white dark:bg-slate-900 border border-outline-variant/20 rounded-2xl shadow-2xl z-[100] overflow-hidden dropdown-transition origin-top-left ${
-                          showMonthDropdown 
-                            ? "opacity-100 translate-y-0 scale-100 pointer-events-auto visible" 
+                          showMonthDropdown
+                            ? "opacity-100 translate-y-0 scale-100 pointer-events-auto visible"
                             : "opacity-0 -translate-y-8 scale-90 pointer-events-none invisible"
                         }`}
                       >
@@ -1145,25 +1453,31 @@ export default function DashboardPage() {
                           >
                             {t("allMonths")}
                             {selectedMonth === -1 && (
-                              <span className="material-symbols-outlined text-sm">check</span>
+                              <span className="material-symbols-outlined text-sm">
+                                check
+                              </span>
                             )}
                           </button>
                           <div className="h-[1px] bg-outline-variant/10 mx-2 my-1"></div>
-                          {(t("months") as unknown as string[]).map((m, idx) => (
-                            <button
-                              key={idx}
-                              onClick={() => {
-                                setSelectedMonth(idx);
-                                setShowMonthDropdown(false);
-                              }}
-                              className={`w-full text-left px-4 py-2.5 hover:bg-primary/5 transition-colors cursor-pointer flex items-center justify-between text-[11px] ${selectedMonth === idx ? "text-primary font-black bg-primary/5" : "text-on-surface font-semibold"}`}
-                            >
-                              {m}
-                              {selectedMonth === idx && (
-                                <span className="material-symbols-outlined text-sm">check</span>
-                              )}
-                            </button>
-                          ))}
+                          {(t("months") as unknown as string[]).map(
+                            (m, idx) => (
+                              <button
+                                key={idx}
+                                onClick={() => {
+                                  setSelectedMonth(idx);
+                                  setShowMonthDropdown(false);
+                                }}
+                                className={`w-full text-left px-4 py-2.5 hover:bg-primary/5 transition-colors cursor-pointer flex items-center justify-between text-[11px] ${selectedMonth === idx ? "text-primary font-black bg-primary/5" : "text-on-surface font-semibold"}`}
+                              >
+                                {m}
+                                {selectedMonth === idx && (
+                                  <span className="material-symbols-outlined text-sm">
+                                    check
+                                  </span>
+                                )}
+                              </button>
+                            ),
+                          )}
                         </div>
                       </div>
                     </div>
@@ -1190,7 +1504,10 @@ export default function DashboardPage() {
                 </div>
               )}
 
-              <div className="relative flex items-center" ref={filterDropdownRef}>
+              <div
+                className="relative flex items-center"
+                ref={filterDropdownRef}
+              >
                 <button
                   onClick={() => setShowFilterDropdown(!showFilterDropdown)}
                   className={`flex items-center gap-2 px-4 py-2 rounded-xl border text-[11px] font-black uppercase tracking-wider transition-all duration-300 cursor-pointer shadow-sm ${filterCategory !== "ALL" || showFilterDropdown ? "border-primary bg-primary/10 text-primary" : "border-outline-variant/30 text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low"}`}
@@ -1200,13 +1517,13 @@ export default function DashboardPage() {
                   </span>
                   {t("colCategory")}
                   {filterCategory !== "ALL" && (
-                     <span className="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+                    <span className="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
                   )}
                 </button>
-                <div 
+                <div
                   className={`absolute right-0 top-12 mt-2 w-56 bg-white dark:bg-slate-900 border border-outline-variant/20 rounded-2xl shadow-2xl z-[100] overflow-hidden text-sm dropdown-transition origin-top-right ${
-                    showFilterDropdown 
-                      ? "opacity-100 translate-y-0 scale-100 pointer-events-auto visible" 
+                    showFilterDropdown
+                      ? "opacity-100 translate-y-0 scale-100 pointer-events-auto visible"
                       : "opacity-0 -translate-y-8 scale-90 pointer-events-none invisible"
                   }`}
                 >
@@ -1260,7 +1577,7 @@ export default function DashboardPage() {
                 </div>
               </div>
             </div>
-            
+
             {/* Bulk Action Bar */}
             {selectedIds.length > 0 && (
               <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-6 py-4 bg-primary/5 border border-primary/20 rounded-2xl animate-in slide-in-from-top-4 duration-300">
@@ -1269,7 +1586,9 @@ export default function DashboardPage() {
                     {selectedIds.length}
                   </span>
                   <p className="text-sm font-bold text-on-surface">
-                    {typeof t("itemsSelected") === 'function' ? t("itemsSelected", selectedIds.length) : `${selectedIds.length} items Selected`}
+                    {typeof t("itemsSelected") === "function"
+                      ? t("itemsSelected", selectedIds.length)
+                      : `${selectedIds.length} items Selected`}
                   </p>
                 </div>
                 <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -1283,7 +1602,9 @@ export default function DashboardPage() {
                     onClick={() => handleDeleteClick(selectedIds)}
                     className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2 rounded-xl bg-error text-white font-black text-xs shadow-lg shadow-error/20 hover:brightness-110 active:scale-95 transition-all cursor-pointer"
                   >
-                    <span className="material-symbols-outlined text-sm">delete</span>
+                    <span className="material-symbols-outlined text-sm">
+                      delete
+                    </span>
                     {t("btnDelete")}
                   </button>
                 </div>
@@ -1297,17 +1618,39 @@ export default function DashboardPage() {
                   <tr className="bg-slate-50 dark:bg-slate-900 text-on-surface-variant uppercase font-black text-[10px] tracking-widest border-b border-outline-variant/10 sticky top-0 z-20 shadow-[0_1px_3px_rgba(0,0,0,0.05)]">
                     <th className="p-2.5 sm:p-4 pl-6 text-center w-12">
                       <SelectionToggle
-                        checked={selectedIds.length > 0 && selectedIds.length === paginatedTransactions.length}
-                        indeterminate={selectedIds.length > 0 && selectedIds.length < paginatedTransactions.length}
-                        onChange={() => handleSelectAll(paginatedTransactions.map(tx => tx.id))}
+                        checked={
+                          selectedIds.length > 0 &&
+                          selectedIds.length === paginatedTransactions.length
+                        }
+                        indeterminate={
+                          selectedIds.length > 0 &&
+                          selectedIds.length < paginatedTransactions.length
+                        }
+                        onChange={() =>
+                          handleSelectAll(
+                            paginatedTransactions.map((tx) => tx.id),
+                          )
+                        }
                       />
                     </th>
-                    <th className="p-2.5 sm:p-4 whitespace-nowrap">{t("colDate")}</th>
-                    <th className="p-2.5 sm:p-4 whitespace-nowrap">{t("colCategory")}</th>
-                    <th className="p-2.5 sm:p-4 whitespace-nowrap">{t("colDescription")}</th>
-                    <th className="p-2.5 sm:p-4 text-left whitespace-nowrap w-[15%]">{t("colType")}</th>
-                    <th className="p-2.5 sm:p-4 text-right whitespace-nowrap w-[20%]">{t("colAmount")}</th>
-                    <th className="p-2.5 sm:p-4 whitespace-nowrap hidden sm:table-cell">{t("colLinkedAssets")}</th>
+                    <th className="p-2.5 sm:p-4 whitespace-nowrap">
+                      {t("colDate")}
+                    </th>
+                    <th className="p-2.5 sm:p-4 whitespace-nowrap">
+                      {t("colCategory")}
+                    </th>
+                    <th className="p-2.5 sm:p-4 whitespace-nowrap">
+                      {t("colDescription")}
+                    </th>
+                    <th className="p-2.5 sm:p-4 text-left whitespace-nowrap w-[15%]">
+                      {t("colType")}
+                    </th>
+                    <th className="p-2.5 sm:p-4 text-right whitespace-nowrap w-[20%]">
+                      {t("colAmount")}
+                    </th>
+                    <th className="p-2.5 sm:p-4 whitespace-nowrap hidden sm:table-cell">
+                      {t("colLinkedAssets")}
+                    </th>
                     <th className="p-2 text-center w-12 bg-slate-50 dark:bg-slate-900 border-l border-outline-variant/10"></th>
                   </tr>
                 ) : (
@@ -1336,7 +1679,8 @@ export default function DashboardPage() {
                     paginatedTransactions.map((tx) => (
                       <tr
                         key={tx.id}
-                        className={`hover:bg-grid-row-hover dark:hover:bg-slate-800/50 transition-colors group border-b border-outline-variant/5 text-sm font-semibold ${selectedIds.includes(tx.id) ? "bg-primary/[0.08]" : ""}`}
+                        onClick={() => setSelectedTxForDetail(tx)}
+                        className={`hover:bg-grid-row-hover dark:hover:bg-slate-800/50 transition-colors group border-b border-outline-variant/5 text-sm font-semibold cursor-pointer ${selectedIds.includes(tx.id) ? "bg-primary/[0.08]" : ""}`}
                       >
                         <td className="p-2.5 sm:p-4 pl-6 text-center">
                           <SelectionToggle
@@ -1360,7 +1704,9 @@ export default function DashboardPage() {
                         </td>
                         <td className="p-2.5 sm:p-4 font-medium text-[12px] sm:text-sm">
                           <div className="flex items-center gap-2">
-                            <span className="truncate max-w-[80px] sm:max-w-xs block">{tx.description}</span>
+                            <span className="truncate max-w-[80px] sm:max-w-xs block">
+                              {tx.description}
+                            </span>
                             {tx.isAi && (
                               <span className="inline-flex shrink-0 items-center gap-1 text-[8px] sm:text-[9px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded-full ml-1">
                                 <span className="material-symbols-outlined text-[10px]">
@@ -1374,21 +1720,27 @@ export default function DashboardPage() {
                         <td
                           className={`p-2.5 sm:p-4 font-bold text-[12px] sm:text-sm ${tx.type === "Credit" || tx.type === "Income" ? "text-secondary" : tx.type === "Investment" ? "text-indigo-500" : "text-error"}`}
                         >
-                          {tx.type === "Credit" || tx.type === "Income" ? t("typeIncome") : tx.type === "Debit" || tx.type === "Expense" ? t("typeExpense") : t("typeInvestment")}
+                          {tx.type === "Credit" || tx.type === "Income"
+                            ? t("typeIncome")
+                            : tx.type === "Debit" || tx.type === "Expense"
+                              ? t("typeExpense")
+                              : t("typeInvestment")}
                         </td>
                         <td
                           className={`p-2.5 sm:p-4 text-right font-black tabular-nums text-[13px] sm:text-[14px] ${tx.type === "Income" || tx.type === "Credit" ? "text-secondary" : "text-error"}`}
                         >
                           <div className="flex flex-col items-end">
                             <span className="tabular-nums">
-                              {tx.type === "Income" || tx.type === "Credit" ? "+" : "-"}
+                              {tx.type === "Income" || tx.type === "Credit"
+                                ? "+"
+                                : "-"}
                               {formatValue(
                                 convert(
                                   Math.abs(Number(tx.amount) || 0),
                                   (tx.currency || "USD") as SupportedCurrency,
-                                  currency as SupportedCurrency
+                                  currency as SupportedCurrency,
                                 ),
-                                currency as SupportedCurrency
+                                currency as SupportedCurrency,
                               )}
                             </span>
                           </div>
@@ -1397,9 +1749,11 @@ export default function DashboardPage() {
                           {(() => {
                             let content: React.ReactNode = "—";
                             let isLinked = false;
-                            
+
                             if (tx.linked_asset_id) {
-                              const linkedA = cashAssets.find((a) => a.id === tx.linked_asset_id);
+                              const linkedA = cashAssets.find(
+                                (a) => a.id === tx.linked_asset_id,
+                              );
                               if (linkedA) {
                                 content = linkedA.name;
                                 isLinked = true;
@@ -1412,17 +1766,31 @@ export default function DashboardPage() {
 
                             return (
                               <div className="flex items-center gap-1.5 justify-end md:justify-start">
-                                <span className={`inline-block w-1.5 h-1.5 rounded-full ${isLinked ? "bg-primary/40 animate-pulse" : "bg-outline-variant/30"}`}></span>
+                                <span
+                                  className={`inline-block w-1.5 h-1.5 rounded-full ${isLinked ? "bg-primary/40 animate-pulse" : "bg-outline-variant/30"}`}
+                                ></span>
                                 {content}
                               </div>
                             );
                           })()}
                         </td>
-                        <td className="p-1 px-2 text-center kebab-menu-container bg-white dark:bg-slate-950 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 transition-all z-20">
-                          <RowActionMenu 
+                        <td 
+                          className="p-1 px-2 text-center kebab-menu-container bg-white dark:bg-slate-950 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 transition-all z-20"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <RowActionMenu
                             actions={[
-                              { label: t("btnEdit"), icon: "edit", onClick: () => handleEdit(tx) },
-                              { label: t("btnDelete"), icon: "delete", onClick: () => handleDeleteClick([tx.id]), variant: "danger" }
+                              {
+                                label: t("btnEdit"),
+                                icon: "edit",
+                                onClick: () => handleEdit(tx),
+                              },
+                              {
+                                label: t("btnDelete"),
+                                icon: "delete",
+                                onClick: () => handleDeleteClick([tx.id]),
+                                variant: "danger",
+                              },
                             ]}
                           />
                         </td>
@@ -1504,26 +1872,32 @@ export default function DashboardPage() {
                     className="flex items-center justify-center min-w-[32px] h-8 rounded-lg hover:bg-surface-container-lowest dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer text-on-surface-variant hover:text-primary active:scale-95"
                     title={t("btnPrev")}
                   >
-                    <span className="material-symbols-outlined text-lg">chevron_left</span>
+                    <span className="material-symbols-outlined text-lg">
+                      chevron_left
+                    </span>
                   </button>
-                  
+
                   <div className="flex items-center gap-1 mx-1">
                     {(() => {
                       const range: (number | string)[] = [];
                       const delta = 1;
                       const left = currentPage - delta;
                       const right = currentPage + delta + 1;
-                      
+
                       for (let i = 1; i <= totalPages; i++) {
-                        if (i === 1 || i === totalPages || (i >= left && i < right)) {
+                        if (
+                          i === 1 ||
+                          i === totalPages ||
+                          (i >= left && i < right)
+                        ) {
                           range.push(i);
                         } else if (range[range.length - 1] !== "...") {
                           range.push("...");
                         }
                       }
-                      
-                      return range.map((p, idx) => (
-                        typeof p === 'number' ? (
+
+                      return range.map((p, idx) =>
+                        typeof p === "number" ? (
                           <button
                             key={idx}
                             onClick={() => setCurrentPage(p)}
@@ -1532,30 +1906,35 @@ export default function DashboardPage() {
                             {p}
                           </button>
                         ) : (
-                          <span key={idx} className="px-1 text-on-surface-variant opacity-40 text-[11px] font-black tracking-widest">{p}</span>
-                        )
-                      ));
+                          <span
+                            key={idx}
+                            className="px-1 text-on-surface-variant opacity-40 text-[11px] font-black tracking-widest"
+                          >
+                            {p}
+                          </span>
+                        ),
+                      );
                     })()}
                   </div>
 
                   <button
                     disabled={currentPage === totalPages}
-                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    onClick={() =>
+                      setCurrentPage((p) => Math.min(totalPages, p + 1))
+                    }
                     className="flex items-center justify-center min-w-[32px] h-8 rounded-lg hover:bg-surface-container-lowest dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer text-on-surface-variant hover:text-primary active:scale-95"
                     title={t("btnNext")}
                   >
-                    <span className="material-symbols-outlined text-lg">chevron_right</span>
+                    <span className="material-symbols-outlined text-lg">
+                      chevron_right
+                    </span>
                   </button>
                 </div>
               )}
-
             </div>
           </div>
         </section>
       </main>
-
-
-
     </>
   );
 }
