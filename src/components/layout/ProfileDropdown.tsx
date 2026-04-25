@@ -8,6 +8,7 @@ import { useCurrency } from "@/hooks/useCurrency";
 import { convert, formatValue, type SupportedCurrency } from "@/lib/currency";
 import { createClient } from "@/utils/supabase/client";
 import * as XLSX from "xlsx";
+import DataSyncModal from "@/components/DataSyncModal";
 
 interface ProfileDropdownProps {
   userName: string | null;
@@ -30,6 +31,7 @@ export default function ProfileDropdown({
   const [mounted, setMounted] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [showGDriveModal, setShowGDriveModal] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -243,6 +245,21 @@ export default function ProfileDropdown({
           <div className="h-px bg-outline-variant/10 my-1 mx-2" />
 
           <button
+            onClick={() => {
+              setShowGDriveModal(true);
+              setShowDropdown(false);
+            }}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-on-surface dark:text-white hover:bg-surface-container-low dark:hover:bg-white/5 transition-colors text-sm font-bold group"
+          >
+            <span className="material-symbols-outlined text-on-surface-variant dark:text-gray-400 group-hover:text-primary transition-colors">
+              sync
+            </span>
+            <span>{lang === 'id' ? 'Sync & Backup' : 'Sync & Backup'}</span>
+          </button>
+
+          <div className="h-px bg-outline-variant/10 my-1 mx-2" />
+
+          <button
             onClick={handleLogout}
             className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-on-surface dark:text-white hover:bg-surface-container-low dark:hover:bg-white/5 transition-colors text-sm font-bold group"
           >
@@ -271,6 +288,12 @@ export default function ProfileDropdown({
           )}
         </div>
       </div>
+
+      <DataSyncModal
+        isOpen={showGDriveModal}
+        onClose={() => setShowGDriveModal(false)}
+        mode="backup" // This prop will now be handled inside the modal for initial state
+      />
     </div>
   );
 }
