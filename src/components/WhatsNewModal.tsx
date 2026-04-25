@@ -37,54 +37,61 @@ export default function WhatsNewModal() {
     {
       icon: "sync_saved_locally",
       title: lang === "id" ? "Universal JSON Sync" : "Universal JSON Sync",
-      desc: lang === "id" 
-        ? "Backup & pindahin data antar akun (Google/GitHub) cuma modal satu file JSON." 
-        : "Backup and transfer data between accounts (Google/GitHub) with a single JSON file.",
-      color: "bg-blue-500"
+      desc:
+        lang === "id"
+          ? "Backup & pindahin data antar akun (Google/GitHub) cuma modal satu file JSON."
+          : "Backup and transfer data between accounts (Google/GitHub) with a single JSON file.",
+      color: "bg-blue-500",
     },
     {
       icon: "table_rows",
-      title: lang === "id" ? "Detail Tabel Interaktif" : "Interactive Table Details",
-      desc: lang === "id" 
-        ? "Klik baris tabel di dashboard buat liat detail transaksi lengkap dengan animasi smooth." 
-        : "Click table rows in the dashboard to see full transaction details with smooth animations.",
-      color: "bg-purple-500"
+      title:
+        lang === "id" ? "Detail Tabel Interaktif" : "Interactive Table Details",
+      desc:
+        lang === "id"
+          ? "Klik baris tabel di dashboard buat liat detail transaksi lengkap dengan animasi smooth."
+          : "Click table rows in the dashboard to see full transaction details with smooth animations.",
+      color: "bg-purple-500",
     },
     {
       icon: "palette",
       title: lang === "id" ? "UI & Hover Refresh" : "UI & Hover Refresh",
-      desc: lang === "id" 
-        ? "Tampilan tabel di Light Mode sekarang lebih jelas hover-nya. Navigasi makin intuitif." 
-        : "Table views in Light Mode now have clearer hover states for intuitive navigation.",
-      color: "bg-emerald-500"
-    }
+      desc:
+        lang === "id"
+          ? "Tampilan tabel di Light Mode sekarang lebih jelas hover-nya. Navigasi makin intuitif."
+          : "Table views in Light Mode now have clearer hover states for intuitive navigation.",
+      color: "bg-emerald-500",
+    },
   ];
 
   const tutorials = [
     {
       step: "01",
       title: lang === "id" ? "Cara Backup Data" : "How to Backup",
-      desc: lang === "id" 
-        ? "Klik foto profil lo > Pilih 'Sync & Backup' > Klik 'Ekspor Data'. File JSON bakal otomatis ter-download." 
-        : "Click your profile > Select 'Sync & Backup' > Click 'Export Data'. Your JSON file will download automatically.",
-      icon: "cloud_upload"
+      desc:
+        lang === "id"
+          ? "Klik foto profil lo > Pilih 'Sync & Backup' > Klik 'Ekspor Data'. File JSON bakal otomatis ter-download."
+          : "Click your profile > Select 'Sync & Backup' > Click 'Export Data'. Your JSON file will download automatically.",
+      icon: "cloud_upload",
     },
     {
       step: "02",
       title: lang === "id" ? "Liat Detail Transaksi" : "View Details",
-      desc: lang === "id" 
-        ? "Di tabel Dashboard atau Assets, cukup tap/klik baris mana aja buat ngebuka detail transaksi lo." 
-        : "In the Dashboard or Assets table, simply tap/click any row to open your transaction details.",
-      icon: "zoom_in"
+      desc:
+        lang === "id"
+          ? "Di tabel Dashboard atau Assets, cukup tap/klik baris mana aja buat ngebuka detail transaksi lo."
+          : "In the Dashboard or Assets table, simply tap/click any row to open your transaction details.",
+      icon: "zoom_in",
     },
     {
       step: "03",
       title: lang === "id" ? "Cara Import Data" : "How to Import",
-      desc: lang === "id" 
-        ? "Klik foto profil > 'Sync & Backup' > 'Impor Data' > Pilih file JSON backup lo. Data bakal otomatis sinkron!" 
-        : "Click profile > 'Sync & Backup' > 'Import Data' > Select your JSON file. Your data will sync instantly!",
-      icon: "publish"
-    }
+      desc:
+        lang === "id"
+          ? "Klik foto profil > 'Sync & Backup' > 'Impor Data' > Pilih file JSON backup lo. Data bakal otomatis sinkron!"
+          : "Click profile > 'Sync & Backup' > 'Import Data' > Select your JSON file. Your data will sync instantly!",
+      icon: "publish",
+    },
   ];
 
   return createPortal(
@@ -120,22 +127,32 @@ export default function WhatsNewModal() {
                   >
                     <div className="text-center space-y-4">
                       <div className="w-16 h-16 bg-primary text-white rounded-3xl flex items-center justify-center mx-auto shadow-2xl shadow-primary/30 mb-4">
-                        <span className="material-symbols-outlined text-4xl">celebration</span>
+                        <span className="material-symbols-outlined text-4xl">
+                          celebration
+                        </span>
                       </div>
                       <h2 className="font-headline font-black text-3xl text-on-surface tracking-tight">
-                        {lang === 'id' ? 'Ada yang baru nih!' : "What's New!"}
+                        {lang === "id" ? "Ada yang baru nih!" : "What's New!"}
                       </h2>
                     </div>
 
                     <div className="space-y-6">
                       {features.map((f, i) => (
                         <div key={i} className="flex gap-5">
-                          <div className={`shrink-0 w-12 h-12 rounded-2xl ${f.color} text-white flex items-center justify-center shadow-lg`}>
-                            <span className="material-symbols-outlined text-2xl">{f.icon}</span>
+                          <div
+                            className={`shrink-0 w-12 h-12 rounded-2xl ${f.color} text-white flex items-center justify-center shadow-lg`}
+                          >
+                            <span className="material-symbols-outlined text-2xl">
+                              {f.icon}
+                            </span>
                           </div>
                           <div className="space-y-1 pt-1 text-left">
-                            <h4 className="font-black text-sm text-on-surface uppercase tracking-wide">{f.title}</h4>
-                            <p className="text-[13px] text-on-surface-variant font-medium leading-relaxed opacity-70">{f.desc}</p>
+                            <h4 className="font-black text-sm text-on-surface uppercase tracking-wide">
+                              {f.title}
+                            </h4>
+                            <p className="text-[13px] text-on-surface-variant font-medium leading-relaxed opacity-70">
+                              {f.desc}
+                            </p>
                           </div>
                         </div>
                       ))}
@@ -146,14 +163,16 @@ export default function WhatsNewModal() {
                         onClick={handleClose}
                         className="w-full py-5 rounded-[2rem] bg-primary text-white font-black text-sm shadow-xl shadow-primary/20 active:scale-95 transition-all flex items-center justify-center gap-3"
                       >
-                        {lang === 'id' ? 'Gue Ngerti!' : 'Got it!'}
-                        <span className="material-symbols-outlined">rocket_launch</span>
+                        {lang === "id" ? "Mengerti!" : "Got it!"}
+                        <span className="material-symbols-outlined">
+                          rocket_launch
+                        </span>
                       </button>
                       <button
                         onClick={() => setView("tutorial")}
                         className="w-full py-3 text-[10px] font-black uppercase tracking-[0.3em] text-on-surface-variant opacity-40 hover:opacity-100 transition-opacity"
                       >
-                        {lang === 'id' ? 'Lihat Tutorial' : 'Learn How to Use'}
+                        {lang === "id" ? "Lihat Tutorial" : "Learn How to Use"}
                       </button>
                     </div>
                   </motion.div>
@@ -167,10 +186,12 @@ export default function WhatsNewModal() {
                   >
                     <div className="text-center space-y-4">
                       <div className="w-16 h-16 bg-secondary text-on-secondary rounded-3xl flex items-center justify-center mx-auto shadow-2xl shadow-secondary/30 mb-4">
-                        <span className="material-symbols-outlined text-4xl">menu_book</span>
+                        <span className="material-symbols-outlined text-4xl">
+                          menu_book
+                        </span>
                       </div>
                       <h2 className="font-headline font-black text-3xl text-on-surface tracking-tight">
-                        {lang === 'id' ? 'Cara Pakenya' : "Tutorial Guide"}
+                        {lang === "id" ? "Cara Pakenya" : "Tutorial Guide"}
                       </h2>
                     </div>
 
@@ -183,7 +204,9 @@ export default function WhatsNewModal() {
                           <div className="space-y-1 pt-1 text-left">
                             <h4 className="font-black text-sm text-on-surface flex items-center gap-2">
                               {t.title}
-                              <span className="material-symbols-outlined text-xs text-secondary opacity-0 group-hover:opacity-100 transition-opacity">{t.icon}</span>
+                              <span className="material-symbols-outlined text-xs text-secondary opacity-0 group-hover:opacity-100 transition-opacity">
+                                {t.icon}
+                              </span>
                             </h4>
                             <p className="text-[12px] text-on-surface-variant font-medium leading-relaxed opacity-60 group-hover:opacity-100 transition-opacity">
                               {t.desc}
@@ -198,8 +221,10 @@ export default function WhatsNewModal() {
                         onClick={() => setView("features")}
                         className="w-full py-5 rounded-[2rem] border-2 border-outline-variant/20 text-on-surface font-black text-sm active:scale-95 transition-all flex items-center justify-center gap-3"
                       >
-                        <span className="material-symbols-outlined text-sm">arrow_back</span>
-                        {lang === 'id' ? 'Kembali' : 'Back to News'}
+                        <span className="material-symbols-outlined text-sm">
+                          arrow_back
+                        </span>
+                        {lang === "id" ? "Kembali" : "Back to News"}
                       </button>
                     </div>
                   </motion.div>
@@ -207,7 +232,7 @@ export default function WhatsNewModal() {
               </AnimatePresence>
             </div>
 
-            <button 
+            <button
               onClick={handleClose}
               className="absolute top-6 right-6 w-10 h-10 rounded-full hover:bg-white/5 flex items-center justify-center text-on-surface-variant transition-colors"
             >
@@ -217,6 +242,6 @@ export default function WhatsNewModal() {
         </div>
       )}
     </AnimatePresence>,
-    document.body
+    document.body,
   );
 }
