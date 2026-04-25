@@ -80,7 +80,7 @@ export default function Navbar({ userName, userEmail, userAvatar, onDeleteAccoun
     >
       <div className="flex justify-between items-center w-full px-4 sm:px-6 py-2 md:py-3 max-w-7xl mx-auto">
         <div className="flex items-center gap-4 md:gap-8">
-          <Link href="/" className="flex items-center gap-2 cursor-pointer group">
+          <Link href="/?explore=true" className="flex items-center gap-2 cursor-pointer group">
             <span className="text-lg md:text-xl font-extrabold tracking-tighter text-indigo-700 dark:text-indigo-300 font-headline group-hover:text-primary transition-colors">
               SnapFins
             </span>

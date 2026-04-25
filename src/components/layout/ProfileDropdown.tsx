@@ -4,10 +4,14 @@ import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useTheme } from "@/hooks/useTheme";
 import { useLang } from "@/hooks/useLang";
+import { useScrollLock } from "@/hooks/useScrollLock";
 import { useCurrency } from "@/hooks/useCurrency";
 import { convert, formatValue, type SupportedCurrency } from "@/lib/currency";
 import { createClient } from "@/utils/supabase/client";
+import { createPortal } from "react-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import * as XLSX from "xlsx";
+import DataSyncModal from "@/components/DataSyncModal";
 
 interface ProfileDropdownProps {
   userName: string | null;
@@ -30,7 +34,11 @@ export default function ProfileDropdown({
   const [mounted, setMounted] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [showGDriveModal, setShowGDriveModal] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useScrollLock(showLogoutConfirm);
 
   useEffect(() => {
     setMounted(true);
@@ -43,7 +51,7 @@ export default function ProfileDropdown({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleLogout = async () => {
+  const confirmLogout = async () => {
     const supabase = createClient();
     await supabase.auth.signOut();
     window.location.href = "/";
@@ -179,98 +187,164 @@ export default function ProfileDropdown({
         />
       </button>
 
-      <div
-        className={`absolute right-0 top-12 mt-2 w-64 bg-white dark:bg-slate-900 border border-outline-variant/20 rounded-2xl shadow-2xl z-[100] overflow-hidden dropdown-transition origin-top-right ${
-          showDropdown
-            ? "opacity-100 translate-y-0 scale-100 pointer-events-auto visible"
-            : "opacity-0 -translate-y-8 scale-90 pointer-events-none invisible"
-        }`}
-      >
-        <div className="px-5 py-4 border-b border-outline-variant/10 bg-slate-50 dark:bg-slate-800/50">
-          <p className="text-xs font-black uppercase tracking-widest text-primary mb-1">{t("profile")}</p>
-          <p className="text-sm font-bold text-on-surface dark:text-white truncate">{userName}</p>
-          <p className="text-[10px] text-on-surface-variant dark:text-gray-400 truncate opacity-60">{userEmail}</p>
-        </div>
-
-        <div className="p-2 space-y-1">
-          {showDashboardLink && (
-            <Link
-              href="/dashboard"
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-on-surface dark:text-white hover:bg-surface-container-low dark:hover:bg-white/5 transition-colors text-sm font-bold group"
-              onClick={() => setShowDropdown(false)}
-            >
-              <span className="material-symbols-outlined text-on-surface-variant dark:text-gray-400 group-hover:text-primary transition-colors">
-                dashboard
-              </span>
-              <span>{t("navDashboard")}</span>
-            </Link>
-          )}
-
-          {mounted && (
-            <button
-              onClick={toggleTheme}
-              className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-on-surface dark:text-white hover:bg-surface-container-low dark:hover:bg-white/5 transition-colors text-sm font-bold group"
-            >
-              <div className="flex items-center gap-3">
-                <span className="material-symbols-outlined text-on-surface-variant dark:text-gray-400 group-hover:text-primary transition-colors">
-                  {theme === "dark" ? "light_mode" : "dark_mode"}
-                </span>
-                <span>{theme === "dark" ? "Light Mode" : "Dark Mode"}</span>
-              </div>
-              <div className="w-8 h-4 bg-outline-variant/30 rounded-full relative">
-                <div
-                  className={`absolute top-0.5 w-3 h-3 bg-primary rounded-full transition-all ${
-                    theme === "dark" ? "right-0.5" : "left-0.5"
-                  }`}
-                ></div>
-              </div>
-            </button>
-          )}
-
-          <div className="h-px bg-outline-variant/10 my-1 mx-2" />
-
-          <button
-            onClick={handleExportAllData}
-            disabled={isExporting}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-on-surface dark:text-white hover:bg-surface-container-low dark:hover:bg-white/5 transition-colors text-sm font-bold group disabled:opacity-50"
+      <AnimatePresence>
+        {showDropdown && (
+          <motion.div
+            initial={{ opacity: 0, y: -20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -10, scale: 0.95 }}
+            transition={{ type: "spring", damping: 20, stiffness: 300 }}
+            className="absolute right-0 top-12 mt-2 w-64 bg-white dark:bg-slate-900 border border-outline-variant/20 rounded-2xl shadow-2xl z-[100] overflow-hidden origin-top-right"
           >
-            <span className={`material-symbols-outlined text-on-surface-variant dark:text-gray-400 group-hover:text-primary transition-colors ${isExporting ? 'animate-spin' : ''}`}>
-              {isExporting ? 'sync' : 'download'}
-            </span>
-            <span>{isExporting ? (lang === 'id' ? 'Mengekspor...' : 'Exporting...') : (lang === 'id' ? 'Ekspor Data (Excel)' : 'Export Data (Excel)')}</span>
-          </button>
+            <div className="px-5 py-4 border-b border-outline-variant/10 bg-slate-50 dark:bg-slate-800/50">
+              <p className="text-xs font-black uppercase tracking-widest text-primary mb-1">{t("profile")}</p>
+              <p className="text-sm font-bold text-on-surface dark:text-white truncate">{userName}</p>
+              <p className="text-[10px] text-on-surface-variant dark:text-gray-400 truncate opacity-60">{userEmail}</p>
+            </div>
 
-          <div className="h-px bg-outline-variant/10 my-1 mx-2" />
+            <div className="p-2 space-y-1">
+              {showDashboardLink && (
+                <Link
+                  href="/dashboard"
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-on-surface dark:text-white hover:bg-surface-container-low dark:hover:bg-white/5 transition-colors text-sm font-bold group"
+                  onClick={() => setShowDropdown(false)}
+                >
+                  <span className="material-symbols-outlined text-on-surface-variant dark:text-gray-400 group-hover:text-primary transition-colors">
+                    dashboard
+                  </span>
+                  <span>{t("navDashboard")}</span>
+                </Link>
+              )}
 
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-on-surface dark:text-white hover:bg-surface-container-low dark:hover:bg-white/5 transition-colors text-sm font-bold group"
-          >
-            <span className="material-symbols-outlined text-on-surface-variant dark:text-gray-400 group-hover:text-primary transition-colors">
-              logout
-            </span>
-            {t("logout")}
-          </button>
+              {mounted && (
+                <button
+                  onClick={toggleTheme}
+                  className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-on-surface dark:text-white hover:bg-surface-container-low dark:hover:bg-white/5 transition-colors text-sm font-bold group"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="material-symbols-outlined text-on-surface-variant dark:text-gray-400 group-hover:text-primary transition-colors">
+                      {theme === "dark" ? "light_mode" : "dark_mode"}
+                    </span>
+                    <span>{theme === "dark" ? "Light Mode" : "Dark Mode"}</span>
+                  </div>
+                  <div className="w-8 h-4 bg-outline-variant/30 rounded-full relative">
+                    <div
+                      className={`absolute top-0.5 w-3 h-3 bg-primary rounded-full transition-all ${
+                        theme === "dark" ? "right-0.5" : "left-0.5"
+                      }`}
+                    ></div>
+                  </div>
+                </button>
+              )}
 
-          {onDeleteAccount && (
-            <>
               <div className="h-px bg-outline-variant/10 my-1 mx-2" />
+
+              <button
+                onClick={handleExportAllData}
+                disabled={isExporting}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-on-surface dark:text-white hover:bg-surface-container-low dark:hover:bg-white/5 transition-colors text-sm font-bold group disabled:opacity-50"
+              >
+                <span className={`material-symbols-outlined text-on-surface-variant dark:text-gray-400 group-hover:text-primary transition-colors ${isExporting ? 'animate-spin' : ''}`}>
+                  {isExporting ? 'sync' : 'download'}
+                </span>
+                <span>{isExporting ? (lang === 'id' ? 'Mengekspor...' : 'Exporting...') : (lang === 'id' ? 'Ekspor Data (Excel)' : 'Export Data (Excel)')}</span>
+              </button>
+
+              <div className="h-px bg-outline-variant/10 my-1 mx-2" />
+
               <button
                 onClick={() => {
+                  setShowGDriveModal(true);
                   setShowDropdown(false);
-                  onDeleteAccount();
                 }}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-error hover:bg-error/10 transition-colors text-sm font-bold group"
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-on-surface dark:text-white hover:bg-surface-container-low dark:hover:bg-white/5 transition-colors text-sm font-bold group"
               >
-                <span className="material-symbols-outlined text-on-surface-variant dark:text-gray-400 group-hover:text-error transition-colors">
-                  delete_forever
+                <span className="material-symbols-outlined text-on-surface-variant dark:text-gray-400 group-hover:text-primary transition-colors">
+                  sync
                 </span>
-                {t("deleteAccount")}
+                <span>{lang === 'id' ? 'Sync & Backup' : 'Sync & Backup'}</span>
               </button>
-            </>
-          )}
-        </div>
-      </div>
+
+              <div className="h-px bg-outline-variant/10 my-1 mx-2" />
+
+              <button
+                onClick={() => {
+                  setShowLogoutConfirm(true);
+                  setShowDropdown(false);
+                }}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-on-surface dark:text-white hover:bg-surface-container-low dark:hover:bg-white/5 transition-colors text-sm font-bold group"
+              >
+                <span className="material-symbols-outlined text-on-surface-variant dark:text-gray-400 group-hover:text-primary transition-colors">
+                  logout
+                </span>
+                {t("logout")}
+              </button>
+
+              {onDeleteAccount && (
+                <>
+                  <div className="h-4" />
+                  <div className="h-px bg-error/20 mx-2" />
+                  <div className="h-1" />
+                  <button
+                    onClick={() => {
+                      setShowDropdown(false);
+                      onDeleteAccount();
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-error hover:bg-error/10 transition-colors text-sm font-bold group"
+                  >
+                    <span className="material-symbols-outlined text-error/60 group-hover:text-error transition-colors">
+                      delete_forever
+                    </span>
+                    {t("deleteAccount")}
+                  </button>
+                </>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <DataSyncModal
+        isOpen={showGDriveModal}
+        onClose={() => setShowGDriveModal(false)}
+        mode="backup" // This prop will now be handled inside the modal for initial state
+      />
+
+      {/* Logout Confirmation Modal */}
+      {showLogoutConfirm && createPortal(
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 overflow-hidden">
+          <div 
+            className="absolute inset-0 bg-black/60 backdrop-blur-md animate-in fade-in duration-300"
+            onClick={() => setShowLogoutConfirm(false)}
+          />
+          <div className="relative w-full max-w-sm bg-surface dark:bg-slate-900 rounded-[2.5rem] border border-white/10 shadow-2xl p-8 text-center animate-in zoom-in-95 duration-300">
+            <div className="w-16 h-16 bg-primary/10 text-primary rounded-2xl flex items-center justify-center mx-auto mb-6">
+              <span className="material-symbols-outlined text-3xl">logout</span>
+            </div>
+            <h3 className="font-headline font-black text-2xl text-on-surface mb-2">
+              {lang === 'id' ? 'Beneran mau Keluar?' : 'Leaving so soon?'}
+            </h3>
+            <p className="text-sm text-on-surface-variant font-medium opacity-60 mb-8">
+              {lang === 'id' ? 'Jangan lupa balik lagi ya bro buat pantau aset lo!' : 'Don\'t forget to come back and track your assets!'}
+            </p>
+            <div className="grid grid-cols-2 gap-4">
+              <button
+                onClick={() => setShowLogoutConfirm(false)}
+                className="py-4 rounded-2xl bg-surface-container-high text-on-surface font-black text-sm active:scale-95 transition-all"
+              >
+                {lang === 'id' ? 'Batal' : 'Stay'}
+              </button>
+              <button
+                onClick={confirmLogout}
+                className="py-4 rounded-2xl bg-primary text-white font-black text-sm active:scale-95 transition-all shadow-xl shadow-primary/20"
+              >
+                {lang === 'id' ? 'Ya, Logout' : 'Log Out'}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }
