@@ -30,6 +30,8 @@ export default function DataSyncModal({ isOpen, onClose }: DataSyncModalProps) {
   useEffect(() => {
     if (isOpen) {
       setView("selection");
+      setErrorMsg("");
+      setPendingData(null);
     }
   }, [isOpen]);
 
@@ -40,7 +42,7 @@ export default function DataSyncModal({ isOpen, onClose }: DataSyncModalProps) {
     
     if (!userData?.user) {
       setView("error");
-      setErrorMsg("User not found");
+      setErrorMsg(lang === 'id' ? 'User tidak ditemukan.' : 'User not found.');
       return;
     }
 
@@ -49,6 +51,13 @@ export default function DataSyncModal({ isOpen, onClose }: DataSyncModalProps) {
         supabase.from("transactions").select("*").eq("user_id", userData.user.id).order("date", { ascending: false }),
         supabase.from("assets").select("*").eq("user_id", userData.user.id)
       ]);
+
+      // VALIDASI DATA KOSONG
+      if ((!transactions || transactions.length === 0) && (!assets || assets.length === 0)) {
+        setView("error");
+        setErrorMsg(lang === 'id' ? 'Waduh, data lo masih kosong nih. Tambahin transaksi dulu baru bisa di-backup ya!' : 'Whoops, your data is empty. Add some transactions or assets first before backing up!');
+        return;
+      }
 
       const backupData = {
         app: "snapfins",
@@ -82,13 +91,36 @@ export default function DataSyncModal({ isOpen, onClose }: DataSyncModalProps) {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // VALIDASI FILE TYPE
+    if (file.type !== "application/json" && !file.name.endsWith(".json")) {
+      setView("error");
+      setErrorMsg(lang === 'id' ? 'File harus berformat .json ya bro!' : 'File must be in .json format!');
+      e.target.value = "";
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = async (event) => {
       try {
-        const content = JSON.parse(event.target?.result as string);
-        if (content.app !== "snapfins") {
-          throw new Error("File ini bukan format backup Snapfins.");
+        const text = event.target?.result as string;
+        let content;
+        
+        try {
+          content = JSON.parse(text);
+        } catch (e) {
+          throw new Error(lang === 'id' ? 'File JSON rusak atau tidak valid.' : 'Invalid or corrupted JSON file.');
         }
+
+        // VALIDASI APP TYPE
+        if (content.app !== "snapfins") {
+          throw new Error(lang === 'id' ? 'File ini bukan format backup Snapfins yang sah.' : 'This file is not a valid Snapfins backup.');
+        }
+
+        // VALIDASI DATA KOSONG DI DALAM JSON
+        if (!content.data || ((!content.data.transactions || content.data.transactions.length === 0) && (!content.data.assets || content.data.assets.length === 0))) {
+          throw new Error(lang === 'id' ? 'File backup ini isinya kosong, nggak ada data yang bisa di-import.' : 'This backup file is empty, no data to import.');
+        }
+
         setPendingData(content.data);
         setView("confirming");
       } catch (err: any) {
@@ -338,7 +370,7 @@ export default function DataSyncModal({ isOpen, onClose }: DataSyncModalProps) {
                   </div>
                   <div className="space-y-2">
                     <h3 className="font-headline font-black text-2xl text-on-surface">Waduh, Gagal</h3>
-                    <p className="text-sm text-error font-bold">{errorMsg}</p>
+                    <p className="text-sm text-error font-bold leading-relaxed">{errorMsg}</p>
                   </div>
                   <button
                     onClick={() => setView("selection")}

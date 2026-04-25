@@ -27,6 +27,7 @@ import TransactionModal from "@/components/TransactionModal";
 import ScanReceiptModal from "@/components/ScanReceiptModal";
 import DeleteTransactionModal from "@/components/DeleteTransactionModal";
 import TransactionDetailModal from "@/components/TransactionDetailModal";
+import WhatsNewModal from "@/components/WhatsNewModal";
 const assignColor = (category: string) => {
   const map: Record<string, string> = {
     DINING: "purple",
@@ -1042,6 +1043,8 @@ export default function DashboardPage() {
           />
         )}
       </AnimatePresence>
+
+      <WhatsNewModal />
 
       {scanSuccess &&
         createPortal(
