@@ -15,10 +15,12 @@ import ProfileDropdown from "@/components/layout/ProfileDropdown";
 import { AnimatePresence } from "framer-motion";
 import InstallPWAButton from "@/components/InstallPWAButton";
 import HeroVideo from "@/components/HeroVideo";
+import { useRouter } from "next/navigation";
 
 export default function LandingPage() {
   const { theme, setTheme } = useTheme();
   const { lang, setLang, t } = useLang();
+  const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
@@ -38,10 +40,17 @@ export default function LandingPage() {
       const { data } = await supabase.auth.getUser();
       if (data?.user) {
         setUser(data.user);
+        
+        // Redirect to dashboard if logged in, unless they explicitly clicked 
+        // to explore the landing page (e.g. from the dashboard logo)
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get("explore") !== "true") {
+          router.replace("/dashboard");
+        }
       }
     };
     checkUser();
-  }, []);
+  }, [router]);
 
   // Ref to prevent scroll spy from overriding a click-set section
   // while the smooth scroll animation is still playing.
