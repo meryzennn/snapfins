@@ -139,9 +139,9 @@ export default function LandingPage() {
     });
   };
 
-  if (!mounted) {
-    return <LandingPageSkeleton />;
-  }
+  // We remove the full-page LandingPageSkeleton blocker so the real header and content are SSR'd.
+  // This prevents the "flash of unstyled content" or large layout shifts on the header
+  // when switching from skeleton to real page, and significantly improves SEO.
 
   return (
     <div className="min-h-screen bg-background selection:bg-primary/20 font-body text-on-surface antialiased scroll-smooth">

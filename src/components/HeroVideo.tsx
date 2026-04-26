@@ -5,15 +5,31 @@ import { useRef, useState, useEffect } from "react";
 export default function HeroVideo() {
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const blurVideoRef = useRef<HTMLVideoElement>(null); // Provides the ambient background blur for fullscreen
   
   const [isPlaying, setIsPlaying] = useState(true);
   const [isMuted, setIsMuted] = useState(true); 
-  const [progress, setProgress] = useState(0);
   const [volume, setVolume] = useState(0); 
-  const [lastVolume, setLastVolume] = useState(0.1); 
-  const [isSliding, setIsSliding] = useState(false); 
+  const [lastVolume, setLastVolume] = useState(0.3); 
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isBuffering, setIsBuffering] = useState(false);
+
+  useEffect(() => {
+    // Explicitly handle autoplay for mobile browsers
+    if (videoRef.current) {
+      videoRef.current.defaultMuted = true;
+      videoRef.current.muted = isMuted;
+
+      const playPromise = videoRef.current.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(() => {
+          // Autoplay was prevented by browser (e.g. low power mode or strict policy)
+          setIsPlaying(false);
+        });
+      } else if (videoRef.current.paused) {
+        setIsPlaying(false);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     if (videoRef.current) {
@@ -42,24 +58,29 @@ export default function HeroVideo() {
     }
   };
 
-  // Synchronize Play/Pause for both main video and ambient blur video
-  const togglePlay = () => {
+  // Safe Play/Pause toggle handling browser autoplay policies
+  const togglePlay = async () => {
     if (videoRef.current) {
-      if (isPlaying) {
+      if (!videoRef.current.paused) {
         videoRef.current.pause();
-        if (blurVideoRef.current) blurVideoRef.current.pause();
+        setIsPlaying(false);
       } else {
-        videoRef.current.play();
-        if (blurVideoRef.current) blurVideoRef.current.play();
+        try {
+          await videoRef.current.play();
+          setIsPlaying(true);
+        } catch (error: any) {
+          if (error.name !== "AbortError") {
+            console.error("Error attempting to play video:", error);
+          }
+        }
       }
-      setIsPlaying(!isPlaying);
     }
   };
 
   const toggleMute = () => {
     if (videoRef.current) {
       if (isMuted) {
-        const volumeToRestore = lastVolume > 0 ? lastVolume : 0.29;
+        const volumeToRestore = lastVolume > 0 ? lastVolume : 0.3;
         videoRef.current.muted = false;
         setVolume(volumeToRestore);
         setIsMuted(false);
@@ -89,26 +110,7 @@ export default function HeroVideo() {
     }
   };
 
-  const handleTimeUpdate = () => {
-    if (videoRef.current && !isSliding) {
-      const current = videoRef.current.currentTime;
-      const duration = videoRef.current.duration;
-      if (duration > 0) {
-        setProgress((current / duration) * 100);
-      }
-    }
-  };
 
-  // Synchronize timeline seeking for both videos
-  const handleTimelineChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newProgress = parseFloat(e.target.value);
-    setProgress(newProgress);
-    if (videoRef.current) {
-      const targetTime = (newProgress / 100) * videoRef.current.duration;
-      videoRef.current.currentTime = targetTime;
-      if (blurVideoRef.current) blurVideoRef.current.currentTime = targetTime;
-    }
-  };
 
   return (
     <div className="w-full max-w-7xl mx-auto mt-12 flex flex-col gap-4">
@@ -122,17 +124,11 @@ export default function HeroVideo() {
         }`}
       >
         
-        {/* Ambient Blur Video Background (Eliminates Black/Grey Bars organically) */}
-        <video
-          ref={blurVideoRef}
-          autoPlay
-          loop
-          muted 
-          playsInline
-          className="absolute inset-0 z-0 w-full h-full object-cover scale-[1.8] blur-[120px] sm:blur-[180px] brightness-75 opacity-70 md:opacity-90 pointer-events-none transition-opacity duration-1000"
-        >
-          <source src="/snapfins.mp4" type="video/mp4" />
-        </video>
+        {/* Ambient Blur Static Background (Eliminates Black/Grey Bars organically) */}
+        <div
+          className="absolute inset-0 z-0 w-full h-full bg-cover bg-center bg-no-repeat scale-[1.8] blur-[120px] sm:blur-[180px] brightness-75 opacity-70 md:opacity-90 pointer-events-none transition-opacity duration-1000"
+          style={{ backgroundImage: `url('/snapfins-poster.jpg')` }}
+        />
         
         {/* Main Video Element */}
         <video
@@ -141,64 +137,49 @@ export default function HeroVideo() {
           loop
           muted={isMuted}
           playsInline
-          onTimeUpdate={handleTimeUpdate}
+          preload="auto"
+          poster="/snapfins-poster.jpg"
+          onPlay={() => setIsPlaying(true)}
+          onPause={() => setIsPlaying(false)}
+          onWaiting={() => setIsBuffering(true)}
+          onPlaying={() => setIsBuffering(false)}
+          onCanPlay={() => setIsBuffering(false)}
+          onSeeking={() => setIsBuffering(true)}
+          onSeeked={() => setIsBuffering(false)}
           onClick={togglePlay}
           className={`relative z-10 w-full transition-all duration-500 cursor-pointer shadow-2xl ${
              isFullscreen ? "h-full object-contain" : "h-auto max-h-[80vh] object-cover rounded-[32px]"
           }`}
         >
+          <source src="/snapfins.webm" type="video/webm" />
           <source src="/snapfins.mp4" type="video/mp4" />
           Your browser does not support the video tag.
         </video>
 
-        {/* Glass Center Play Button */}
-        <div className={`absolute inset-0 z-20 flex items-center justify-center pointer-events-none transition-all duration-500 ${!isPlaying ? "opacity-100 scale-100" : "opacity-0 scale-110"}`}>
-          <button 
-            onClick={togglePlay}
-            className="pointer-events-auto w-16 h-16 md:w-20 md:h-20 bg-white/10 backdrop-blur-md text-white rounded-full flex items-center justify-center hover:bg-white/20 active:scale-90 transition-all duration-300 shadow-[0_8px_32px_rgba(0,0,0,0.3)] border border-white/20 hover:border-white/40 hover:shadow-[0_0_40px_rgba(147,51,234,0.4)] group/centerBtn"
-          >
-            <span className="material-symbols-outlined flex items-center justify-center text-4xl md:text-5xl text-white/90 group-hover/centerBtn:text-white transition-colors duration-300">
-              play_arrow
-            </span>
-          </button>
+        {/* Glass Center Play Button or Loading Spinner */}
+        <div className={`absolute inset-0 z-20 flex items-center justify-center pointer-events-none transition-all duration-500 ${!isPlaying || isBuffering ? "opacity-100 scale-100" : "opacity-0 scale-110"}`}>
+          {isBuffering ? (
+            <div className="w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 bg-black/50 backdrop-blur-md rounded-full flex items-center justify-center shadow-[0_8px_32px_rgba(0,0,0,0.3)] border border-white/20">
+              <span className="material-symbols-outlined animate-spin text-2xl sm:text-3xl md:text-4xl text-white/90">
+                progress_activity
+              </span>
+            </div>
+          ) : (
+            <button 
+              onClick={togglePlay}
+              className="pointer-events-auto w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 bg-white/10 backdrop-blur-md text-white rounded-full flex items-center justify-center hover:bg-white/20 active:scale-90 transition-all duration-300 shadow-[0_8px_32px_rgba(0,0,0,0.3)] border border-white/20 hover:border-white/40 hover:shadow-[0_0_40px_rgba(147,51,234,0.4)] group/centerBtn"
+            >
+              <span className="material-symbols-outlined flex items-center justify-center text-3xl sm:text-4xl md:text-5xl text-white/90 group-hover/centerBtn:text-white transition-colors duration-300">
+                play_arrow
+              </span>
+            </button>
+          )}
         </div>
 
         {/* Floating Dark Purple Control Bar */}
-        <div className={`absolute bottom-0 left-0 right-0 z-30 py-6 px-4 md:px-8 transition-opacity duration-300 ${!isPlaying ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
-          <div className="flex items-center gap-3 md:gap-5 text-white bg-black/40 backdrop-blur-2xl rounded-2xl p-2 md:p-3 max-w-4xl mx-auto border border-white/5 shadow-[0_20px_40px_rgba(0,0,0,0.5)]">
+        <div className={`absolute bottom-3 sm:bottom-6 left-0 right-0 z-30 px-4 md:px-8 transition-opacity duration-300 ${!isPlaying && !isBuffering ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
+          <div className="flex items-center justify-center gap-6 sm:gap-8 text-white bg-black/40 backdrop-blur-2xl rounded-3xl px-6 py-2 md:py-3 w-fit mx-auto border border-white/5 shadow-[0_20px_40px_rgba(0,0,0,0.5)]">
             
-            {/* Play/Pause Button */}
-            <button onClick={togglePlay} className="hover:text-purple-400 hover:scale-110 active:scale-95 transition-all focus:outline-none flex items-center justify-center pl-2">
-              <span className="material-symbols-outlined text-3xl">
-                {isPlaying ? "pause" : "play_arrow"}
-              </span>
-            </button>
-            
-            {/* Timeline */}
-            <div className="flex-1 flex items-center mx-1 md:mx-3 h-6 relative group/timeline cursor-pointer">
-              <input 
-                type="range" 
-                min="0" 
-                max="100" 
-                step="0.1" 
-                value={progress}
-                onChange={handleTimelineChange}
-                onMouseDown={() => setIsSliding(true)}
-                onMouseUp={() => setIsSliding(false)}
-                onTouchStart={() => setIsSliding(true)}
-                onTouchEnd={() => setIsSliding(false)}
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-              />
-              <div className="absolute left-0 right-0 h-1.5 md:h-2 bg-white/10 rounded-full pointer-events-none group-hover/timeline:bg-white/20 transition-colors">
-                <div 
-                  className="absolute top-0 left-0 h-full bg-gradient-to-r from-purple-600 to-indigo-500 rounded-full flex justify-end items-center pointer-events-none transition-all duration-75 ease-linear shadow-[0_0_15px_rgba(147,51,234,0.5)]"
-                  style={{ width: `${progress}%` }}
-                >
-                  <div className="w-3.5 h-3.5 bg-white rounded-full opacity-0 group-hover/timeline:opacity-100 group-hover/timeline:scale-125 transition-all shadow-md translate-x-1.5"></div>
-                </div>
-              </div>
-            </div>
-
             {/* Volume Control */}
             <div className="flex items-center group/volume">
               <button onClick={toggleMute} className="hover:text-purple-400 hover:scale-110 active:scale-95 transition-all focus:outline-none flex items-center justify-center">
@@ -206,7 +187,7 @@ export default function HeroVideo() {
                   {isMuted || volume === 0 ? "volume_off" : volume < 0.5 ? "volume_down" : "volume_up"}
                 </span>
               </button>
-              <div className="w-0 overflow-hidden opacity-0 group-hover/volume:w-16 md:group-hover/volume:w-20 group-hover/volume:opacity-100 group-hover/volume:ml-2 md:group-hover/volume:ml-3 transition-all duration-300 ease-in-out flex items-center">
+              <div className="w-0 overflow-hidden opacity-0 group-hover/volume:w-16 md:group-hover/volume:w-20 group-hover/volume:opacity-100 group-hover/volume:ml-2 md:group-hover/volume:ml-3 transition-all duration-300 ease-in-out hidden sm:flex items-center">
                 <input 
                   type="range" 
                   min="0" 
