@@ -147,17 +147,39 @@ export default function DataSyncModal({ isOpen, onClose }: DataSyncModalProps) {
         supabase.from("assets").delete().eq("user_id", userData.user.id)
       ]);
 
-      const tToIns = (transactions || []).map((t: any) => {
-        const { id, created_at, updated_at, user_id, ...rest } = t;
-        return { ...rest, user_id: userData.user.id };
-      });
-      const aToIns = (assets || []).map((a: any) => {
-        const { id, created_at, updated_at, user_id, ...rest } = a;
-        return { ...rest, user_id: userData.user.id };
+      // Map old asset IDs to newly generated UUIDs to prevent collisions
+      const assetIdMap: Record<string, string> = {};
+      (assets || []).forEach((a: any) => {
+        if (a.id) assetIdMap[a.id] = crypto.randomUUID();
       });
 
-      if (aToIns.length > 0) await supabase.from("assets").insert(aToIns);
-      if (tToIns.length > 0) await supabase.from("transactions").insert(tToIns);
+      const aToIns = (assets || []).map((a: any) => {
+        const { id, user_id, ...rest } = a;
+        return { 
+          ...rest, 
+          id: assetIdMap[id] || id, // use new ID, fallback to old if not mapped
+          user_id: userData.user.id 
+        };
+      });
+
+      const tToIns = (transactions || []).map((t: any) => {
+        const { id, user_id, linked_asset_id, ...rest } = t;
+        return { 
+          ...rest, 
+          id: crypto.randomUUID(), // generate new ID for transaction
+          linked_asset_id: linked_asset_id ? (assetIdMap[linked_asset_id] || null) : null,
+          user_id: userData.user.id 
+        };
+      });
+
+      if (aToIns.length > 0) {
+        const { error } = await supabase.from("assets").insert(aToIns);
+        if (error) throw new Error("Assets Error: " + error.message);
+      }
+      if (tToIns.length > 0) {
+        const { error } = await supabase.from("transactions").insert(tToIns);
+        if (error) throw new Error("Transactions Error: " + error.message);
+      }
 
       setView("success");
       setTimeout(() => window.location.reload(), 1500);
