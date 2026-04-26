@@ -211,8 +211,8 @@ export default function DataSyncModal({ isOpen, onClose }: DataSyncModalProps) {
               {view === "selection" && (
                 <div className="space-y-8">
                   <div className="space-y-2">
-                    <h3 className="font-bold text-lg text-on-surface">Pilih Aksi</h3>
-                    <p className="text-sm text-on-surface-variant opacity-60">Mau ekspor data lo atau balikin data lama?</p>
+                    <h3 className="font-bold text-lg text-on-surface">{lang === "id" ? "Pilih Aksi" : "Select Action"}</h3>
+                    <p className="text-sm text-on-surface-variant opacity-60">{lang === "id" ? "Mau ekspor data lo atau balikin data lama?" : "Do you want to export your data or restore an old backup?"}</p>
                   </div>
                   
                   <div className="grid grid-cols-2 gap-4">
@@ -224,8 +224,8 @@ export default function DataSyncModal({ isOpen, onClose }: DataSyncModalProps) {
                         <span className="material-symbols-outlined text-3xl">upload</span>
                       </div>
                       <div className="space-y-1">
-                        <p className="font-black text-sm text-on-surface">Ekspor Data</p>
-                        <p className="text-[10px] text-on-surface-variant font-medium opacity-60">Backup ke JSON</p>
+                        <p className="font-black text-sm text-on-surface">{lang === "id" ? "Ekspor Data" : "Export Data"}</p>
+                        <p className="text-[10px] text-on-surface-variant font-medium opacity-60">{lang === "id" ? "Backup ke JSON" : "Backup to JSON"}</p>
                       </div>
                     </button>
 
@@ -237,8 +237,8 @@ export default function DataSyncModal({ isOpen, onClose }: DataSyncModalProps) {
                         <span className="material-symbols-outlined text-3xl">download</span>
                       </div>
                       <div className="space-y-1">
-                        <p className="font-black text-sm text-on-surface">Impor Data</p>
-                        <p className="text-[10px] text-on-surface-variant font-medium opacity-60">Restore dari JSON</p>
+                        <p className="font-black text-sm text-on-surface">{lang === "id" ? "Impor Data" : "Import Data"}</p>
+                        <p className="text-[10px] text-on-surface-variant font-medium opacity-60">{lang === "id" ? "Restore dari JSON" : "Restore from JSON"}</p>
                       </div>
                     </button>
                   </div>
@@ -252,9 +252,9 @@ export default function DataSyncModal({ isOpen, onClose }: DataSyncModalProps) {
                       <span className="material-symbols-outlined text-4xl">folder_zip</span>
                     </div>
                     <div className="space-y-2">
-                      <h3 className="font-bold text-lg text-on-surface">Siap buat Backup?</h3>
+                      <h3 className="font-bold text-lg text-on-surface">{lang === "id" ? "Siap buat Backup?" : "Ready to Backup?"}</h3>
                       <p className="text-sm text-on-surface-variant font-medium leading-relaxed opacity-70">
-                        Semua data transaksi dan aset lo bakal dibundle jadi satu file JSON buat dipindah atau disimpen aman.
+                        {lang === "id" ? "Semua data transaksi dan aset lo bakal dibundle jadi satu file JSON buat dipindah atau disimpen aman." : "All your transaction and asset data will be bundled into a single JSON file for safekeeping."}
                       </p>
                     </div>
                   </div>
@@ -264,10 +264,10 @@ export default function DataSyncModal({ isOpen, onClose }: DataSyncModalProps) {
                       className="w-full py-5 rounded-2xl bg-primary text-white font-black text-sm transition-all active:scale-95 shadow-xl shadow-primary/20 flex items-center justify-center gap-3"
                     >
                       <span className="material-symbols-outlined">download</span>
-                      Download File Sekarang
+                      {lang === "id" ? "Download File Sekarang" : "Download File Now"}
                     </button>
                     <button onClick={() => setView("selection")} className="py-3 text-xs font-bold text-on-surface-variant opacity-60 hover:opacity-100 transition-opacity">
-                      Kembali
+                      {lang === "id" ? "Kembali" : "Go Back"}
                     </button>
                   </div>
                 </div>
@@ -280,9 +280,9 @@ export default function DataSyncModal({ isOpen, onClose }: DataSyncModalProps) {
                       <span className="material-symbols-outlined text-4xl">upload_file</span>
                     </div>
                     <div className="space-y-2">
-                      <h3 className="font-bold text-lg text-on-surface">Pilih File Backup</h3>
+                      <h3 className="font-bold text-lg text-on-surface">{lang === "id" ? "Pilih File Backup" : "Choose Backup File"}</h3>
                       <p className="text-sm text-on-surface-variant font-medium leading-relaxed opacity-70">
-                        Pilih file .json hasil ekspor Snapfins lo buat nge-restore data lama ke akun ini.
+                        {lang === "id" ? "Pilih file .json hasil ekspor Snapfins lo buat nge-restore data lama ke akun ini." : "Select the .json file exported from Snapfins to restore your old data to this account."}
                       </p>
                     </div>
                   </div>
@@ -292,10 +292,10 @@ export default function DataSyncModal({ isOpen, onClose }: DataSyncModalProps) {
                       className="w-full py-5 rounded-2xl bg-secondary text-on-secondary font-black text-sm transition-all active:scale-95 shadow-xl shadow-secondary/20 flex items-center justify-center gap-3"
                     >
                       <span className="material-symbols-outlined">publish</span>
-                      Pilih & Upload File
+                      {lang === "id" ? "Pilih & Upload File" : "Choose & Upload File"}
                     </button>
                     <button onClick={() => setView("selection")} className="py-3 text-xs font-bold text-on-surface-variant opacity-60 hover:opacity-100 transition-opacity">
-                      Kembali
+                      {lang === "id" ? "Kembali" : "Go Back"}
                     </button>
                   </div>
                   <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".json" className="hidden" />
@@ -308,9 +308,9 @@ export default function DataSyncModal({ isOpen, onClose }: DataSyncModalProps) {
                     <span className="material-symbols-outlined text-4xl">warning</span>
                   </div>
                   <div className="space-y-3">
-                    <h3 className="font-headline font-black text-2xl text-on-surface">Konfirmasi Impor</h3>
+                    <h3 className="font-headline font-black text-2xl text-on-surface">{lang === "id" ? "Konfirmasi Impor" : "Confirm Import"}</h3>
                     <p className="text-sm text-on-surface-variant font-medium leading-relaxed">
-                      Peringatan: Semua data transaksi dan aset lo saat ini bakal dihapus dan diganti sama data dari file ini. Lo yakin mau lanjut?
+                      {lang === "id" ? "Peringatan: Semua data transaksi dan aset lo saat ini bakal dihapus dan diganti sama data dari file ini. Lo yakin mau lanjut?" : "Warning: All your current transactions and assets will be deleted and replaced with the data from this file. Are you sure you want to proceed?"}
                     </p>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
@@ -318,13 +318,13 @@ export default function DataSyncModal({ isOpen, onClose }: DataSyncModalProps) {
                       onClick={() => setView("import")}
                       className="py-4 rounded-2xl bg-surface-container-high text-on-surface font-black text-sm active:scale-95 transition-all"
                     >
-                      Batal
+                      {lang === "id" ? "Batal" : "Cancel"}
                     </button>
                     <button
                       onClick={performImport}
                       className="py-4 rounded-2xl bg-error text-white font-black text-sm active:scale-95 transition-all shadow-xl shadow-error/20"
                     >
-                      Ya, Restore
+                      {lang === "id" ? "Ya, Restore" : "Yes, Restore"}
                     </button>
                   </div>
                 </div>
@@ -339,8 +339,8 @@ export default function DataSyncModal({ isOpen, onClose }: DataSyncModalProps) {
                     </div>
                   </div>
                   <div className="space-y-1">
-                    <p className="text-sm font-bold text-on-surface-variant">Sedang memproses data lo...</p>
-                    <p className="text-[10px] text-on-surface-variant opacity-50 italic">Sabar ya bro, dikit lagi kelar.</p>
+                    <p className="text-sm font-bold text-on-surface-variant">{lang === "id" ? "Sedang memproses data lo..." : "Processing your data..."}</p>
+                    <p className="text-[10px] text-on-surface-variant opacity-50 italic">{lang === "id" ? "Sabar ya bro, dikit lagi kelar." : "Please hold on, almost done."}</p>
                   </div>
                 </div>
               )}
@@ -355,9 +355,9 @@ export default function DataSyncModal({ isOpen, onClose }: DataSyncModalProps) {
                     <span className="material-symbols-outlined text-4xl">done_all</span>
                   </motion.div>
                   <div className="space-y-2">
-                    <h3 className="font-headline font-black text-2xl text-on-surface">Berhasil!</h3>
+                    <h3 className="font-headline font-black text-2xl text-on-surface">{lang === "id" ? "Berhasil!" : "Success!"}</h3>
                     <p className="text-sm text-on-surface-variant font-medium">
-                      Data lo udah sukses di-sync. Halaman bakal refresh otomatis...
+                      {lang === "id" ? "Data lo udah sukses di-sync. Halaman bakal refresh otomatis..." : "Your data has been successfully synced. The page will refresh automatically..."}
                     </p>
                   </div>
                 </div>
@@ -369,14 +369,14 @@ export default function DataSyncModal({ isOpen, onClose }: DataSyncModalProps) {
                     <span className="material-symbols-outlined text-4xl">priority_high</span>
                   </div>
                   <div className="space-y-2">
-                    <h3 className="font-headline font-black text-2xl text-on-surface">Waduh, Gagal</h3>
+                    <h3 className="font-headline font-black text-2xl text-on-surface">{lang === "id" ? "Waduh, Gagal" : "Whoops, Failed"}</h3>
                     <p className="text-sm text-error font-bold leading-relaxed">{errorMsg}</p>
                   </div>
                   <button
                     onClick={() => setView("selection")}
                     className="w-full py-4 rounded-2xl bg-primary text-white font-black text-sm active:scale-95 transition-all"
                   >
-                    Coba Lagi
+                    {lang === "id" ? "Coba Lagi" : "Try Again"}
                   </button>
                 </div>
               )}

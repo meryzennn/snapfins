@@ -46,12 +46,12 @@ export default function RowActionMenu({ actions }: RowActionMenuProps) {
 
     document.addEventListener("mousedown", handleClickOutside);
     document.addEventListener("keydown", handleKeyDown);
-    window.addEventListener("scroll", handleScroll, true);
+    window.addEventListener("scroll", handleScroll, { passive: true, capture: true });
 
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
       document.removeEventListener("keydown", handleKeyDown);
-      window.removeEventListener("scroll", handleScroll, true);
+      window.removeEventListener("scroll", handleScroll, { capture: true });
     };
   }, [isOpen]);
 

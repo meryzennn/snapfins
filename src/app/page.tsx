@@ -70,29 +70,41 @@ export default function LandingPage() {
   useEffect(() => {
     const sections = ["home", "features", "guide"];
 
+    let ticking = false;
+
     const getActiveSection = () => {
       // Don't override while a nav click is still animating
-      if (clickLockedRef.current) return;
-
-      const scrollY = window.scrollY;
-      if (scrollY < 80) {
-        setActiveSection("home");
+      if (clickLockedRef.current) {
+        ticking = false;
         return;
       }
 
+      const scrollY = window.scrollY;
       let current = "home";
-      for (const id of sections) {
-        const el = document.getElementById(id);
-        if (el && el.getBoundingClientRect().top + scrollY - 120 <= scrollY) {
-          current = id;
+
+      if (scrollY >= 80) {
+        for (const id of sections) {
+          const el = document.getElementById(id);
+          if (el && el.getBoundingClientRect().top + scrollY - 120 <= scrollY) {
+            current = id;
+          }
         }
       }
-      setActiveSection(current);
+
+      setActiveSection((prev) => prev !== current ? current : prev);
+      ticking = false;
+    };
+
+    const onScroll = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(getActiveSection);
+        ticking = true;
+      }
     };
 
     getActiveSection();
-    window.addEventListener("scroll", getActiveSection, { passive: true });
-    return () => window.removeEventListener("scroll", getActiveSection);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
   // Apply scroll lock specifically when the Login Modal is open.
@@ -139,9 +151,9 @@ export default function LandingPage() {
     });
   };
 
-  if (!mounted) {
-    return <LandingPageSkeleton />;
-  }
+  // We remove the full-page LandingPageSkeleton blocker so the real header and content are SSR'd.
+  // This prevents the "flash of unstyled content" or large layout shifts on the header
+  // when switching from skeleton to real page, and significantly improves SEO.
 
   return (
     <div className="min-h-screen bg-background selection:bg-primary/20 font-body text-on-surface antialiased scroll-smooth">
