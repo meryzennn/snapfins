@@ -126,7 +126,7 @@ export default function HeroVideo() {
         
         {/* Ambient Blur Static Background (Eliminates Black/Grey Bars organically) */}
         <div
-          className="absolute inset-0 z-0 w-full h-full bg-cover bg-center bg-no-repeat scale-[1.8] blur-[120px] sm:blur-[180px] brightness-75 opacity-70 md:opacity-90 pointer-events-none transition-opacity duration-1000"
+          className="absolute inset-0 z-0 w-full h-full bg-cover bg-center bg-no-repeat scale-[1.8] blur-[60px] sm:blur-[120px] md:blur-[180px] brightness-75 opacity-70 md:opacity-90 pointer-events-none transition-opacity duration-1000"
           style={{ backgroundImage: `url('/snapfins-poster.jpg')` }}
         />
         
@@ -137,7 +137,7 @@ export default function HeroVideo() {
           loop
           muted={isMuted}
           playsInline
-          preload="auto"
+          preload="metadata"
           poster="/snapfins-poster.jpg"
           onPlay={() => setIsPlaying(true)}
           onPause={() => setIsPlaying(false)}

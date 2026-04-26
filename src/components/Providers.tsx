@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { translations, LangKey, TranslationKeys } from '@/lib/i18n';
 import { SupportedCurrency, normalizeCurrency } from '@/lib/currency';
+import { motion, AnimatePresence } from 'framer-motion';
 
 // --- Types ---
 interface LanguageContextType {
@@ -36,6 +37,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
   const [currency, setCurrencyState] = useState<SupportedCurrency>('USD');
   const [theme, setThemeState] = useState<'light' | 'dark'>('dark');
   const [mounted, setMounted] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
 
   // Initialize from localStorage
   useEffect(() => {
@@ -67,14 +69,26 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
   }, [theme, mounted]);
 
   const setLang = useCallback((newLang: LangKey) => {
-    setLangState(newLang);
-    localStorage.setItem(LANG_STORAGE_KEY, newLang);
-  }, []);
+    if (newLang === lang) return;
+    setIsTransitioning(true);
+    setTimeout(() => {
+      setLangState(newLang);
+      localStorage.setItem(LANG_STORAGE_KEY, newLang);
+      setIsTransitioning(false);
+      window.location.reload();
+    }, 150);
+  }, [lang]);
 
   const setCurrency = useCallback((newCurrency: SupportedCurrency) => {
-    setCurrencyState(newCurrency);
-    localStorage.setItem(CURRENCY_STORAGE_KEY, newCurrency);
-  }, []);
+    if (newCurrency === currency) return;
+    setIsTransitioning(true);
+    setTimeout(() => {
+      setCurrencyState(newCurrency);
+      localStorage.setItem(CURRENCY_STORAGE_KEY, newCurrency);
+      setIsTransitioning(false);
+      window.location.reload();
+    }, 150);
+  }, [currency]);
 
   const setTheme = useCallback((newTheme: 'light' | 'dark') => {
     setThemeState(newTheme);
@@ -96,6 +110,18 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
       <LanguageContext.Provider value={{ lang, setLang, t }}>
         <CurrencyContext.Provider value={{ currency, setCurrency }}>
           {children}
+          
+          <AnimatePresence>
+            {isTransitioning && (
+              <motion.div
+                initial={{ opacity: 0, backdropFilter: 'blur(0px)' }}
+                animate={{ opacity: 1, backdropFilter: 'blur(8px)' }}
+                exit={{ opacity: 0, backdropFilter: 'blur(0px)' }}
+                transition={{ duration: 0.15, ease: "easeInOut" }}
+                className="fixed inset-0 z-[9999] bg-background/50 pointer-events-auto"
+              />
+            )}
+          </AnimatePresence>
         </CurrencyContext.Provider>
       </LanguageContext.Provider>
     </ThemeContext.Provider>
